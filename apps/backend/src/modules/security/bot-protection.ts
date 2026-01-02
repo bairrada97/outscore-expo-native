@@ -23,6 +23,12 @@ interface BotProtectionOptions {
    * Whether to check the cf-connecting-ip header (Cloudflare specific)
    */
   checkCloudflareIp?: boolean;
+
+  /**
+   * Force enable Cloudflare strict checking regardless of environment
+   * If not set, will check NODE_ENV === 'production' or ENABLE_CLOUDFLARE_CHECK env var
+   */
+  forceCloudflareCheck?: boolean;
 }
 
 /**
@@ -47,6 +53,10 @@ const knownBotPatterns = [
   'bingbot',
   'yandex',
   'baidu',
+  'python-requests',
+  'go-http-client',
+  'wget',
+  'curl',
 ];
 
 /**
@@ -58,12 +68,34 @@ export const botProtection = (options: BotProtectionOptions = {}): MiddlewareHan
     blockKnownBots = true,
     blockedUserAgents = [],
     checkCloudflareIp = true,
+    forceCloudflareCheck,
   } = options;
 
   // Combine custom and known bot patterns
   const patterns = blockKnownBots ? [...knownBotPatterns, ...blockedUserAgents] : blockedUserAgents;
 
+  // Track if we've logged the strict check activation message (per worker instance)
+  let hasLoggedStrictCheckActivation = false;
+
   return async (context, next) => {
+    // Determine if we should enforce strict Cloudflare checking
+    // Check in order: forceCloudflareCheck option > ENABLE_CLOUDFLARE_CHECK env > NODE_ENV === 'production'
+    const env = (context.env as { NODE_ENV?: string; ENABLE_CLOUDFLARE_CHECK?: string }) || {};
+    const isProduction = env.NODE_ENV === 'production';
+    const cloudflareCheckEnabled = env.ENABLE_CLOUDFLARE_CHECK === 'true' || env.ENABLE_CLOUDFLARE_CHECK === '1';
+    const shouldEnforceStrictCloudflareCheck = forceCloudflareCheck ?? cloudflareCheckEnabled ?? isProduction;
+
+    // Log once when stricter check is active (per worker instance)
+    if (checkCloudflareIp && shouldEnforceStrictCloudflareCheck && !hasLoggedStrictCheckActivation) {
+      const reason = forceCloudflareCheck
+        ? 'forceCloudflareCheck option enabled'
+        : cloudflareCheckEnabled
+        ? 'ENABLE_CLOUDFLARE_CHECK env var enabled'
+        : 'production mode (NODE_ENV=production)';
+      console.log(`🔒 [Bot] Cloudflare strict header check is ACTIVE (${reason})`);
+      hasLoggedStrictCheckActivation = true;
+    }
+
     const userAgent = context.req.header('user-agent') || '';
 
     // Block empty user agents if configured
@@ -100,14 +132,20 @@ export const botProtection = (options: BotProtectionOptions = {}): MiddlewareHan
 
       // If we're behind Cloudflare but there's no CF-Connecting-IP, it's suspicious
       if (isCf && !cfIp) {
-        console.log(`🤖 [Bot] Blocked: Missing CF-Connecting-IP header`);
-        return context.json(
-          {
-            error: 'access_denied',
-            message: 'Access denied',
-          },
-          403
-        );
+        if (shouldEnforceStrictCloudflareCheck) {
+          // In production or when explicitly enabled, block the request
+          console.log(`🤖 [Bot] Blocked: Missing CF-Connecting-IP header (strict check active)`);
+          return context.json(
+            {
+              error: 'access_denied',
+              message: 'Access denied',
+            },
+            403
+          );
+        } else {
+          // In non-production, log a warning but allow the request
+          console.warn(`⚠️ [Bot] Warning: Missing CF-Connecting-IP header detected but not blocking (non-production mode). Request from: ${context.req.header('user-agent') || 'unknown'}`);
+        }
       }
     }
 

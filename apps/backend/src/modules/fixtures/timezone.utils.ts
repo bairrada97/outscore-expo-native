@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { formatInTimeZone } from 'date-fns-tz';
+import { formatInTimeZone, getTimezoneOffset } from 'date-fns-tz';
 import { getAdjacentDate } from './date.utils';
 
 
@@ -11,7 +11,7 @@ export interface TimezoneFetchStrategy {
 
 export const getCurrentHourInTimezone = (timezone: string): number => {
   const userNow = new Date();
-  return parseInt(formatInTimeZone(userNow, timezone, 'HH'));
+  return parseInt(formatInTimeZone(userNow, timezone, 'HH'), 10);
 };
 
 /**
@@ -50,15 +50,32 @@ export const getDatesToFetch = (
   };
 };
 
+/**
+ * Validates if a timezone string is valid by attempting to get its offset
+ */
+const isValidTimezone = (timezone: string): boolean => {
+  try {
+    getTimezoneOffset(timezone, new Date());
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 export const formatDateInTimezone = (
   date: string,
   timezone: string,
   formatStr: string
 ): string => {
+  if (!isValidTimezone(timezone)) {
+    console.warn(`Invalid timezone: ${timezone}, falling back to local formatting`);
+    return format(new Date(date), formatStr);
+  }
+
   try {
     return formatInTimeZone(date, timezone, formatStr);
-  } catch {
+  } catch (error) {
+    console.error(`Error formatting date in timezone ${timezone}:`, error);
     return format(new Date(date), formatStr);
   }
 };

@@ -177,11 +177,38 @@ export const getTTLForResource = <T>(
 ): number => {
   const strategy = CACHE_STRATEGIES[resourceType];
 
-  if (strategy.ttlMode === 'static') {
-    return strategy.staticTTL!;
+  if (!strategy) {
+    throw new Error(
+      `Cache strategy not found for resource type: "${resourceType}". ` +
+        `Available types: ${Object.keys(CACHE_STRATEGIES).join(', ')}`
+    );
   }
 
-  return strategy.dynamicTTL!(params, data);
+  switch (strategy.ttlMode) {
+    case 'static':
+      if (typeof strategy.staticTTL !== 'number') {
+        throw new Error(
+          `Invalid cache strategy for resource type "${resourceType}": ` +
+            `ttlMode is "static" but staticTTL is not a number (got ${typeof strategy.staticTTL})`
+        );
+      }
+      return strategy.staticTTL;
+
+    case 'dynamic':
+      if (typeof strategy.dynamicTTL !== 'function') {
+        throw new Error(
+          `Invalid cache strategy for resource type "${resourceType}": ` +
+            `ttlMode is "dynamic" but dynamicTTL is not a function (got ${typeof strategy.dynamicTTL})`
+        );
+      }
+      return strategy.dynamicTTL(params, data);
+
+    default:
+      throw new Error(
+        `Invalid cache strategy for resource type "${resourceType}": ` +
+          `unknown ttlMode "${(strategy as CacheStrategyConfig).ttlMode}". Expected "static" or "dynamic"`
+      );
+  }
 };
 
 /**

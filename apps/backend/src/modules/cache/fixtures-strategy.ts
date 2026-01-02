@@ -18,9 +18,9 @@ export interface FixturesCacheEnv {
 }
 
 /**
- * Current UTC date tracking for date transitions
+ * KV key for tracking date transitions
  */
-let currentUtcDate: string | null = null;
+const DATE_TRANSITION_KEY = 'fixtures:date-transition:current-utc-date';
 
 /**
  * Get cache location for fixtures based on date
@@ -212,23 +212,22 @@ export const handleFixturesDateTransition = async (
 };
 
 /**
- * Check and handle fixtures date transition
+ * Check and handle fixtures date transition using KV-backed state
  */
 export const checkFixturesDateTransition = async (
   env: FixturesCacheEnv
 ): Promise<boolean> => {
   const newDate = getCurrentUtcDate();
+  const storedDate = await env.FOOTBALL_KV.get(DATE_TRANSITION_KEY);
 
-  if (currentUtcDate === null) {
-    currentUtcDate = newDate;
+  if (storedDate === null) {
+    await env.FOOTBALL_KV.put(DATE_TRANSITION_KEY, newDate);
     return false;
   }
 
-  if (currentUtcDate !== newDate) {
-    const oldDate = currentUtcDate;
-    currentUtcDate = newDate;
-
-    await handleFixturesDateTransition(env, oldDate, newDate);
+  if (storedDate !== newDate) {
+    await env.FOOTBALL_KV.put(DATE_TRANSITION_KEY, newDate);
+    await handleFixturesDateTransition(env, storedDate, newDate);
     return true;
   }
 

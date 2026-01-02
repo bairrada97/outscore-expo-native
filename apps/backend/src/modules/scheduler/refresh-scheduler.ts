@@ -13,11 +13,12 @@ import { commonTimezones } from '../timezones';
 export interface SchedulerEnv extends CacheEnv {
   FOOTBALL_API_URL: string;
   RAPIDAPI_KEY: string;
+  REFRESH_SCHEDULER_DO?: DurableObjectNamespace;
 }
 
 /**
  * Refresh today's fixtures data in all cache layers
- * Called by Cloudflare Cron Triggers every 15 seconds
+ * Called by Durable Object alarm every 15 seconds
  */
 export const refreshTodayFixtures = async (env: SchedulerEnv): Promise<void> => {
   const startTime = performance.now();
@@ -145,13 +146,37 @@ export const prefetchTomorrowFixtures = async (env: SchedulerEnv): Promise<void>
 
 /**
  * Scheduled event handler for Cloudflare Workers
+ * Acts as a failsafe to ensure the DO alarm chain is running
  */
 export const handleScheduledEvent = async (
   event: ScheduledEvent,
   env: SchedulerEnv
 ): Promise<void> => {
-  console.log(`⚡ [Scheduler] Triggered at ${new Date(event.scheduledTime).toISOString()}`);
+  console.log(`⚡ [Scheduler] Cron triggered at ${new Date(event.scheduledTime).toISOString()}`);
 
-  // Only refresh regular fixtures - live fixtures are fetched on-demand
-  await refreshTodayFixtures(env);
+  if (!env.REFRESH_SCHEDULER_DO) {
+    // Fallback: if DO not configured, refresh directly
+    console.log(`⚠️ [Scheduler] REFRESH_SCHEDULER_DO not configured, refreshing directly`);
+    await refreshTodayFixtures(env);
+    return;
+  }
+
+  // Ensure the DO alarm chain is running (it handles 15-second refreshes)
+  const id = env.REFRESH_SCHEDULER_DO.idFromName('default');
+  const stub = env.REFRESH_SCHEDULER_DO.get(id);
+
+  try {
+    const response = await stub.fetch(new Request('https://do/ensure', { method: 'POST' }));
+    const result = await response.json() as { started: boolean; nextAlarm: number };
+
+    if (result.started) {
+      console.log(`🚀 [Scheduler] Started DO alarm chain`);
+    } else {
+      console.log(`✅ [Scheduler] DO alarm chain already running, next alarm at ${new Date(result.nextAlarm).toISOString()}`);
+    }
+  } catch (error) {
+    console.error(`❌ [Scheduler] Failed to ensure DO alarm chain:`, error);
+    // Fallback: refresh directly on error
+    await refreshTodayFixtures(env);
+  }
 };

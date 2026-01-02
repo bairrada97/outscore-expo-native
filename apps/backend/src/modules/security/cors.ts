@@ -65,6 +65,43 @@ const isOriginAllowed = (
 };
 
 /**
+ * Check if origins configuration contains a wildcard
+ */
+const hasWildcardOrigin = (origins: string | string[] | ((origin: string) => boolean) | undefined): boolean => {
+  if (origins === '*') {
+    return true;
+  }
+  if (typeof origins === 'string' && origins === '*') {
+    return true;
+  }
+  if (Array.isArray(origins) && origins.includes('*')) {
+    return true;
+  }
+  return false;
+};
+
+/**
+ * Get the Access-Control-Allow-Origin header value and Vary header flag
+ * @returns Object with origin value (or null if not allowed) and shouldVary flag
+ */
+const getAllowedOriginHeader = (
+  origins: string | string[] | ((origin: string) => boolean),
+  requestOrigin: string
+): { origin: string | null; shouldVary: boolean } => {
+  // Check for wildcard (simplified: origins === '*' handles the string case)
+  if (origins === '*') {
+    return { origin: '*', shouldVary: false };
+  }
+
+  // Check if request origin is allowed
+  if (requestOrigin && isOriginAllowed(requestOrigin, origins)) {
+    return { origin: requestOrigin, shouldVary: true };
+  }
+
+  return { origin: null, shouldVary: false };
+};
+
+/**
  * CORS middleware
  */
 export const cors = (config: CorsConfig = {}): MiddlewareHandler => {
@@ -83,6 +120,14 @@ export const cors = (config: CorsConfig = {}): MiddlewareHandler => {
     maxAge = 86400, // 24 hours
   } = config;
 
+  // Validate configuration at startup: credentials cannot be used with wildcard origins
+  if (credentials && hasWildcardOrigin(origins)) {
+    throw new Error(
+      'CORS configuration error: Access-Control-Allow-Credentials cannot be set to true when origins is "*" or contains "*". ' +
+      'Either set credentials to false or specify explicit origins instead of using a wildcard.'
+    );
+  }
+
   return async (context, next) => {
     const requestOrigin = context.req.header('origin') || '';
 
@@ -95,15 +140,23 @@ export const cors = (config: CorsConfig = {}): MiddlewareHandler => {
       };
 
       // Set origin header
-      if (origins === '*' || (typeof origins === 'string' && origins === '*')) {
-        headers['Access-Control-Allow-Origin'] = '*';
-      } else if (requestOrigin && isOriginAllowed(requestOrigin, origins)) {
-        headers['Access-Control-Allow-Origin'] = requestOrigin;
-        headers['Vary'] = 'Origin';
+      const { origin: allowedOrigin, shouldVary } = getAllowedOriginHeader(origins, requestOrigin);
+      const isWildcardOrigin = allowedOrigin === '*';
+      if (allowedOrigin) {
+        headers['Access-Control-Allow-Origin'] = allowedOrigin;
+        if (shouldVary) {
+          headers['Vary'] = 'Origin';
+        }
       }
 
-      if (credentials) {
+      // Guard: Never send credentials with wildcard origin (invalid per CORS spec)
+      if (credentials && !isWildcardOrigin) {
         headers['Access-Control-Allow-Credentials'] = 'true';
+      } else if (credentials && isWildcardOrigin) {
+        console.warn(
+          '[CORS] Warning: Access-Control-Allow-Credentials is ignored because Access-Control-Allow-Origin is "*". ' +
+          'This is invalid per CORS specification. Consider fixing your CORS configuration.'
+        );
       }
 
       return new Response(null, {
@@ -116,18 +169,26 @@ export const cors = (config: CorsConfig = {}): MiddlewareHandler => {
     await next();
 
     // Add CORS headers to response
-    if (origins === '*' || (typeof origins === 'string' && origins === '*')) {
-      context.header('Access-Control-Allow-Origin', '*');
-    } else if (requestOrigin && isOriginAllowed(requestOrigin, origins)) {
-      context.header('Access-Control-Allow-Origin', requestOrigin);
-      context.header('Vary', 'Origin');
+    const { origin: allowedOrigin, shouldVary } = getAllowedOriginHeader(origins, requestOrigin);
+    const isWildcardOrigin = allowedOrigin === '*';
+    if (allowedOrigin) {
+      context.header('Access-Control-Allow-Origin', allowedOrigin);
+      if (shouldVary) {
+        context.header('Vary', 'Origin');
+      }
     }
 
     context.header('Access-Control-Allow-Methods', methods.join(', '));
     context.header('Access-Control-Expose-Headers', exposedHeaders.join(', '));
 
-    if (credentials) {
+    // Guard: Never send credentials with wildcard origin (invalid per CORS spec)
+    if (credentials && !isWildcardOrigin) {
       context.header('Access-Control-Allow-Credentials', 'true');
+    } else if (credentials && isWildcardOrigin) {
+      console.warn(
+        '[CORS] Warning: Access-Control-Allow-Credentials is ignored because Access-Control-Allow-Origin is "*". ' +
+        'This is invalid per CORS specification. Consider fixing your CORS configuration.'
+      );
     }
   };
 };

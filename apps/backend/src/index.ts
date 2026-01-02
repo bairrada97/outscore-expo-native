@@ -10,13 +10,17 @@ import {
   type SchedulerEnv,
 } from './modules';
 import { getMetrics, logRequest } from './utils';
+import QuotaDurableObject from './utils/quota-durable-object';
+import RefreshSchedulerDurableObject from './utils/refresh-scheduler-do';
 
 /**
  * Environment bindings
  */
 interface Env extends FixturesEnv, SchedulerEnv {
   APPROVED_ORIGINS?: string;
-  OUTSCORE_RATE_LIMITER: RateLimiter;
+  OUTSCORE_RATE_LIMITER?: unknown; // Cloudflare Rate Limiter binding (not currently used)
+  QUOTA_DO: DurableObjectNamespace;
+  REFRESH_SCHEDULER_DO: DurableObjectNamespace;
 }
 
 /**
@@ -33,7 +37,6 @@ app.use(
     hsts: 'max-age=63072000; includeSubDomains; preload',
     contentTypeOptions: 'nosniff',
     frameOptions: 'DENY',
-    xssProtection: '1; mode=block',
     // API doesn't need CSP
     contentSecurityPolicy: false,
   })
@@ -169,4 +172,9 @@ export default {
     ctx.waitUntil(handleScheduledEvent(event, env));
   },
 };
+
+/**
+ * Export Durable Object classes for Cloudflare Workers
+ */
+export { QuotaDurableObject, RefreshSchedulerDurableObject };
 

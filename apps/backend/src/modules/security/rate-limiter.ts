@@ -27,7 +27,9 @@ interface RateLimiterConfig {
 
 /**
  * In-memory rate limit store (per worker instance)
- * Note: In production with multiple workers, use KV or Durable Objects
+ * WARNING: This implementation is NOT suitable for production with multiple workers.
+ * Each worker maintains independent counters, resulting in N × limit where N is worker count.
+ * Use Cloudflare Durable Objects or Workers KV for distributed rate limiting.
  */
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 
@@ -38,13 +40,21 @@ const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 const MAX_ENTRIES = 10000;
 
 /**
+ * Maximum iterations per cleanup cycle to prevent performance degradation
+ */
+const MAX_CLEANUP_ITERATIONS = 1000;
+
+/**
  * Clean up expired entries from the store
  * Called lazily when the store exceeds MAX_ENTRIES
  */
 const cleanupExpiredEntries = (now: number): void => {
+  let cleaned = 0;
   for (const [rateLimitKey, rateLimitEntry] of rateLimitStore.entries()) {
+    if (cleaned >= MAX_CLEANUP_ITERATIONS) break;
     if (rateLimitEntry.resetAt < now) {
       rateLimitStore.delete(rateLimitKey);
+      cleaned++;
     }
   }
 };
@@ -78,6 +88,11 @@ export const rateLimiter = (config: RateLimiterConfig): MiddlewareHandler => {
   return async (context, next) => {
     // Check if we should skip rate limiting
     if (skip?.(context)) {
+      // Still set rate limit headers for skipped requests using configured defaults
+      // This ensures consistent API behavior and allows clients to know the limits
+      context.header('X-RateLimit-Limit', limit.toString());
+      context.header('X-RateLimit-Remaining', limit.toString());
+      context.header('X-RateLimit-Reset', windowSec.toString());
       await next();
       return;
     }

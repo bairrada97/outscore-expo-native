@@ -2,8 +2,12 @@
  * API Quota Manager
  * 
  * Tracks third-party API usage and provides alerts when approaching limits.
- * Uses KV to persist quota state across worker instances.
+ * Uses Cloudflare Durable Objects for atomic counter increments to prevent
+ * lost increments under concurrent requests.
  */
+
+import type { DurableObjectNamespace } from '@cloudflare/workers-types';
+import type { IncrementResponse } from './quota-durable-object';
 
 /**
  * Quota configuration
@@ -11,12 +15,11 @@
 interface QuotaConfig {
   dailyLimit: number;
   hourlyLimit: number;
-
   alertThreshold: number;
 }
 
 /**
- * Quota state stored in KV
+ * Quota state stored in the Durable Object
  */
 interface QuotaState {
   date: string;
@@ -38,65 +41,70 @@ const DEFAULT_CONFIG: QuotaConfig = {
 
 /**
  * Quota Manager class
+ * 
+ * Uses a Durable Object for atomic increments to ensure thread-safety
+ * under concurrent requests.
  */
 export class QuotaManager {
-  private kv: KVNamespace;
+  private durableObjectNamespace: DurableObjectNamespace;
   private config: QuotaConfig;
-  private key = 'api:quota:state';
+  private durableObjectId: DurableObjectId;
 
-  constructor(kv: KVNamespace, config: Partial<QuotaConfig> = {}) {
-    this.kv = kv;
+  constructor(
+    durableObjectNamespace: DurableObjectNamespace,
+    config: Partial<QuotaConfig> = {}
+  ) {
+    this.durableObjectNamespace = durableObjectNamespace;
     this.config = { ...DEFAULT_CONFIG, ...config };
+    // Use a single Durable Object instance for quota tracking
+    // The ID is deterministic based on a fixed name
+    this.durableObjectId = durableObjectNamespace.idFromName('quota-tracker');
   }
 
   /**
-   * Get current quota state
+   * Get the Durable Object stub
+   */
+  private getStub() {
+    return this.durableObjectNamespace.get(this.durableObjectId);
+  }
+
+  /**
+   * Ensure the Durable Object is configured with the current config
+   */
+  private async ensureConfigured(): Promise<void> {
+    const stub = this.getStub();
+    // Configure the Durable Object with current config
+    // This is idempotent, so safe to call multiple times
+    await stub.fetch('https://quota.local/configure', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(this.config),
+    });
+  }
+
+  /**
+   * Get current quota state from the Durable Object
    */
   async getState(): Promise<QuotaState> {
-    const now = new Date();
-    const today = now.toISOString().split('T')[0];
-    const currentHour = now.getUTCHours();
-
-    // Try to get existing state
-    const stored = await this.kv.get<QuotaState>(this.key, { type: 'json' });
-
-    if (stored) {
-      // Check if we need to reset daily counter
-      if (stored.date !== today) {
-        return {
-          date: today,
-          dailyCalls: 0,
-          currentHour,
-          hourlyCalls: 0,
-          lastUpdated: now.toISOString(),
-        };
-      }
-
-      // Check if we need to reset hourly counter
-      if (stored.currentHour !== currentHour) {
-        return {
-          ...stored,
-          currentHour,
-          hourlyCalls: 0,
-          lastUpdated: now.toISOString(),
-        };
-      }
-
-      return stored;
+    await this.ensureConfigured();
+    const stub = this.getStub();
+    const response = await stub.fetch('https://quota.local/state', {
+      method: 'GET',
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to get quota state: ${response.statusText}`);
     }
-
-    // Initialize new state
-    return {
-      date: today,
-      dailyCalls: 0,
-      currentHour,
-      hourlyCalls: 0,
-      lastUpdated: now.toISOString(),
-    };
+    
+    return await response.json<QuotaState>();
   }
 
   /**
    * Record an API call
+   * 
+   * Atomically increments counters via the Durable Object and returns
+   * the authoritative quota status. This ensures no lost increments
+   * under concurrent requests.
    */
   async recordCall(): Promise<{
     allowed: boolean;
@@ -104,45 +112,26 @@ export class QuotaManager {
     hourlyRemaining: number;
     shouldAlert: boolean;
   }> {
-    const state = await this.getState();
-
-    // Increment counters
-    state.dailyCalls++;
-    state.hourlyCalls++;
-    state.lastUpdated = new Date().toISOString();
-
-    // Calculate remaining
-    const dailyRemaining = this.config.dailyLimit - state.dailyCalls;
-    const hourlyRemaining = this.config.hourlyLimit - state.hourlyCalls;
-
-    // Check if we're over limits
-    const allowed = dailyRemaining >= 0 && hourlyRemaining >= 0;
-
-    // Check if we should alert
-    const dailyPercentage = state.dailyCalls / this.config.dailyLimit;
-    const shouldAlert = dailyPercentage >= this.config.alertThreshold;
-
-    // Save state
-    await this.kv.put(this.key, JSON.stringify(state), {
-      expirationTtl: 86400 * 2, // 2 days
+    await this.ensureConfigured();
+    const stub = this.getStub();
+    
+    // Call the Durable Object's atomic increment operation
+    const response = await stub.fetch('https://quota.local/increment', {
+      method: 'POST',
     });
-
-    if (!allowed) {
-      console.warn(
-        `⚠️ [Quota] Limit exceeded! Daily: ${state.dailyCalls}/${this.config.dailyLimit}, ` +
-          `Hourly: ${state.hourlyCalls}/${this.config.hourlyLimit}`
-      );
-    } else if (shouldAlert) {
-      console.warn(
-        `⚠️ [Quota] Approaching limit! Daily usage: ${(dailyPercentage * 100).toFixed(1)}%`
-      );
+    
+    if (!response.ok) {
+      throw new Error(`Failed to record quota call: ${response.statusText}`);
     }
-
+    
+    const result = await response.json<IncrementResponse>();
+    
+    // Return the authoritative response from the Durable Object
     return {
-      allowed,
-      dailyRemaining: Math.max(0, dailyRemaining),
-      hourlyRemaining: Math.max(0, hourlyRemaining),
-      shouldAlert,
+      allowed: result.allowed,
+      dailyRemaining: result.dailyRemaining,
+      hourlyRemaining: result.hourlyRemaining,
+      shouldAlert: result.shouldAlert,
     };
   }
 
@@ -185,9 +174,9 @@ export class QuotaManager {
  * Create a quota manager instance
  */
 export const createQuotaManager = (
-  kv: KVNamespace,
+  durableObjectNamespace: DurableObjectNamespace,
   config?: Partial<QuotaConfig>
 ): QuotaManager => {
-  return new QuotaManager(kv, config);
+  return new QuotaManager(durableObjectNamespace, config);
 };
 

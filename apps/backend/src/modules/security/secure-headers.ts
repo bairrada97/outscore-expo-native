@@ -38,11 +38,10 @@ interface SecureHeadersConfig {
 /**
  * Default secure headers configuration
  */
-const defaultConfig: Required<SecureHeadersConfig> = {
+const defaultConfig: Omit<Required<SecureHeadersConfig>, 'xssProtection'> = {
   hsts: 'max-age=63072000; includeSubDomains; preload',
   contentTypeOptions: 'nosniff',
   frameOptions: 'DENY',
-  xssProtection: '1; mode=block',
   contentSecurityPolicy: "default-src 'self'",
   referrerPolicy: 'strict-origin-when-cross-origin',
 };

@@ -197,25 +197,249 @@ Date Transition Management (Critical - Single Reference Per Date):
 
 Principle: Each date exists in only ONE folder at a time (future → today → historical)
 Known Issue: The inspiration folder's handleFixturesDateTransition had duplication bugs - needs refactoring
-Improved Transition Logic (to be implemented):
-Atomic Operations: Use transaction-like pattern to ensure move operations complete fully
-Verification Steps: After each move, verify source file is deleted and destination exists
-Retry Logic: If move fails, retry with exponential backoff
-Cleanup Pass: Run periodic cleanup to detect and fix any duplicates
-Lock Mechanism: Use KV to track in-progress transitions and prevent race conditions
-Transition Flow:
-When date moves future/ → today/: 
-Copy to today folder
-Verify copy succeeded
-Delete from future folder
-Verify deletion succeeded
-Clean up KV entries
-When date moves today/ → historical/: Same atomic pattern
-Check for duplicates before and after transitions
-KV Cleanup: Remove KV entries atomically when moving between folders
-Edge Cache: Invalidate all timezone-specific entries for transitioning dates
-Error Handling: If transition fails, log error and retry on next operation
-Storage Layers Affected: R2 (move files), KV (delete old keys), Edge Cache (invalidate)
+
+Implementation Pattern: KV-Based Distributed Lock with Idempotency
+
+1. Distributed Lock Pattern (KV-based):
+   - Lock Key Format: `transition:lock:{date}:{fromLocation}:{toLocation}`
+   - Lock Value: `{workerId}:{timestamp}` (identifies lock holder)
+   - Lock TTL: 300s (5 minutes) - auto-expires if worker crashes
+   - Check-Before-Set Semantics:
+     ```
+     currentLock = await kv.get(lockKey)
+     if (currentLock !== null) {
+       // Another worker is handling this transition
+       return { success: false, reason: 'LOCKED' }
+     }
+     await kv.put(lockKey, lockValue, { expirationTtl: 300 })
+     ```
+
+2. Idempotency Key Pattern:
+   - Idempotency Key Format: `transition:op:{date}:{fromLocation}:{toLocation}:{operationId}`
+   - Operation ID: UUID v4 or timestamp-based unique identifier
+   - Value: `{status: 'in_progress'|'completed'|'failed', startedAt, completedAt, error?}`
+   - Purpose: Prevent duplicate transitions if same operation retries
+   - Check before starting: If idempotency key exists with status 'completed', skip operation
+
+3. Atomic Transition Operation Steps (Pseudo-code):
+
+   ```
+   async function transitionDate(date, fromLocation, toLocation, r2Bucket, kv, edgeCache) {
+     const lockKey = `transition:lock:${date}:${fromLocation}:${toLocation}`
+     const operationId = generateUUID()
+     const idempotencyKey = `transition:op:${date}:${fromLocation}:${toLocation}:${operationId}`
+     const workerId = `${env.WORKER_ID || 'unknown'}:${Date.now()}`
+     const maxRetries = 3
+     let attempt = 0
+     
+     // Step 1: Acquire distributed lock (with check-before-set)
+     const currentLock = await kv.get(lockKey)
+     if (currentLock !== null) {
+       return { success: false, reason: 'LOCKED', message: 'Another worker is handling this transition' }
+     }
+     
+     try {
+       await kv.put(lockKey, workerId, { expirationTtl: 300 })
+       
+       // Step 2: Check idempotency key (prevent duplicate operations)
+       const existingOp = await kv.get(idempotencyKey)
+       if (existingOp?.status === 'completed') {
+         return { success: true, reason: 'IDEMPOTENT', message: 'Operation already completed' }
+       }
+       
+       // Step 3: Create idempotency key with 'in_progress' status
+       await kv.put(idempotencyKey, JSON.stringify({
+         status: 'in_progress',
+         startedAt: new Date().toISOString(),
+         workerId
+       }), { expirationTtl: 600 })
+       
+       // Step 4: HEAD-verify source exists before copy
+       const sourceKey = `${fromLocation}/fixtures-${date}.json`
+       const sourceHead = await r2Bucket.head(sourceKey)
+       if (!sourceHead) {
+         throw new Error(`Source ${sourceKey} does not exist`)
+       }
+       
+       // Step 5: Perform R2 copy operation
+       const destKey = `${toLocation}/fixtures-${date}.json`
+       const sourceObject = await r2Bucket.get(sourceKey)
+       if (!sourceObject) {
+         throw new Error(`Failed to read source ${sourceKey}`)
+       }
+       
+       const sourceData = await sourceObject.text()
+       const sourceMetadata = sourceObject.customMetadata || {}
+       
+       await r2Bucket.put(destKey, sourceData, {
+         httpMetadata: { contentType: 'application/json' },
+         customMetadata: {
+           ...sourceMetadata,
+           movedAt: new Date().toISOString(),
+           originalKey: sourceKey,
+           transitionId: operationId
+         }
+       })
+       
+       // Step 6: HEAD-verify destination exists after copy
+       const destHead = await r2Bucket.head(destKey)
+       if (!destHead) {
+         throw new Error(`Destination ${destKey} was not created`)
+       }
+       
+       // Step 7: HEAD-verify source still exists before delete
+       const sourceHeadBeforeDelete = await r2Bucket.head(sourceKey)
+       if (!sourceHeadBeforeDelete) {
+         // Source was already deleted - rollback: delete destination
+         await r2Bucket.delete(destKey)
+         throw new Error(`Source ${sourceKey} was deleted during transition`)
+       }
+       
+       // Step 8: Delete source
+       await r2Bucket.delete(sourceKey)
+       
+       // Step 9: Verify source deletion succeeded
+       const sourceHeadAfterDelete = await r2Bucket.head(sourceKey)
+       if (sourceHeadAfterDelete) {
+         // Deletion failed - rollback: delete destination, retry source deletion
+         await r2Bucket.delete(destKey)
+         await r2Bucket.delete(sourceKey) // Retry deletion
+         throw new Error(`Source ${sourceKey} still exists after delete`)
+       }
+       
+       // Step 10: Clean up KV entries for old location
+       await deleteKVEntriesForDate(kv, date) // Removes fixtures:{date} and fixtures:{date}:live
+       
+       // Step 11: Invalidate Edge Cache for all timezones
+       const commonTimezones = ['UTC', 'Europe/Lisbon', 'America/New_York', 'Asia/Tokyo', ...]
+       await invalidateEdgeCacheForDate(date, commonTimezones)
+       
+       // Step 12: Update idempotency key to 'completed'
+       await kv.put(idempotencyKey, JSON.stringify({
+         status: 'completed',
+         startedAt: new Date().toISOString(),
+         completedAt: new Date().toISOString(),
+         workerId
+       }), { expirationTtl: 86400 }) // Keep for 24h for audit
+       
+       // Step 13: Release lock (atomic cleanup)
+       await kv.delete(lockKey)
+       
+       return { success: true, operationId }
+       
+     } catch (error) {
+       // Compensating Rollback Actions:
+       try {
+         // Rollback 1: If copy succeeded but delete failed, delete destination
+         const destHead = await r2Bucket.head(destKey)
+         if (destHead) {
+           await r2Bucket.delete(destKey)
+           console.log(`[ROLLBACK] Deleted destination ${destKey} due to failed transition`)
+         }
+         
+         // Rollback 2: Mark operation as failed in idempotency key
+         await kv.put(idempotencyKey, JSON.stringify({
+           status: 'failed',
+           startedAt: new Date().toISOString(),
+           failedAt: new Date().toISOString(),
+           error: error.message,
+           workerId
+         }), { expirationTtl: 86400 })
+         
+         // Rollback 3: Schedule retry (store failed operation for later retry)
+         const retryKey = `transition:retry:${date}:${fromLocation}:${toLocation}`
+         await kv.put(retryKey, JSON.stringify({
+           date,
+           fromLocation,
+           toLocation,
+           operationId,
+           failedAt: new Date().toISOString(),
+           attempt: attempt + 1,
+           maxRetries
+         }), { expirationTtl: 3600 }) // Retry within 1 hour
+         
+       } finally {
+         // Always release lock
+         await kv.delete(lockKey)
+       }
+       
+       // Exponential backoff retry on transient failures
+       if (isTransientError(error) && attempt < maxRetries) {
+         const backoffMs = Math.min(1000 * Math.pow(2, attempt), 30000) // Max 30s
+         await sleep(backoffMs)
+         attempt++
+         return transitionDate(date, fromLocation, toLocation, r2Bucket, kv, edgeCache) // Retry
+       }
+       
+       throw error
+     }
+   }
+   
+   // Helper: Check if error is transient (network, timeout, rate limit)
+   function isTransientError(error) {
+     return error.message.includes('timeout') ||
+            error.message.includes('network') ||
+            error.message.includes('rate limit') ||
+            error.code === 'ECONNRESET'
+   }
+   ```
+
+4. Retry Mechanism with Exponential Backoff:
+   - Initial delay: 1s
+   - Backoff multiplier: 2x per attempt
+   - Max delay: 30s
+   - Max retries: 3 attempts
+   - Only retry on transient errors (network, timeout, rate limits)
+   - Permanent errors (file not found, permission denied) fail immediately
+
+5. Compensating Rollback Actions:
+   - If copy succeeds but delete fails:
+     → Delete newly created destination blob
+     → Mark operation as failed in idempotency key
+     → Schedule retry for later
+   - If copy fails:
+     → No rollback needed (destination doesn't exist)
+     → Mark operation as failed
+     → Retry with backoff
+   - If verification fails:
+     → Rollback destination if it exists
+     → Retry entire operation
+
+6. Atomic Cleanup Pattern:
+   - After successful transition:
+     → Delete lock key (KV)
+     → Update idempotency key to 'completed' (KV)
+     → Delete old location KV entries (fixtures:{date}, fixtures:{date}:live)
+   - Use KV batch operations where possible for atomicity
+   - If cleanup fails, log error but don't fail operation (idempotency key tracks completion)
+
+7. Edge Cache Invalidation:
+   - After successful R2 transition:
+     → Generate edge cache keys for all common timezones
+     → Delete both live and non-live entries per timezone
+     → Pattern: `fixtures:{date}:{timezone}:{live}`
+   - Common timezones to invalidate: UTC, Europe/Lisbon, America/New_York, Asia/Tokyo, Europe/London, etc.
+   - Use parallel invalidation for performance
+
+8. Verification Requirements:
+   - HEAD check source before copy (prevents copying non-existent files)
+   - HEAD check destination after copy (verifies copy succeeded)
+   - HEAD check source before delete (ensures source still exists)
+   - HEAD check source after delete (verifies deletion succeeded)
+   - All HEAD checks are mandatory - fail fast if verification fails
+
+9. Storage Layers Affected:
+   - R2: Move files between folders (future → today → historical)
+   - KV: Delete old location keys, manage locks and idempotency keys
+   - Edge Cache: Invalidate all timezone-specific entries for transitioning date
+
+10. Error Handling:
+    - Transient errors: Retry with exponential backoff (max 3 attempts)
+    - Permanent errors: Fail immediately, mark as failed, schedule manual review
+    - Lock conflicts: Return immediately (another worker is handling it)
+    - Idempotent operations: Return success if already completed
+
+ADR Note: This implementation pattern ensures atomicity through distributed locks and idempotency keys. The pattern is designed to handle concurrent transitions across multiple Cloudflare Workers while preventing race conditions and ensuring data consistency. A minimal runnable example PR should implement the KV lock, idempotency key pattern, HEAD verification, retry/backoff, rollback compensations, and cleanup for reviewer validation.
 Request Deduplication:
 
 Track in-flight requests by cache key
