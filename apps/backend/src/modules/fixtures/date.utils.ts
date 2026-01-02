@@ -62,8 +62,9 @@ export const getUtcDateInfo = (date: string): {
 
 
 export const getAdjacentDate = (date: string, offsetDays: number): string => {
-  const dateObj = new Date(date);
-  dateObj.setDate(dateObj.getDate() + offsetDays);
+  // Parse yyyy-MM-dd as UTC to avoid timezone issues
+  const [year, month, day] = date.split('-').map(Number);
+  const dateObj = new Date(Date.UTC(year, month - 1, day + offsetDays));
   return format(dateObj, 'yyyy-MM-dd');
 };
 

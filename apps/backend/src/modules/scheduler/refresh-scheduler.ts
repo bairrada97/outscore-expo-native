@@ -1,4 +1,3 @@
-import { format } from 'date-fns';
 import { getFootballApiFixtures } from '../../pkg/util/football-api';
 import {
   type CacheEnv,
@@ -6,6 +5,7 @@ import {
   cacheSetEdgeOnly,
   checkFixturesDateTransition,
   getCurrentUtcDate,
+  getTomorrowUtcDate,
 } from '../cache';
 import { filterFixturesByTimezone, formatFixtures } from '../fixtures';
 import { commonTimezones } from '../timezones';
@@ -119,10 +119,7 @@ export const refreshLiveFixtures = async (env: SchedulerEnv): Promise<void> => {
  * Called once daily to warm the cache
  */
 export const prefetchTomorrowFixtures = async (env: SchedulerEnv): Promise<void> => {
-  const today = new Date();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = format(tomorrow, 'yyyy-MM-dd');
+  const tomorrowStr = getTomorrowUtcDate();
 
   console.log(`📅 [Scheduler] Pre-fetching fixtures for tomorrow (${tomorrowStr})`);
 

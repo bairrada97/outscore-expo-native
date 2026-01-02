@@ -32,19 +32,22 @@ interface RateLimiterConfig {
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 
 /**
- * Clean up expired entries periodically
+ * Maximum entries to prevent unbounded memory growth
+ * When exceeded, triggers a cleanup of expired entries
  */
-const cleanupExpiredEntries = () => {
-  const now = Date.now();
+const MAX_ENTRIES = 10000;
+
+/**
+ * Clean up expired entries from the store
+ * Called lazily when the store exceeds MAX_ENTRIES
+ */
+const cleanupExpiredEntries = (now: number): void => {
   for (const [rateLimitKey, rateLimitEntry] of rateLimitStore.entries()) {
     if (rateLimitEntry.resetAt < now) {
       rateLimitStore.delete(rateLimitKey);
     }
   }
 };
-
-// Run cleanup every minute
-setInterval(cleanupExpiredEntries, 60000);
 
 /**
  * Get client IP from request
@@ -66,7 +69,7 @@ const getClientIp = (context: Context): string => {
 };
 
 /**
- * Rate limiter middleware using sliding window algorithm
+ * Rate limiter middleware using fixed window algorithm
  */
 export const rateLimiter = (config: RateLimiterConfig): MiddlewareHandler => {
   const { limit, windowSec, keyGenerator, skip } = config;
@@ -81,6 +84,11 @@ export const rateLimiter = (config: RateLimiterConfig): MiddlewareHandler => {
 
     const key = keyGenerator ? keyGenerator(context) : getClientIp(context);
     const now = Date.now();
+
+    // Lazy cleanup: remove expired entries when store exceeds max size
+    if (rateLimitStore.size > MAX_ENTRIES) {
+      cleanupExpiredEntries(now);
+    }
 
     // Get or create rate limit entry
     let entry = rateLimitStore.get(key);

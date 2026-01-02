@@ -10,7 +10,7 @@ import { invalidateEdgeCacheForDate } from './edge-cache';
 import { deleteKVEntriesForDate } from './kv-provider';
 import type { R2CacheProvider } from './provider.interface';
 import { cleanupR2Duplicates, createR2CacheProvider } from './r2-provider';
-import type { CacheLocation } from './types';
+import { CacheLocation } from './types';
 
 export interface FixturesCacheEnv {
   FOOTBALL_KV: KVNamespace;
@@ -29,14 +29,14 @@ export const getFixturesCacheLocation = (date: string): CacheLocation => {
   const today = getCurrentUtcDate();
 
   if (date === today) {
-    return 'today' as CacheLocation;
+    return CacheLocation.TODAY;
   }
 
   if (date < today) {
-    return 'historical' as CacheLocation;
+    return CacheLocation.HISTORICAL;
   }
 
-  return 'future' as CacheLocation;
+  return CacheLocation.FUTURE;
 };
 
 /**
@@ -118,6 +118,8 @@ const ensureInFuture = async (
 
 /**
  * Handle date transition - move fixtures files between folders
+ * Each step is wrapped in try-catch to ensure all steps are attempted
+ * even if some fail, preventing inconsistent state
  */
 export const handleFixturesDateTransition = async (
   env: FixturesCacheEnv,
@@ -127,30 +129,86 @@ export const handleFixturesDateTransition = async (
   console.log(`🔄 [Fixtures] Handling date transition from ${oldDate} to ${newDate}`);
 
   const r2Provider = createR2CacheProvider(env.FOOTBALL_CACHE);
-  const tomorrow = format(new Date(new Date(newDate).getTime() + 86400000), 'yyyy-MM-dd');
+  // Parse newDate as UTC to calculate tomorrow
+  const [year, month, day] = newDate.split('-').map(Number);
+  const tomorrow = format(new Date(Date.UTC(year, month - 1, day + 1)), 'yyyy-MM-dd');
+
+  const errors: Array<{ step: string; error: unknown }> = [];
 
   // 1. Move old "today" to "historical"
-  await moveToHistorical(r2Provider, oldDate);
+  try {
+    await moveToHistorical(r2Provider, oldDate);
+  } catch (error) {
+    console.error(`❌ [Fixtures] Failed to move ${oldDate} to historical:`, error);
+    errors.push({ step: 'moveToHistorical', error });
+  }
 
   // 2. Move "future" today to "today"
-  await moveFromFuture(r2Provider, newDate);
+  try {
+    await moveFromFuture(r2Provider, newDate);
+  } catch (error) {
+    console.error(`❌ [Fixtures] Failed to move ${newDate} from future:`, error);
+    errors.push({ step: 'moveFromFuture', error });
+  }
 
   // 3. Ensure tomorrow is in "future" folder
-  await ensureInFuture(r2Provider, tomorrow);
+  try {
+    await ensureInFuture(r2Provider, tomorrow);
+  } catch (error) {
+    console.error(`❌ [Fixtures] Failed to ensure ${tomorrow} is in future:`, error);
+    errors.push({ step: 'ensureInFuture', error });
+  }
 
   // 4. Clean up any duplicates
-  await cleanupR2Duplicates(env.FOOTBALL_CACHE, oldDate, 'historical');
-  await cleanupR2Duplicates(env.FOOTBALL_CACHE, newDate, 'today');
-  await cleanupR2Duplicates(env.FOOTBALL_CACHE, tomorrow, 'future');
+  try {
+    await cleanupR2Duplicates(env.FOOTBALL_CACHE, oldDate, 'historical');
+  } catch (error) {
+    console.error(`❌ [Fixtures] Failed to cleanup duplicates for ${oldDate}:`, error);
+    errors.push({ step: 'cleanupR2Duplicates-oldDate', error });
+  }
+
+  try {
+    await cleanupR2Duplicates(env.FOOTBALL_CACHE, newDate, 'today');
+  } catch (error) {
+    console.error(`❌ [Fixtures] Failed to cleanup duplicates for ${newDate}:`, error);
+    errors.push({ step: 'cleanupR2Duplicates-newDate', error });
+  }
+
+  try {
+    await cleanupR2Duplicates(env.FOOTBALL_CACHE, tomorrow, 'future');
+  } catch (error) {
+    console.error(`❌ [Fixtures] Failed to cleanup duplicates for ${tomorrow}:`, error);
+    errors.push({ step: 'cleanupR2Duplicates-tomorrow', error });
+  }
 
   // 5. Clean up KV entries for old date
-  await deleteKVEntriesForDate(env.FOOTBALL_KV, oldDate);
+  try {
+    await deleteKVEntriesForDate(env.FOOTBALL_KV, oldDate);
+  } catch (error) {
+    console.error(`❌ [Fixtures] Failed to delete KV entries for ${oldDate}:`, error);
+    errors.push({ step: 'deleteKVEntriesForDate', error });
+  }
 
   // 6. Invalidate Edge Cache for transitioning dates
-  await invalidateEdgeCacheForDate(oldDate, commonTimezones);
-  await invalidateEdgeCacheForDate(newDate, commonTimezones);
+  try {
+    await invalidateEdgeCacheForDate(oldDate, commonTimezones);
+  } catch (error) {
+    console.error(`❌ [Fixtures] Failed to invalidate edge cache for ${oldDate}:`, error);
+    errors.push({ step: 'invalidateEdgeCacheForDate-oldDate', error });
+  }
 
-  console.log(`✅ [Fixtures] Date transition completed`);
+  try {
+    await invalidateEdgeCacheForDate(newDate, commonTimezones);
+  } catch (error) {
+    console.error(`❌ [Fixtures] Failed to invalidate edge cache for ${newDate}:`, error);
+    errors.push({ step: 'invalidateEdgeCacheForDate-newDate', error });
+  }
+
+  if (errors.length > 0) {
+    console.warn(`⚠️ [Fixtures] Date transition completed with ${errors.length} error(s)`);
+  } else {
+    console.log(`✅ [Fixtures] Date transition completed successfully`);
+  }
 };
 
 /**

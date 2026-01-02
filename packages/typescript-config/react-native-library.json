@@ -4,7 +4,7 @@
   "compilerOptions": {
     "allowJs": true,
     "jsx": "react",
-    "lib": ["DOM", "ESNext"],
+    "lib": ["ESNext"],
     "noEmit": true,
     "resolveJsonModule": true,
     "target": "ESNext"

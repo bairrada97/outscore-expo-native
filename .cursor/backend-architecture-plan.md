@@ -225,7 +225,7 @@ Prevent duplicate API calls
 Inbound Rate Limiting:
 
 Cloudflare Rate Limiter: 100 requests/60s per IP (primary defense)
-Application-level: hono-rate-limiter with sliding window
+Application-level: hono-rate-limiter with fixed window
 Per-endpoint limits: /fixtures (60/min), /fixtures?live=all (30/min)
 Rate limit headers: X-RateLimit-Limit, X-RateLimit-Remaining, Retry-After
 Store rate limit state in KV for distributed workers

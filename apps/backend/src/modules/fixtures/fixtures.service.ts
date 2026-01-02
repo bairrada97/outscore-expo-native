@@ -76,51 +76,36 @@ export const fixturesService = {
         };
       }
 
-      // 2. Check KV/R2 for raw UTC data
-      let rawFixtures: Fixture[] | null = null;
-      let source = 'API';
+      // 2. Determine which dates to fetch based on timezone
+      // Non-UTC timezones may need adjacent dates to show all fixtures for the local date
+      let datesToFetch: string[] = [requestedDate];
+      let source = 'KV';
 
-      const rawParams = { date: requestedDate, live: 'false' };
-      const rawResult = await cacheGet<Fixture[]>(env, 'fixtures', rawParams);
-
-      if (rawResult.data && rawResult.source !== 'none' && rawResult.source !== 'edge') {
-        rawFixtures = rawResult.data;
-        source = rawResult.source === 'kv' ? 'KV' : 'R2';
-        console.log(`✅ [Fixtures] ${source} hit for ${requestedDate}`);
+      if (timezone !== 'UTC') {
+        const currentHour = getCurrentHourInTimezone(timezone);
+        const strategy = getDatesToFetch(requestedDate, timezone, currentHour);
+        datesToFetch = strategy.datesToFetch;
+        console.log(`🌍 [Fixtures] ${strategy.reason}`);
       }
 
-      // 3. For non-UTC timezones, we may need adjacent dates
-      const needsAdjacentDates = timezone !== 'UTC' && !rawFixtures;
-      let allFixtures: Fixture[] = [];
+      console.log(`🗓️ [Fixtures] Fetching dates: ${datesToFetch.join(', ')}`);
 
-      if (needsAdjacentDates || !rawFixtures) {
-        // Determine which dates to fetch
-        let datesToFetch: string[] = [requestedDate];
+      // 3. Fetch all required dates (will use cache when available)
+      const fetchResults = await Promise.all(
+        datesToFetch.map((fetchDate) =>
+          this.fetchDateFixtures({ date: fetchDate, env, ctx })
+        )
+      );
 
-        if (timezone !== 'UTC') {
-          const currentHour = getCurrentHourInTimezone(timezone);
-          const strategy = getDatesToFetch(requestedDate, timezone, currentHour);
-          datesToFetch = strategy.datesToFetch;
-          console.log(`🌍 [Fixtures] ${strategy.reason}`);
-        }
+      // Combine results
+      let allFixtures = fetchResults.flatMap((result) => result.fixtures);
+      source = fetchResults.some((r) => r.source === 'API')
+        ? 'API'
+        : fetchResults.some((r) => r.source === 'Stale Cache')
+          ? 'Stale Cache'
+          : fetchResults[0]?.source ?? 'KV';
 
-        console.log(`🗓️ [Fixtures] Fetching dates: ${datesToFetch.join(', ')}`);
-
-        // Fetch all dates
-        const fetchResults = await Promise.all(
-          datesToFetch.map((fetchDate) =>
-            this.fetchDateFixtures({ date: fetchDate, env, ctx })
-          )
-        );
-
-        // Combine results
-        allFixtures = fetchResults.flatMap((result) => result.fixtures);
-        source = fetchResults.some((fetchResult) => fetchResult.source === 'API') ? 'API' : source;
-
-        console.log(`📊 [Fixtures] Total fixtures: ${allFixtures.length}`);
-      } else {
-        allFixtures = rawFixtures;
-      }
+      console.log(`📊 [Fixtures] Total fixtures: ${allFixtures.length}`)
 
       // 4. Save original count before filtering
       const originalMatchCount = allFixtures.length;
@@ -189,42 +174,58 @@ export const fixturesService = {
 
       // 2. Check KV/R2 for raw live data
       let rawFixtures: Fixture[] | null = null;
+      let staleFixtures: Fixture[] | null = null;
       let source = 'API';
 
       const rawParams = { date: today, live: 'true' };
       const rawResult = await cacheGet<Fixture[]>(env, 'fixtures', rawParams);
 
       if (rawResult.data && rawResult.source !== 'none' && rawResult.source !== 'edge') {
-        rawFixtures = rawResult.data;
-        source = rawResult.source === 'kv' ? 'KV' : 'R2';
+        const cachedSource = rawResult.source === 'kv' ? 'KV' : 'R2';
 
         // Check if data is stale
         if (!isStale(rawResult.meta, 'fixtures', rawParams)) {
+          rawFixtures = rawResult.data;
+          source = cachedSource;
           console.log(`✅ [Fixtures] ${source} hit for live`);
         } else {
-          console.log(`⏳ [Fixtures] ${source} data is stale, fetching fresh`);
-          rawFixtures = null;
+          // Keep stale data as fallback
+          staleFixtures = rawResult.data;
+          console.log(`⏳ [Fixtures] ${cachedSource} data is stale, fetching fresh`);
         }
       }
 
       // 3. Fetch from API if needed
       if (!rawFixtures) {
         console.log(`🌐 [Fixtures] Fetching live from API`);
-        const response = await getFootballApiFixtures(
-          today,
-          'live',
-          env.FOOTBALL_API_URL,
-          env.RAPIDAPI_KEY
-        );
-        rawFixtures = response.response;
-        source = 'API';
+        try {
+          const response = await getFootballApiFixtures(
+            today,
+            'live',
+            env.FOOTBALL_API_URL,
+            env.RAPIDAPI_KEY
+          );
+          rawFixtures = response.response;
+          source = 'API';
 
-        // Cache raw data (non-blocking)
-        ctx.waitUntil(
-          cacheSet(env, 'fixtures', rawParams, rawFixtures).catch((err) =>
-            console.error(`❌ [Fixtures] Failed to cache live data:`, err)
-          )
-        );
+          // Cache raw data (non-blocking)
+          ctx.waitUntil(
+            cacheSet(env, 'fixtures', rawParams, rawFixtures).catch((err) =>
+              console.error(`❌ [Fixtures] Failed to cache live data:`, err)
+            )
+          );
+        } catch (error) {
+          console.error(`❌ [Fixtures] API fetch failed for live:`, error);
+
+          // Fall back to stale data if available
+          if (staleFixtures) {
+            console.log(`⚠️ [Fixtures] Using stale data as fallback for live`);
+            rawFixtures = staleFixtures;
+            source = 'Stale Cache';
+          } else {
+            throw error;
+          }
+        }
       }
 
       // 4. Save original count
@@ -270,6 +271,7 @@ export const fixturesService = {
 
     // Check cache first (KV/R2 for raw UTC data)
     const cacheResult = await cacheGet<Fixture[]>(env, 'fixtures', params);
+    let staleFixtures: Fixture[] | null = null;
 
     if (cacheResult.data && cacheResult.source !== 'none' && cacheResult.source !== 'edge') {
       // Check if stale
@@ -279,29 +281,46 @@ export const fixturesService = {
           source: cacheResult.source === 'kv' ? 'KV' : 'R2',
         };
       }
+      // Keep stale data as fallback
+      staleFixtures = cacheResult.data;
       console.log(`⏳ [Fixtures] Cache data for ${date} is stale`);
     }
 
     // Fetch from API
     console.log(`🌐 [Fixtures] Fetching ${date} from API`);
-    const response = await getFootballApiFixtures(
-      date,
-      undefined,
-      env.FOOTBALL_API_URL,
-      env.RAPIDAPI_KEY
-    );
+    try {
+      const response = await getFootballApiFixtures(
+        date,
+        undefined,
+        env.FOOTBALL_API_URL,
+        env.RAPIDAPI_KEY
+      );
 
-    // Cache raw data (non-blocking)
-    ctx.waitUntil(
-      cacheSet(env, 'fixtures', params, response.response).catch((err) =>
-        console.error(`❌ [Fixtures] Failed to cache ${date}:`, err)
-      )
-    );
+      // Cache raw data (non-blocking)
+      ctx.waitUntil(
+        cacheSet(env, 'fixtures', params, response.response).catch((err) =>
+          console.error(`❌ [Fixtures] Failed to cache ${date}:`, err)
+        )
+      );
 
-    return {
-      fixtures: response.response,
-      source: 'API',
-    };
+      return {
+        fixtures: response.response,
+        source: 'API',
+      };
+    } catch (error) {
+      console.error(`❌ [Fixtures] API fetch failed for ${date}:`, error);
+
+      // Fall back to stale data if available
+      if (staleFixtures) {
+        console.log(`⚠️ [Fixtures] Using stale data as fallback for ${date}`);
+        return {
+          fixtures: staleFixtures,
+          source: 'Stale Cache',
+        };
+      }
+
+      throw error;
+    }
   },
 
   /**
