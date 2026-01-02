@@ -3,10 +3,10 @@
   "extends": "./base.json",
   "compilerOptions": {
     "allowJs": true,
-    "jsx": "react",
-    "lib": ["ESNext"],
+    "jsx": "react-native",
+    "lib": ["ES2022"],
     "noEmit": true,
     "resolveJsonModule": true,
-    "target": "ESNext"
+    "target": "ES2022"
   }
 }

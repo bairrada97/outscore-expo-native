@@ -100,11 +100,26 @@ export class QuotaManager {
   }
 
   /**
-   * Record an API call
+   * Record an API call (RECOMMENDED)
    * 
-   * Atomically increments counters via the Durable Object and returns
-   * the authoritative quota status. This ensures no lost increments
-   * under concurrent requests.
+   * Atomically checks quota availability AND reserves capacity in a single
+   * operation via the Durable Object. This prevents TOCTOU race conditions
+   * that can occur with canMakeCall() + recordCall() patterns.
+   * 
+   * Always use this method instead of canMakeCall() for quota checking.
+   * The returned `allowed` field indicates whether the call was permitted.
+   * 
+   * Example:
+   * ```typescript
+   * const result = await quotaManager.recordCall();
+   * if (!result.allowed) {
+   *   throw new Error('Quota exceeded');
+   * }
+   * // Proceed with API call
+   * ```
+   * 
+   * This ensures no lost increments under concurrent requests and prevents
+   * quota overruns from race conditions.
    */
   async recordCall(): Promise<{
     allowed: boolean;
@@ -160,6 +175,29 @@ export class QuotaManager {
 
   /**
    * Check if we can make an API call (without recording)
+   * 
+   * ⚠️ WARNING: TOCTOU Race Condition
+   * 
+   * This method has a Time-Of-Check-Time-Of-Use (TOCTOU) race condition:
+   * - It checks quota state at time T1
+   * - Between T1 and when you call recordCall(), other concurrent requests
+   *   could exhaust the quota
+   * - This can lead to quota overruns
+   * 
+   * RECOMMENDED: Always use recordCall() instead, which atomically checks
+   * and reserves quota in a single operation. The returned `allowed` field
+   * tells you if the call was permitted.
+   * 
+   * Example:
+   * ```typescript
+   * const result = await quotaManager.recordCall();
+   * if (!result.allowed) {
+   *   // Handle quota exceeded
+   * }
+   * ```
+   * 
+   * @deprecated Use recordCall() instead for atomic quota checking and reservation
+   * @returns Promise<boolean> - true if quota appears available (but may change before use)
    */
   async canMakeCall(): Promise<boolean> {
     const state = await this.getState();

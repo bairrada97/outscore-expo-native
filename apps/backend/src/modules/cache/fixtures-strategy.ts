@@ -1,4 +1,4 @@
-import { format } from 'date-fns';
+import { addDays, format, parseISO } from 'date-fns';
 import { commonTimezones } from '../timezones';
 import {
   getCurrentUtcDate,
@@ -129,9 +129,9 @@ export const handleFixturesDateTransition = async (
   console.log(`🔄 [Fixtures] Handling date transition from ${oldDate} to ${newDate}`);
 
   const r2Provider = createR2CacheProvider(env.FOOTBALL_CACHE);
-  // Parse newDate as UTC to calculate tomorrow
-  const [year, month, day] = newDate.split('-').map(Number);
-  const tomorrow = format(new Date(Date.UTC(year, month - 1, day + 1)), 'yyyy-MM-dd');
+  // Parse newDate and calculate tomorrow using date-fns (handles month/year boundaries correctly)
+  const date = parseISO(newDate);
+  const tomorrow = format(addDays(date, 1), 'yyyy-MM-dd');
 
   const errors: Array<{ step: string; error: unknown }> = [];
 
