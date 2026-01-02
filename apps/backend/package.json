@@ -1,0 +1,25 @@
+{
+  "name": "outscore-api",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "dependencies": {
+    "@hono/zod-validator": "^0.4.3",
+    "@outscore/shared-types": "*",
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
+    "hono": "^4.7.4",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250319.0",
+    "typescript": "^5.8.2",
+    "wrangler": "^4.2.0"
+  }
+}
+

@@ -1,0 +1,20 @@
+{
+  "name": "@outscore/shared-types",
+  "version": "1.0.0",
+  "description": "Shared types for Outscore application",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": [
+    "types",
+    "outscore"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}

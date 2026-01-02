@@ -1,0 +1,55 @@
+name = "outscore-api"
+main = "src/index.ts"
+compatibility_date = "2025-03-07"
+compatibility_flags = ["nodejs_compat"]
+
+# R2 bucket for storing match data (cold storage)
+[[r2_buckets]]
+binding = "FOOTBALL_CACHE"
+bucket_name = "outscore-match-data"
+preview_bucket_name = "outscore-match-data-dev"
+
+# KV namespace for hot data (today's matches)
+[[kv_namespaces]]
+binding = "FOOTBALL_KV"
+id = "your-kv-namespace-id"
+preview_id = "your-preview-kv-namespace-id"
+
+# Durable Object for atomic quota tracking
+[[durable_objects.bindings]]
+name = "QUOTA_DO"
+class_name = "QuotaDurableObject"
+
+# Durable Object for 15-second fixture refresh scheduling
+[[durable_objects.bindings]]
+name = "REFRESH_SCHEDULER_DO"
+class_name = "RefreshSchedulerDurableObject"
+
+# Durable Object migrations (required for DO classes)
+[[migrations]]
+tag = "v1"
+new_classes = ["QuotaDurableObject", "RefreshSchedulerDurableObject"]
+
+# Environment variables
+[vars]
+FOOTBALL_API_URL = "https://api-football-v1.p.rapidapi.com/v3"
+
+# Rate limiting configuration
+[[ratelimits]]
+name = "OUTSCORE_RATE_LIMITER"
+namespace_id = "1001"
+
+[ratelimits.simple]
+limit = 100
+period = 60
+
+# Scheduled triggers - cron acts as failsafe to ensure DO alarm chain is running
+# The actual 15-second refresh happens via Durable Object alarms
+[triggers]
+crons = ["* * * * *"]  # Every minute (failsafe to restart DO alarm chain if needed)
+
+# Enable observability
+[observability]
+enabled = true
+head_sampling_rate = 0.1
+
