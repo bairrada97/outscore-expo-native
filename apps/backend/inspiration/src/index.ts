@@ -1,12 +1,10 @@
-import { Hono } from 'hono';
-import { cors } from 'hono/cors';
 import { zValidator } from '@hono/zod-validator';
+import { Hono } from 'hono';
 import { secureHeaders } from 'hono/secure-headers';
-import { rateLimiter } from 'hono-rate-limiter';
 
-import { z } from 'zod';
 import { format } from 'date-fns';
-import { isValidTimezone, fixturesService, createR2CacheProvider } from './modules';
+import { z } from 'zod';
+import { fixturesService, isValidTimezone } from './modules';
 import { getUtcDateInfo } from './modules/fixtures/date.utils';
 import { botProtection } from './utils';
 
@@ -98,11 +96,7 @@ const dateSchema = z.object({
   live: z.enum(['all']).optional(),
 });
 
-// Background refresh timer for today's fixtures
-let backgroundRefreshTimer: number | null = null;
-const BACKGROUND_REFRESH_INTERVAL = 15 * 1000; // 15 seconds
-
-// Function to refresh today's fixtures in the background
+// Function to refresh today's fixtures (called by scheduled cron handler)
 async function refreshTodayFixtures(env: any) {
   try {
     console.log('🔄 BACKGROUND: Automatically refreshing today\'s fixtures data');
@@ -140,25 +134,6 @@ async function refreshTodayFixtures(env: any) {
     console.log('✅ BACKGROUND: Successfully refreshed today\'s fixtures data');
   } catch (error) {
     console.error('❌ BACKGROUND: Error refreshing today\'s fixtures:', error);
-  }
-}
-
-// Start the background refresh timer
-function startBackgroundRefreshTimer(env: any) {
-  if (!backgroundRefreshTimer) {
-    console.log(`⏱️ Starting background refresh timer (every ${BACKGROUND_REFRESH_INTERVAL/1000}s)`);
-    
-    // Initial refresh
-    refreshTodayFixtures(env).catch(err => {
-      console.error('Failed initial background refresh:', err);
-    });
-    
-    // Set up interval for regular refreshes
-    backgroundRefreshTimer = setInterval(() => {
-      refreshTodayFixtures(env).catch(err => {
-        console.error('Failed background refresh:', err);
-      });
-    }, BACKGROUND_REFRESH_INTERVAL);
   }
 }
 
@@ -263,9 +238,6 @@ app.get('/fixtures', zValidator('query', dateSchema), async (c) => {
 
 export default {
   async fetch(request: Request, env: any, ctx: ExecutionContext): Promise<Response> {
-    // Initialize background refresh timer on first request
-    startBackgroundRefreshTimer(env);
-    
     // Get the origin from the request
     const origin = request.headers.get('Origin') || '';
     
