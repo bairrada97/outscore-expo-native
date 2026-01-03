@@ -15,6 +15,93 @@ interface QuotaConfig {
 }
 
 /**
+ * Validation constants for configuration
+ */
+const CONFIG_VALIDATION = {
+  dailyLimit: { min: 1, max: 10_000_000 },
+  hourlyLimit: { min: 1, max: 1_000_000 },
+  alertThreshold: { min: 0, max: 1 },
+} as const;
+
+const ALLOWED_CONFIG_KEYS = new Set(['dailyLimit', 'hourlyLimit', 'alertThreshold']);
+
+/**
+ * Validation result type
+ */
+type ValidationResult = { valid: true; config: QuotaConfig } | { valid: false; error: string };
+
+/**
+ * Validate quota configuration payload
+ */
+function validateQuotaConfig(payload: unknown): ValidationResult {
+  // Check payload is an object
+  if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) {
+    return { valid: false, error: 'Request body must be a JSON object' };
+  }
+
+  const obj = payload as Record<string, unknown>;
+
+  // Check for unknown keys
+  const unknownKeys = Object.keys(obj).filter(key => !ALLOWED_CONFIG_KEYS.has(key));
+  if (unknownKeys.length > 0) {
+    return { valid: false, error: `Unknown keys: ${unknownKeys.join(', ')}` };
+  }
+
+  // Validate dailyLimit
+  if (!('dailyLimit' in obj)) {
+    return { valid: false, error: 'Missing required field: dailyLimit' };
+  }
+  if (typeof obj.dailyLimit !== 'number' || !Number.isFinite(obj.dailyLimit)) {
+    return { valid: false, error: 'dailyLimit must be a finite number' };
+  }
+  if (!Number.isInteger(obj.dailyLimit)) {
+    return { valid: false, error: 'dailyLimit must be an integer' };
+  }
+  if (obj.dailyLimit < CONFIG_VALIDATION.dailyLimit.min || obj.dailyLimit > CONFIG_VALIDATION.dailyLimit.max) {
+    return { valid: false, error: `dailyLimit must be between ${CONFIG_VALIDATION.dailyLimit.min} and ${CONFIG_VALIDATION.dailyLimit.max}` };
+  }
+
+  // Validate hourlyLimit
+  if (!('hourlyLimit' in obj)) {
+    return { valid: false, error: 'Missing required field: hourlyLimit' };
+  }
+  if (typeof obj.hourlyLimit !== 'number' || !Number.isFinite(obj.hourlyLimit)) {
+    return { valid: false, error: 'hourlyLimit must be a finite number' };
+  }
+  if (!Number.isInteger(obj.hourlyLimit)) {
+    return { valid: false, error: 'hourlyLimit must be an integer' };
+  }
+  if (obj.hourlyLimit < CONFIG_VALIDATION.hourlyLimit.min || obj.hourlyLimit > CONFIG_VALIDATION.hourlyLimit.max) {
+    return { valid: false, error: `hourlyLimit must be between ${CONFIG_VALIDATION.hourlyLimit.min} and ${CONFIG_VALIDATION.hourlyLimit.max}` };
+  }
+
+  // Validate alertThreshold
+  if (!('alertThreshold' in obj)) {
+    return { valid: false, error: 'Missing required field: alertThreshold' };
+  }
+  if (typeof obj.alertThreshold !== 'number' || !Number.isFinite(obj.alertThreshold)) {
+    return { valid: false, error: 'alertThreshold must be a finite number' };
+  }
+  if (obj.alertThreshold < CONFIG_VALIDATION.alertThreshold.min || obj.alertThreshold > CONFIG_VALIDATION.alertThreshold.max) {
+    return { valid: false, error: `alertThreshold must be between ${CONFIG_VALIDATION.alertThreshold.min} and ${CONFIG_VALIDATION.alertThreshold.max}` };
+  }
+
+  // Logical validation: hourlyLimit should not exceed dailyLimit
+  if (obj.hourlyLimit > obj.dailyLimit) {
+    return { valid: false, error: 'hourlyLimit cannot exceed dailyLimit' };
+  }
+
+  return {
+    valid: true,
+    config: {
+      dailyLimit: obj.dailyLimit,
+      hourlyLimit: obj.hourlyLimit,
+      alertThreshold: obj.alertThreshold,
+    },
+  };
+}
+
+/**
  * Quota state stored in the Durable Object
  */
 interface QuotaState {
@@ -229,8 +316,46 @@ export class QuotaDurableObject {
       }
 
       if (path === '/configure' && request.method === 'POST') {
-        const config = await request.json<QuotaConfig>();
-        await this.configure(config);
+        // Validate Content-Type header
+        const contentType = request.headers.get('Content-Type');
+        if (!contentType || !contentType.includes('application/json')) {
+          return new Response(
+            JSON.stringify({ error: 'Content-Type must be application/json' }),
+            {
+              status: 400,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        }
+
+        // Parse JSON body with error handling
+        let payload: unknown;
+        try {
+          payload = await request.json();
+        } catch {
+          return new Response(
+            JSON.stringify({ error: 'Invalid JSON in request body' }),
+            {
+              status: 400,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        }
+
+        // Validate the payload
+        const validationResult = validateQuotaConfig(payload);
+        if (!validationResult.valid) {
+          return new Response(
+            JSON.stringify({ error: validationResult.error }),
+            {
+              status: 400,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        }
+
+        // Configuration is valid, apply it
+        await this.configure(validationResult.config);
         return new Response(JSON.stringify({ success: true }), {
           headers: { 'Content-Type': 'application/json' },
         });

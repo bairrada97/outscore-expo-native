@@ -68,16 +68,7 @@ const isOriginAllowed = (
  * Check if origins configuration contains a wildcard
  */
 const hasWildcardOrigin = (origins: string | string[] | ((origin: string) => boolean) | undefined): boolean => {
-  if (origins === '*') {
-    return true;
-  }
-  if (typeof origins === 'string' && origins === '*') {
-    return true;
-  }
-  if (Array.isArray(origins) && origins.includes('*')) {
-    return true;
-  }
-  return false;
+  return origins === '*' || (Array.isArray(origins) && origins.includes('*'));
 };
 
 /**

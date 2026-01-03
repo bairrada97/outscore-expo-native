@@ -159,7 +159,7 @@ export const handleScheduledEvent = async (
   // Run cleanup once per day at 2 AM UTC
   const hour = scheduledTime.getUTCHours();
   const minute = scheduledTime.getUTCMinutes();
-  if (hour === 2 && minute === 0) {
+  if (hour === 2 && minute < 5) {
     console.log(`🧹 [Scheduler] Running daily cleanup`);
     try {
       const result = await cleanupOldCacheData(env, 30, 14);
