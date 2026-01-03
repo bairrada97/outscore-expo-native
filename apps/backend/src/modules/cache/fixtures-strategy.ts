@@ -1,4 +1,4 @@
-import { addDays, format, parseISO } from 'date-fns';
+import { addDays, format, parseISO, subDays } from 'date-fns';
 import { commonTimezones } from '../timezones';
 import {
   getCurrentUtcDate,
@@ -232,6 +232,103 @@ export const checkFixturesDateTransition = async (
   }
 
   return false;
+};
+
+/**
+ * Clean up old cache data
+ * - Deletes historical data older than retentionDays (default: 30)
+ * - Deletes future data older than futureDays (default: 14 days ahead)
+ * 
+ * This prevents unlimited storage growth while keeping recent data cached.
+ * Old data can be re-fetched from API if needed.
+ */
+export const cleanupOldCacheData = async (
+  env: FixturesCacheEnv,
+  retentionDays: number = 30,
+  futureDays: number = 14
+): Promise<{ deleted: number; errors: number }> => {
+  const today = getCurrentUtcDate();
+  const cutoffDate = subDays(parseISO(today), retentionDays);
+  const futureCutoffDate = addDays(parseISO(today), futureDays);
+  
+  const r2Provider = createR2CacheProvider(env.FOOTBALL_CACHE);
+  let deleted = 0;
+  let errors = 0;
+
+  console.log(`🧹 [Cleanup] Starting cleanup: keeping last ${retentionDays} days, future up to ${futureDays} days`);
+
+  // Clean up old historical data
+  try {
+    const historicalKeys = await r2Provider.list('historical/');
+    
+    for (const key of historicalKeys) {
+      // Extract date from key: historical/fixtures-YYYY-MM-DD.json
+      const dateMatch = key.match(/fixtures-(\d{4}-\d{2}-\d{2})/);
+      if (!dateMatch) continue;
+      
+      const fileDate = parseISO(dateMatch[1]);
+      
+      // Delete if older than cutoff
+      if (fileDate < cutoffDate) {
+        try {
+          await r2Provider.delete(key);
+          console.log(`🗑️ [Cleanup] Deleted old historical: ${key}`);
+          deleted++;
+          
+          // Also delete live version if exists
+          const liveKey = key.replace('.json', '-live.json');
+          if (await r2Provider.exists(liveKey)) {
+            await r2Provider.delete(liveKey);
+            deleted++;
+          }
+        } catch (error) {
+          console.error(`❌ [Cleanup] Failed to delete ${key}:`, error);
+          errors++;
+        }
+      }
+    }
+  } catch (error) {
+    console.error(`❌ [Cleanup] Error listing historical files:`, error);
+    errors++;
+  }
+
+  // Clean up old future data (beyond reasonable future window)
+  try {
+    const futureKeys = await r2Provider.list('future/');
+    
+    for (const key of futureKeys) {
+      // Extract date from key: future/fixtures-YYYY-MM-DD.json
+      const dateMatch = key.match(/fixtures-(\d{4}-\d{2}-\d{2})/);
+      if (!dateMatch) continue;
+      
+      const fileDate = parseISO(dateMatch[1]);
+      
+      // Delete if beyond future cutoff
+      if (fileDate > futureCutoffDate) {
+        try {
+          await r2Provider.delete(key);
+          console.log(`🗑️ [Cleanup] Deleted old future: ${key}`);
+          deleted++;
+          
+          // Also delete live version if exists
+          const liveKey = key.replace('.json', '-live.json');
+          if (await r2Provider.exists(liveKey)) {
+            await r2Provider.delete(liveKey);
+            deleted++;
+          }
+        } catch (error) {
+          console.error(`❌ [Cleanup] Failed to delete ${key}:`, error);
+          errors++;
+        }
+      }
+    }
+  } catch (error) {
+    console.error(`❌ [Cleanup] Error listing future files:`, error);
+    errors++;
+  }
+
+  console.log(`✅ [Cleanup] Completed: deleted ${deleted} files, ${errors} errors`);
+  return { deleted, errors };
 };
 
 // Re-export helpers from cache-strategies for backwards compatibility

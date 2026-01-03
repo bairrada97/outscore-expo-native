@@ -34,6 +34,7 @@ export {
 // Fixtures-specific strategy
 export {
   checkFixturesDateTransition,
+  cleanupOldCacheData,
   getFixturesCacheLocation,
   getFixturesR2Key,
   handleFixturesDateTransition,

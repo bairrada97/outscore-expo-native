@@ -25,10 +25,11 @@ export enum CacheLocation {
 }
 
 export const TTL = {
-  SHORT: 15,
+  SHORT: 15, // 15 seconds for live/today's data
   MEDIUM: 300,
   STANDARD: 3600,
   LONG: 86400,
+  KV_MIN: 60, // Cloudflare KV minimum (for resources that use KV)
 } as const;
 
 export const SWR = {

@@ -114,7 +114,7 @@ export const CACHE_STRATEGIES: Record<ResourceType, CacheStrategyConfig> = {
     ttlMode: 'dynamic',
     dynamicTTL: (params) => getFixturesTTL(params.date, params.live === 'true'),
     swr: SWR.SHORT,
-    useKV: true,
+    useKV: false, // Disabled: KV requires 60s min TTL, but fixtures need 15s for live updates
     useR2: true,
     useEdge: true,
     keyGenerator: (params) => {
@@ -130,7 +130,7 @@ export const CACHE_STRATEGIES: Record<ResourceType, CacheStrategyConfig> = {
     ttlMode: 'dynamic',
     dynamicTTL: getFixtureDetailTTL,
     swr: SWR.SHORT,
-    useKV: true, // Hot during live matches
+    useKV: false, // Disabled: KV requires 60s min TTL, but live matches need 15s
     useR2: true,
     useEdge: true,
     keyGenerator: (params) => `fixture:${params.fixtureId}`,

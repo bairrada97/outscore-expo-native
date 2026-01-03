@@ -12,8 +12,8 @@ preview_bucket_name = "outscore-match-data-dev"
 # KV namespace for hot data (today's matches)
 [[kv_namespaces]]
 binding = "FOOTBALL_KV"
-id = "your-kv-namespace-id"
-preview_id = "your-preview-kv-namespace-id"
+id = "bd0f2fadda52416db9ba5ce58974f6b4"
+preview_id = "058faa4190274550bf7edabe699718f1"
 
 # Durable Object for atomic quota tracking
 [[durable_objects.bindings]]
@@ -26,9 +26,10 @@ name = "REFRESH_SCHEDULER_DO"
 class_name = "RefreshSchedulerDurableObject"
 
 # Durable Object migrations (required for DO classes)
+# Using new_sqlite_classes for free plan compatibility
 [[migrations]]
 tag = "v1"
-new_classes = ["QuotaDurableObject", "RefreshSchedulerDurableObject"]
+new_sqlite_classes = ["QuotaDurableObject", "RefreshSchedulerDurableObject"]
 
 # Environment variables
 [vars]
