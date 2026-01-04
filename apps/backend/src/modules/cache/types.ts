@@ -25,7 +25,7 @@ export enum CacheLocation {
 }
 
 export const TTL = {
-  SHORT: 15, // 15 seconds for live/today's data
+  SHORT: 30, // 30 seconds for live/today's data (gives buffer for client refetch)
   MEDIUM: 300,
   STANDARD: 3600,
   LONG: 86400,

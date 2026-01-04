@@ -1,3 +1,4 @@
+import { usePrefetchFixtures } from "@/hooks/usePrefetchFixtures";
 import { cn } from "@/lib/utils";
 import { LIVE_BUTTON_LABEL } from "@/utils/constants";
 import {
@@ -278,6 +279,9 @@ export function DateTabs() {
 	const layout = useWindowDimensions();
 	const router = useRouter();
 	const params = useGlobalSearchParams<{ date?: string }>();
+
+	// Prefetch all date tabs in the background for instant tab switching
+	usePrefetchFixtures();
 
 	const today = new Date();
 	const dates = getDateRange(today);
