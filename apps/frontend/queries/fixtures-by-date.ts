@@ -19,6 +19,19 @@ export function createFixturesQueryKey(
 }
 
 /**
+ * Custom error class to include HTTP status for retry logic
+ */
+class FetchError extends Error {
+	constructor(
+		message: string,
+		public status: number,
+	) {
+		super(message);
+		this.name = "FetchError";
+	}
+}
+
+/**
  * Fetch fixtures from the API
  */
 async function fetchFixtures({
@@ -39,7 +52,10 @@ async function fetchFixtures({
 	const response = await fetch(`${API_BASE_URL}/fixtures?${params.toString()}`);
 
 	if (!response.ok) {
-		throw new Error(`Failed to fetch fixtures: ${response.statusText}`);
+		throw new FetchError(
+			`Failed to fetch fixtures: ${response.statusText}`,
+			response.status,
+		);
 	}
 
 	const json = (await response.json()) as { data: FormattedCountry[] };
@@ -126,5 +142,20 @@ export function fixturesByDateQuery({
 		gcTime,
 		refetchOnMount,
 		refetchOnWindowFocus,
+		// Retry configuration using React Query's built-in support
+		retry: (failureCount: number, error: Error) => {
+			// Only retry on 503 (Service Unavailable) or 429 (Rate Limited)
+			if (error instanceof FetchError) {
+				return (
+					(error.status === 503 || error.status === 429) && failureCount < 3
+				);
+			}
+			// Retry network errors up to 3 times
+			return failureCount < 3;
+		},
+		retryDelay: (attemptIndex: number) => {
+			// Exponential backoff: 1s, 2s, 4s (capped at 5s)
+			return Math.min(1000 * 2 ** attemptIndex, 5000);
+		},
 	};
 }

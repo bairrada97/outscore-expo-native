@@ -183,8 +183,12 @@ export const fixturesService = {
       if (rawResult.data && rawResult.source !== 'none' && rawResult.source !== 'edge') {
         const cachedSource = rawResult.source === 'kv' ? 'KV' : 'R2';
 
+        // For R2 (cold storage), use a longer staleness window
+        const isR2 = rawResult.source === 'r2';
+        const staleCheckParams = isR2 ? { ...rawParams, _r2Staleness: 'true' } : rawParams;
+
         // Check if data is stale
-        if (!isStale(rawResult.meta, 'fixtures', rawParams)) {
+        if (!isStale(rawResult.meta, 'fixtures', staleCheckParams)) {
           rawFixtures = rawResult.data;
           source = cachedSource;
           console.log(`✅ [Fixtures] ${source} hit for live`);
@@ -277,8 +281,13 @@ export const fixturesService = {
     let staleFixtures: Fixture[] | null = null;
 
     if (cacheResult.data && cacheResult.source !== 'none' && cacheResult.source !== 'edge') {
-      // Check if stale
-      if (!isStale(cacheResult.meta, 'fixtures', params)) {
+      // For R2 (cold storage), use a longer staleness window
+      // Edge Cache has short TTL (30s) but R2 should serve data for longer
+      // The scheduler refreshes R2 every 15s anyway, so 5 min staleness is safe
+      const isR2 = cacheResult.source === 'r2';
+      const staleCheckParams = isR2 ? { ...params, _r2Staleness: 'true' } : params;
+      
+      if (!isStale(cacheResult.meta, 'fixtures', staleCheckParams)) {
         console.log(`✅ [Fixtures] Cache hit from ${cacheResult.source} for ${date}`);
         return {
           fixtures: cacheResult.data,

@@ -236,6 +236,7 @@ export const withDeduplication = async <T>(
 
 /**
  * Check if cache data is stale based on TTL
+ * For R2 (cold storage), uses a longer staleness window
  */
 export const isStale = (
   meta: CacheMeta | undefined | null,
@@ -244,7 +245,12 @@ export const isStale = (
 ): boolean => {
   if (!meta) return true;
 
-  const ttl = getTTLForResource(resourceType, params);
+  // For R2 cold storage, use a longer staleness window (5 minutes)
+  // This allows R2 to serve data even when Edge Cache expires after 30s
+  // The scheduler refreshes data every 15s, so 5 min staleness is safe
+  const isR2Staleness = params._r2Staleness === 'true';
+  const ttl = isR2Staleness ? 300 : getTTLForResource(resourceType, params);
+  
   const updatedAt = new Date(meta.updatedAt).getTime();
   const now = Date.now();
   const age = (now - updatedAt) / 1000;

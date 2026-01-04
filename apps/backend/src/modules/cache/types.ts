@@ -25,15 +25,16 @@ export enum CacheLocation {
 }
 
 export const TTL = {
-  SHORT: 30, // 30 seconds for live/today's data (gives buffer for client refetch)
+  SHORT: 20, // 20 seconds for Edge Cache (slightly longer than 15s scheduler for buffer)
   MEDIUM: 300,
   STANDARD: 3600,
   LONG: 86400,
   KV_MIN: 60, // Cloudflare KV minimum (for resources that use KV)
+  R2_TODAY: 300, // 5 minutes for R2 staleness (but R2 is refreshed every 15s, so always fresh)
 } as const;
 
 export const SWR = {
-  SHORT: 30,
+  SHORT: 0, // No stale data for live matches - freshness is critical!
   STANDARD: 7200,
 } as const;
 
