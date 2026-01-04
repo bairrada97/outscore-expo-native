@@ -10,31 +10,20 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { TimeZoneProvider } from "@/context/timezone-context";
 import {
-  createPersistOptions,
-  createQueryClient,
-  createQueryPersister,
+	createPersistOptions,
+	createQueryClient,
+	createQueryPersister,
 } from "@/queries/query-client";
 
 // Import global styles for Uniwind
 import "../global.css";
 
 // Import fonts
-import SourceCodeProBlack from "../assets/fonts/SourceCodePro-Black.ttf";
-import SourceCodeProBlackItalic from "../assets/fonts/SourceCodePro-BlackItalic.ttf";
-import SourceCodeProBold from "../assets/fonts/SourceCodePro-Bold.ttf";
-import SourceCodeProBoldItalic from "../assets/fonts/SourceCodePro-BoldItalic.ttf";
-import SourceCodeProExtraBold from "../assets/fonts/SourceCodePro-ExtraBold.ttf";
-import SourceCodeProExtraBoldItalic from "../assets/fonts/SourceCodePro-ExtraBoldItalic.ttf";
-import SourceCodeProExtraLight from "../assets/fonts/SourceCodePro-ExtraLight.ttf";
-import SourceCodeProExtraLightItalic from "../assets/fonts/SourceCodePro-ExtraLightItalic.ttf";
-import SourceCodeProItalic from "../assets/fonts/SourceCodePro-Italic.ttf";
-import SourceCodeProLight from "../assets/fonts/SourceCodePro-Light.ttf";
-import SourceCodeProLightItalic from "../assets/fonts/SourceCodePro-LightItalic.ttf";
-import SourceCodeProMedium from "../assets/fonts/SourceCodePro-Medium.ttf";
-import SourceCodeProMediumItalic from "../assets/fonts/SourceCodePro-MediumItalic.ttf";
-import SourceCodeProRegular from "../assets/fonts/SourceCodePro-Regular.ttf";
-import SourceCodeProSemiBold from "../assets/fonts/SourceCodePro-SemiBold.ttf";
-import SourceCodeProSemiBoldItalic from "../assets/fonts/SourceCodePro-SemiBoldItalic.ttf";
+
+import SourceSans3Bold from "../assets/fonts/SourceSans3-Bold.ttf";
+// Import SourceSans3 fonts
+import SourceSans3Regular from "../assets/fonts/SourceSans3-Regular.ttf";
+import SourceSans3SemiBold from "../assets/fonts/SourceSans3-SemiBold.ttf";
 
 const isWeb = Platform.OS === "web";
 
@@ -48,22 +37,9 @@ const persistOptions = createPersistOptions(persister);
 
 export default function RootLayout() {
 	const [fontsLoaded] = useFonts({
-		"SourceCodePro-Black": SourceCodeProBlack,
-		"SourceCodePro-BlackItalic": SourceCodeProBlackItalic,
-		"SourceCodePro-Bold": SourceCodeProBold,
-		"SourceCodePro-BoldItalic": SourceCodeProBoldItalic,
-		"SourceCodePro-ExtraBold": SourceCodeProExtraBold,
-		"SourceCodePro-ExtraBoldItalic": SourceCodeProExtraBoldItalic,
-		"SourceCodePro-ExtraLight": SourceCodeProExtraLight,
-		"SourceCodePro-ExtraLightItalic": SourceCodeProExtraLightItalic,
-		"SourceCodePro-Italic": SourceCodeProItalic,
-		"SourceCodePro-Light": SourceCodeProLight,
-		"SourceCodePro-LightItalic": SourceCodeProLightItalic,
-		"SourceCodePro-Medium": SourceCodeProMedium,
-		"SourceCodePro-MediumItalic": SourceCodeProMediumItalic,
-		"SourceCodePro-Regular": SourceCodeProRegular,
-		"SourceCodePro-SemiBold": SourceCodeProSemiBold,
-		"SourceCodePro-SemiBoldItalic": SourceCodeProSemiBoldItalic,
+		"SourceSans3-Regular": SourceSans3Regular,
+		"SourceSans3-SemiBold": SourceSans3SemiBold,
+		"SourceSans3-Bold": SourceSans3Bold,
 	});
 
 	const [appIsReady, setAppIsReady] = useState(false);
@@ -108,23 +84,23 @@ export default function RootLayout() {
 			persistOptions={persistOptions}
 		>
 			<GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
-					<TimeZoneProvider>
-						<StatusBar style="auto" />
-						<View
-							style={{
-								flex: 1,
-								width: "100%",
-								maxWidth: isWeb ? 800 : undefined,
-								alignSelf: "center",
+				<TimeZoneProvider>
+					<StatusBar style="auto" />
+					<View
+						style={{
+							flex: 1,
+							width: "100%",
+							maxWidth: isWeb ? 800 : undefined,
+							alignSelf: "center",
+						}}
+					>
+						<Stack
+							screenOptions={{
+								headerShown: false,
 							}}
-						>
-							<Stack
-								screenOptions={{
-									headerShown: false,
-								}}
-							/>
-						</View>
-					</TimeZoneProvider>
+						/>
+					</View>
+				</TimeZoneProvider>
 			</GestureHandlerRootView>
 		</PersistQueryClientProvider>
 	);

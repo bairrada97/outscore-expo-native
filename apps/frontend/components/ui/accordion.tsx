@@ -112,7 +112,7 @@ function AccordionTrigger({
 	return (
 		<TextClassContext.Provider
 			value={cn(
-				"text-left text-sm font-medium",
+				"text-left text-sm font-sans-regular",
 				Platform.select({ web: "group-hover:underline" }),
 			)}
 		>

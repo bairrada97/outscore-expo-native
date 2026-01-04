@@ -164,7 +164,7 @@ export function FixtureCardNewDesign({
 						className={cn(
 							"text-center text-12 text-neu-09 dark:text-neu-05",
 							(homeIsWinner || teamScored.home) &&
-								"font-semibold text-neu-13 dark:text-neu-01",
+								"font-sans-semibold text-neu-13 dark:text-neu-01",
 						)}
 						numberOfLines={1}
 					>
@@ -189,7 +189,7 @@ export function FixtureCardNewDesign({
 									style={{ opacity: pulseAnim }}
 									className="h-6 w-6 rounded-full bg-m-01"
 								/>
-								<Text className="text-10 font-semibold uppercase text-m-01">
+								<Text className="text-10 font-sans-semibold uppercase text-m-01">
 									{statusState}
 								</Text>
 							</View>
@@ -197,7 +197,7 @@ export function FixtureCardNewDesign({
 						{!matchIsLive && (
 							<Text
 								className={cn(
-									"text-10 font-medium uppercase",
+									"text-10 font-sans-regular uppercase",
 									matchIsFinished
 										? "text-neu-07 dark:text-neu-06"
 										: "text-neu-08 dark:text-neu-05",
@@ -218,7 +218,7 @@ export function FixtureCardNewDesign({
 						>
 							<Text
 								className={cn(
-									"font-mono text-24 font-bold text-neu-10 dark:text-neu-03",
+									"font-mono text-24 font-sans-bold text-neu-10 dark:text-neu-03",
 									homeIsWinner && "text-m-01 dark:text-m-01-light-02",
 									teamScored.home && "text-m-01 dark:text-m-01-light-02",
 								)}
@@ -237,7 +237,7 @@ export function FixtureCardNewDesign({
 						>
 							<Text
 								className={cn(
-									"font-mono text-24 font-bold text-neu-10 dark:text-neu-03",
+									"font-mono text-24 font-sans-bold text-neu-10 dark:text-neu-03",
 									awayIsWinner && "text-m-01 dark:text-m-01-light-02",
 									teamScored.away && "text-m-01 dark:text-m-01-light-02",
 								)}
@@ -275,7 +275,7 @@ export function FixtureCardNewDesign({
 						className={cn(
 							"text-center text-12 text-neu-09 dark:text-neu-05",
 							(awayIsWinner || teamScored.away) &&
-								"font-semibold text-neu-13 dark:text-neu-01",
+								"font-sans-semibold text-neu-13 dark:text-neu-01",
 						)}
 						numberOfLines={1}
 					>

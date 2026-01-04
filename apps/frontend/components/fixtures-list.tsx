@@ -65,7 +65,7 @@ export function FixturesList({
 	if (countries.length === 0) {
 		return (
 			<View className="flex-1 items-center justify-center py-20">
-				<Text className="text-lg font-semibold text-neu-08">
+				<Text className="text-lg font-sans-semibold text-neu-08">
 					No fixtures found
 				</Text>
 				<Text className="mt-2 text-sm text-neu-07">

@@ -18,7 +18,7 @@ export function CompetitionSection({ league, timezone, onFixturePress }: Competi
           className="w-5 h-5 mr-2"
           resizeMode="contain"
         />
-        <Text className="text-sm font-medium text-neu-10 flex-1" numberOfLines={1}>
+        <Text className="text-sm font-sans-regular text-neu-10 flex-1" numberOfLines={1}>
           {league.name}
         </Text>
       </Pressable>

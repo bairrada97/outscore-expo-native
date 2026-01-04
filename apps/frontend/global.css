@@ -77,6 +77,11 @@
   --spacing-56: 56px;
   --spacing-64: 64px;
 
+  /* Font families */
+  --font-sans-regular: "SourceSans3-Regular", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans-semibold: "SourceSans3-SemiBold", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans-bold: "SourceSans3-Bold", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
   /* Font sizes */
   --font-size-10: 0.625rem;
   --font-size-12: 0.75rem;
@@ -99,6 +104,10 @@
 }
 
 @layer base {
+  html {
+    font-family: var(--font-sans-regular);
+  }
+  
   :root {
     --foreground: var(--color-neu-13);
     --background: var(--color-neu-02);

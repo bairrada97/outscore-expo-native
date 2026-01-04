@@ -7,7 +7,7 @@ const fixtureTeam = tva({
 	base: "flex flex-row gap-y-0 gap-x-8",
 	variants: {
 		bold: {
-			true: ["font-bold", "dark:text-neu-01"],
+			true: ["font-sans-bold", "dark:text-neu-01"],
 		},
 	},
 });

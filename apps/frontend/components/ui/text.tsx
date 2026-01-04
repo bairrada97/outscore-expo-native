@@ -6,9 +6,9 @@ import { Platform, Text as RNText, type Role } from "react-native";
 
 const textVariants = cva(
 	cn(
-		"text-foreground text-base",
+		"text-foreground text-base font-sans-regular",
 		Platform.select({
-			web: "font-sourceSansPro tracking-sm my-0 bg-transparent border-0 box-border list-none p-0 relative text-start no-underline whitespace-pre-wrap break-words select-text",
+			web: "tracking-sm my-0 bg-transparent border-0 box-border list-none p-0 relative text-start no-underline whitespace-pre-wrap break-words select-text",
 		}),
 	),
 	{
@@ -34,43 +34,44 @@ const textVariants = cva(
 			},
 			variant: {
 				default: "",
-				"title-01": "font-semibold uppercase max-w-[400px]",
-				"title-02": "font-semibold uppercase text-[0.875rem] max-w-[400px]",
-				"highlight-01": "font-normal text-[1.25rem] max-w-[400px]",
-				"highlight-02": "font-bold text-[1.25rem] max-w-[400px]",
-				"highlight-03": "font-normal text-[1.125rem] max-w-[400px]",
-				"highlight-04": "font-bold text-[1.125rem] max-w-[400px]",
-				"body-01": "font-normal text-[1rem] max-w-[400px]",
-				"body-01--semi": "font-semibold text-[1rem] max-w-[400px]",
-				"body-02": "font-normal text-[0.875rem] max-w-[400px]",
-				"body-02--semi": "font-semibold text-[0.875rem] max-w-[400px]",
-				"caption-01": "font-semibold text-[0.75rem] max-w-[400px]",
-				"caption-02": "font-normal text-[0.75rem] max-w-[400px]",
-				"caption-03": "font-semibold text-[0.625rem] max-w-[400px]",
+				"title-01": "font-sans-semibold uppercase max-w-[400px]",
+				"title-02":
+					"font-sans-semibold uppercase text-[0.875rem] max-w-[400px]",
+				"highlight-01": "font-sans-regular text-[1.25rem] max-w-[400px]",
+				"highlight-02": "font-sans-bold text-[1.25rem] max-w-[400px]",
+				"highlight-03": "font-sans-regular text-[1.125rem] max-w-[400px]",
+				"highlight-04": "font-sans-bold text-[1.125rem] max-w-[400px]",
+				"body-01": "font-sans-regular text-[1rem] max-w-[400px]",
+				"body-01--semi": "font-sans-semibold text-[1rem] max-w-[400px]",
+				"body-02": "font-sans-regular text-[0.875rem] max-w-[400px]",
+				"body-02--semi": "font-sans-semibold text-[0.875rem] max-w-[400px]",
+				"caption-01": "font-sans-semibold text-[0.75rem] max-w-[400px]",
+				"caption-02": "font-sans-regular text-[0.75rem] max-w-[400px]",
+				"caption-03": "font-sans-semibold text-[0.625rem] max-w-[400px]",
 				h1: cn(
-					"text-center text-4xl font-extrabold tracking-tight",
+					"text-center text-4xl font-sans-bold tracking-tight",
 					Platform.select({ web: "scroll-m-20 text-balance" }),
 				),
 				h2: cn(
-					"border-border border-b pb-2 text-3xl font-semibold tracking-tight",
+					"border-border border-b pb-2 text-3xl font-sans-semibold tracking-tight",
 					Platform.select({ web: "scroll-m-20 first:mt-0" }),
 				),
 				h3: cn(
-					"text-2xl font-semibold tracking-tight",
+					"text-2xl font-sans-semibold tracking-tight",
 					Platform.select({ web: "scroll-m-20" }),
 				),
 				h4: cn(
-					"text-xl font-semibold tracking-tight",
+					"text-xl font-sans-semibold tracking-tight",
 					Platform.select({ web: "scroll-m-20" }),
 				),
 				p: "mt-3 leading-7 sm:mt-6",
 				blockquote: "mt-4 border-l-2 pl-3 italic sm:mt-6 sm:pl-6",
 				code: cn(
-					"bg-muted relative rounded px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold",
+					"bg-muted relative rounded px-[0.3rem] py-[0.2rem] font-mono text-sm font-sans-semibold",
 				),
 				lead: "text-muted-foreground text-xl",
-				large: "text-lg font-semibold",
-				small: "text-sm font-medium leading-none",
+				large: "text-lg font-sans-semibold",
+				small: "text-sm font-sans-regular leading-none",
 				muted: "text-muted-foreground text-sm",
 			},
 		},
@@ -106,6 +107,7 @@ function Text({
 	className,
 	asChild = false,
 	variant = "default",
+	style,
 	...props
 }: React.ComponentProps<typeof RNText> &
 	TextVariantProps &
@@ -117,6 +119,7 @@ function Text({
 	return (
 		<Component
 			className={cn(textClass, textVariants({ variant }), className)}
+			style={style}
 			role={variant ? ROLE[variant] : undefined}
 			aria-level={variant ? ARIA_LEVEL[variant] : undefined}
 			{...props}

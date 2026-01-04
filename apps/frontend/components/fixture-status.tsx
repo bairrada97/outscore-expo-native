@@ -26,7 +26,7 @@ export function FixtureStatus({
 			<Text
 				variant={!matchIsLiveOrFinished ? "body-02--semi" : undefined}
 				className={cn(
-					"font-semibold text-neu-08 dark:text-neu-06",
+					"font-sans-semibold text-neu-08 dark:text-neu-06",
 					fixtureStatus({ matchIsLiveOrFinished }),
 				)}
 			>

@@ -32,7 +32,9 @@ export function CountryItem({
 
 	return (
 		<AccordionItem value={country.name} className="mb-0 border-0">
-			<AccordionTrigger className="group/trigger h-40 min-h-40 flex-row items-center justify-between border-b border-neu-03 px-16 py-0 in-data-[state=expanded]:bg-linear-to-br in-data-[state=expanded]:from-m-01-light-01 in-data-[state=expanded]:to-m-02-dark-01 dark:border-neu-10 hover:no-underline">
+			<AccordionTrigger className="group/trigger relative h-40 min-h-40 flex-row items-center justify-between px-16 py-0 in-data-[state=expanded]:bg-linear-to-br in-data-[state=expanded]:from-m-01-light-01 in-data-[state=expanded]:to-m-02-dark-01 hover:no-underline">
+				{/* Divider - full width minus 8px on each side */}
+				<View className="absolute bottom-0 left-8 right-8 h-px bg-neu-03 dark:bg-neu-10" />
 				<View className="flex-1 flex-row items-center gap-x-16">
 					{/* Flag container with circular border */}
 					<View

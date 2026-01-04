@@ -129,8 +129,8 @@ export function FixtureCardCompact({
 				{/* Status */}
 				<View className="w-36 items-center">
 					<Text
-						className={cn(
-							"text-11 font-medium",
+							className={cn(
+								"text-11 font-sans-regular",
 							matchIsLive
 								? "text-m-01"
 								: matchIsFinished
@@ -161,7 +161,7 @@ export function FixtureCardCompact({
 							className={cn(
 								"flex-1 text-13",
 								homeIsWinner || teamScored.home
-									? "font-semibold text-neu-13 dark:text-neu-01"
+									? "font-sans-semibold text-neu-13 dark:text-neu-01"
 									: "text-neu-10 dark:text-neu-05",
 							)}
 							numberOfLines={1}
@@ -187,7 +187,7 @@ export function FixtureCardCompact({
 							className={cn(
 								"flex-1 text-13",
 								awayIsWinner || teamScored.away
-									? "font-semibold text-neu-13 dark:text-neu-01"
+									? "font-sans-semibold text-neu-13 dark:text-neu-01"
 									: "text-neu-10 dark:text-neu-05",
 							)}
 							numberOfLines={1}
@@ -203,7 +203,7 @@ export function FixtureCardCompact({
 						className={cn(
 							"font-mono text-13",
 							homeIsWinner || teamScored.home
-								? "font-bold text-m-01"
+								? "font-sans-bold text-m-01"
 								: "text-neu-10 dark:text-neu-05",
 						)}
 					>
@@ -213,7 +213,7 @@ export function FixtureCardCompact({
 						className={cn(
 							"font-mono text-13",
 							awayIsWinner || teamScored.away
-								? "font-bold text-m-01"
+								? "font-sans-bold text-m-01"
 								: "text-neu-10 dark:text-neu-05",
 						)}
 					>

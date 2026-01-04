@@ -42,7 +42,7 @@ export function FixtureStatusBadge({ status, time }: FixtureStatusBadgeProps) {
     >
       <Text
         className={cn(
-          "text-xs font-semibold font-mono",
+          "text-xs font-sans-semibold font-mono",
           isLive && "text-red",
           isFinished && "text-neu-07",
           !isLive && !isFinished && "text-neu-10"
