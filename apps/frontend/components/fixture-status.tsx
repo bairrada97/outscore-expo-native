@@ -22,7 +22,7 @@ export function FixtureStatus({
 	matchIsLiveOrFinished,
 }: FixtureStatusProps) {
 	return (
-		<View className="w-[40px]">
+		<View>
 			<Text
 				variant={!matchIsLiveOrFinished ? "body-02--semi" : undefined}
 				className={cn(

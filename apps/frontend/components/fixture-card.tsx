@@ -36,11 +36,12 @@ export function FixtureCard({
 		away: false,
 	});
 
-	const { status, teams, score, goals, date, type = null } = fixture;
+	const { status, teams, score, goals, date, time, type = null } = fixture;
 
 	const { renderFixtureStatus, fixtureStatus } = useFixtureStatus({
 		status,
 		date,
+		time,
 		timezone,
 		type,
 	});
@@ -88,7 +89,7 @@ export function FixtureCard({
 
 	return (
 		<Pressable onPress={onPress} className="relative h-64 px-16">
-			<View className="relative flex h-full flex-row items-center">
+			<View className="relative flex h-full flex-row items-center gap-x-16">
 				{/* Live indicator bar */}
 				{matchIsLive && (
 					<View className="absolute left-[-10px] h-48 w-[2px] rounded-[4px] bg-m-01-light-03" />

@@ -11,10 +11,11 @@ export function useDatePicker() {
 		const dateObj = typeof date === "string" ? new Date(date) : new Date(date);
 
 		try {
-			// Format date in the specified timezone
+			// Format date in the specified timezone (24-hour format)
 			return new Intl.DateTimeFormat("en-US", {
-				hour: "numeric",
-				minute: "numeric",
+				hour: "2-digit",
+				minute: "2-digit",
+				hour12: false,
 				timeZone: timezone,
 			}).format(dateObj);
 		} catch {

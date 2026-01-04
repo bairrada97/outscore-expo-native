@@ -1,10 +1,10 @@
 import { H2H } from "@/utils/constants";
 import {
-  FIXTURE_HALF_TIME,
-  FIXTURE_HAVE_NOT_STARTED,
-  FIXTURE_IS_FINISHED_STATUS,
-  FIXTURE_IS_LIVE_STATUS,
-  FIXTURE_WILL_NOT_START_STATUS,
+	FIXTURE_HALF_TIME,
+	FIXTURE_HAVE_NOT_STARTED,
+	FIXTURE_IS_FINISHED_STATUS,
+	FIXTURE_IS_LIVE_STATUS,
+	FIXTURE_WILL_NOT_START_STATUS,
 } from "@/utils/fixtures-status-constants";
 import type { FixtureStatusShort } from "@outscore/shared-types";
 import { useDatePicker } from "./useDatePicker";
@@ -25,6 +25,7 @@ interface FixtureStatusState {
 interface UseFixtureStatusProps {
 	status?: FixtureStatus;
 	date?: string | number;
+	time?: string;
 	type?: "H2H" | "favorite-team" | null;
 	timezone: string;
 }
@@ -35,6 +36,7 @@ interface UseFixtureStatusProps {
 export function useFixtureStatus({
 	status,
 	date,
+	time,
 	timezone,
 	type = null,
 }: UseFixtureStatusProps) {
@@ -73,9 +75,7 @@ export function useFixtureStatus({
 							? `${status.elapsed}'`
 							: "LIVE",
 			preOrPostFixture: fixtureStatus.haveNotStarted
-				? date
-					? getDateInHoursAndMinutes(date, timezone)
-					: null
+				? time || (date ? getDateInHoursAndMinutes(date, timezone) : null)
 				: currentFixtureStatus,
 			h2h:
 				fixtureStatus.isFinished || fixtureStatus.haveNotStarted

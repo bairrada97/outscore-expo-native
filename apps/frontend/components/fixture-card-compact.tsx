@@ -35,11 +35,12 @@ export function FixtureCardCompact({
 
 	const [pulseAnim] = useState(() => new Animated.Value(1));
 
-	const { status, teams, score, goals, date, type = null } = fixture;
+	const { status, teams, score, goals, date, time, type = null } = fixture;
 
 	const { renderFixtureStatus, fixtureStatus } = useFixtureStatus({
 		status,
 		date,
+		time,
 		timezone,
 		type,
 	});

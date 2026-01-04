@@ -1,5 +1,5 @@
 import { LegendList, type LegendListRenderItemProps } from "@legendapp/list";
-import type { FormattedCountry } from "@outscore/shared-types";
+import { type FormattedCountry, isLiveStatus } from "@outscore/shared-types";
 import { Platform, Text, View } from "react-native";
 import { CountryItem } from "./country-item";
 import { Accordion } from "./ui/accordion";
@@ -26,7 +26,7 @@ function Item({ item, timezone, onFixturePress }: ItemProps) {
 	const totalLiveMatches = item.leagues.reduce((acc, league) => {
 		return (
 			acc +
-			league.matches.filter((match) => match.status?.elapsed !== null).length
+			league.matches.filter((match) => isLiveStatus(match.status?.short)).length
 		);
 	}, 0);
 
@@ -48,7 +48,9 @@ export function FixturesList({
 	isRefetching,
 	onFixturePress,
 }: FixturesListProps) {
-	const renderItem = ({ item }: LegendListRenderItemProps<FormattedCountry>) => (
+	const renderItem = ({
+		item,
+	}: LegendListRenderItemProps<FormattedCountry>) => (
 		<Item item={item} timezone={timezone} onFixturePress={onFixturePress} />
 	);
 
@@ -83,32 +85,32 @@ export function FixturesList({
 						<Item
 							key={country.name}
 							item={country}
-			timezone={timezone}
-			onFixturePress={onFixturePress}
-		/>
+							timezone={timezone}
+							onFixturePress={onFixturePress}
+						/>
 					))}
 				</Accordion>
 			</View>
-	);
+		);
 	}
 
 	// On native, use LegendList for virtualization
 	return (
 		<View className="flex-1">
 			<Accordion type="multiple" className="w-full">
-		<LegendList
-			data={countries}
-			renderItem={renderItem}
-			keyExtractor={(country: FormattedCountry) => country.name}
-			estimatedItemSize={200}
+				<LegendList
+					data={countries}
+					renderItem={renderItem}
+					keyExtractor={(country: FormattedCountry) => country.name}
+					estimatedItemSize={200}
 					drawDistance={500}
 					recycleItems={false}
-			showsVerticalScrollIndicator={false}
-			contentContainerStyle={{ paddingBottom: 100 }}
-			ListHeaderComponent={
+					showsVerticalScrollIndicator={false}
+					contentContainerStyle={{ paddingBottom: 100 }}
+					ListHeaderComponent={
 						isRefetching ? <View className="py-2 items-center" /> : null
-			}
-		/>
+					}
+				/>
 			</Accordion>
 		</View>
 	);

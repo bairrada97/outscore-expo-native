@@ -36,7 +36,10 @@ export function CountryDailyMatches({
 					</Text>
 				</>
 			) : (
-				<Text className="text-12 font-medium text-neu-09 dark:text-neu-05">
+				<Text
+					variant="body-02"
+					className="text-neu-09 dark:text-neu-05 in-data-[state=expanded]:text-neu-01"
+				>
 					{dailyMatchesLength}
 				</Text>
 			)}

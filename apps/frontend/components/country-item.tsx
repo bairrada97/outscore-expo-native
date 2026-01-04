@@ -6,8 +6,9 @@ import {
 import { cn } from "@/lib/utils";
 import type { FormattedCountry } from "@outscore/shared-types";
 import { View } from "react-native";
-import { CompetitionSection } from "./competition-section";
+import { CardsBlock } from "./cards-block";
 import { CountryDailyMatches } from "./country-daily-matches";
+import { FixtureCard } from "./fixture-card";
 import { SvgFlag } from "./svg-flag";
 import { Text } from "./ui/text";
 
@@ -31,7 +32,7 @@ export function CountryItem({
 
 	return (
 		<AccordionItem value={country.name} className="mb-0 border-0">
-			<AccordionTrigger className="h-40 min-h-40 flex-row items-center justify-between border-b border-neu-03 px-16 py-0 data-[state=expanded]:bg-m-01 dark:border-neu-10 hover:no-underline">
+			<AccordionTrigger className="group/trigger h-40 min-h-40 flex-row items-center justify-between border-b border-neu-03 px-16 py-0 in-data-[state=expanded]:bg-linear-to-br in-data-[state=expanded]:from-m-01-light-01 in-data-[state=expanded]:to-m-02-dark-01 dark:border-neu-10 hover:no-underline">
 				<View className="flex-1 flex-row items-center gap-x-16">
 					{/* Flag container with circular border */}
 					<View
@@ -45,8 +46,8 @@ export function CountryItem({
 							className={cn(
 								"absolute -top-px -left-px h-[26px] w-[26px] rounded-full border-2",
 								"border-neu-01 dark:border-neu-10",
-								"data-[state=expanded]:border-m-01-light-03 data-[state=expanded]:shadow-sha-01",
-								"dark:data-[state=expanded]:shadow-sha-06",
+								"in-data-[state=expanded]:border-m-01-light-03 in-data-[state=expanded]:shadow-sha-01",
+								"dark:in-data-[state=expanded]:shadow-sha-06",
 							)}
 						/>
 						{/* Flag image container */}
@@ -66,7 +67,7 @@ export function CountryItem({
 					{/* Country name */}
 					<Text
 						variant="body-01--semi"
-						className="text-left text-neu-10 dark:text-neu-06"
+						className="text-left text-neu-10 dark:text-neu-06 in-data-[state=expanded]:text-neu-01"
 					>
 						{country.name}
 					</Text>
@@ -80,13 +81,22 @@ export function CountryItem({
 			</AccordionTrigger>
 
 			<AccordionContent className="pb-0">
-				{country.leagues.map((league) => (
-					<CompetitionSection
-						key={league.id}
-						league={league}
-						timezone={timezone}
-						onFixturePress={onFixturePress}
-					/>
+				{country.leagues.map((league, index) => (
+					<CardsBlock
+						key={`${league.id}-${index}`}
+						title={league.name}
+						cardsClassName="gap-0"
+					>
+						{league.matches.map((match, matchIndex) => (
+							<FixtureCard
+								key={match.id}
+								fixture={match}
+								timezone={timezone}
+								isLastMatch={matchIndex === league.matches.length - 1}
+								onPress={() => onFixturePress?.(match.id)}
+							/>
+						))}
+					</CardsBlock>
 				))}
 			</AccordionContent>
 		</AccordionItem>
