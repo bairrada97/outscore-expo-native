@@ -30,3 +30,13 @@ export const LIVE_BUTTON_LABEL = 'LIVE';
  */
 export const APP_MAX_WIDTH = 800;
 
+/**
+ * Default timezone
+ */
+export const DEFAULT_TIMEZONE = "UTC";
+
+/**
+ * H2H (Head-to-Head) type constant
+ */
+export const H2H = "H2H";
+

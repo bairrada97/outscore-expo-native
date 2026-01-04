@@ -83,32 +83,32 @@ export function FixturesList({
 						<Item
 							key={country.name}
 							item={country}
-							timezone={timezone}
-							onFixturePress={onFixturePress}
-						/>
+			timezone={timezone}
+			onFixturePress={onFixturePress}
+		/>
 					))}
 				</Accordion>
 			</View>
-		);
+	);
 	}
 
 	// On native, use LegendList for virtualization
 	return (
 		<View className="flex-1">
 			<Accordion type="multiple" className="w-full">
-				<LegendList
-					data={countries}
-					renderItem={renderItem}
-					keyExtractor={(country: FormattedCountry) => country.name}
-					estimatedItemSize={200}
+		<LegendList
+			data={countries}
+			renderItem={renderItem}
+			keyExtractor={(country: FormattedCountry) => country.name}
+			estimatedItemSize={200}
 					drawDistance={500}
 					recycleItems={false}
-					showsVerticalScrollIndicator={false}
-					contentContainerStyle={{ paddingBottom: 100 }}
-					ListHeaderComponent={
+			showsVerticalScrollIndicator={false}
+			contentContainerStyle={{ paddingBottom: 100 }}
+			ListHeaderComponent={
 						isRefetching ? <View className="py-2 items-center" /> : null
-					}
-				/>
+			}
+		/>
 			</Accordion>
 		</View>
 	);

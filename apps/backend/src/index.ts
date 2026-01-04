@@ -17,10 +17,10 @@ import RefreshSchedulerDurableObject from "./utils/refresh-scheduler-do";
  * Environment bindings
  */
 interface Env extends FixturesEnv, SchedulerEnv {
-	APPROVED_ORIGINS?: string;
-	OUTSCORE_RATE_LIMITER?: unknown; // Cloudflare Rate Limiter binding (not currently used)
-	QUOTA_DO: DurableObjectNamespace;
-	REFRESH_SCHEDULER_DO: DurableObjectNamespace;
+  APPROVED_ORIGINS?: string;
+  OUTSCORE_RATE_LIMITER?: unknown; // Cloudflare Rate Limiter binding (not currently used)
+  QUOTA_DO: DurableObjectNamespace;
+  REFRESH_SCHEDULER_DO: DurableObjectNamespace;
 }
 
 /**
@@ -33,12 +33,12 @@ const app = new Hono<{ Bindings: Env }>();
  */
 app.use(
 	"*",
-	secureHeaders({
+  secureHeaders({
 		hsts: "max-age=63072000; includeSubDomains; preload",
 		contentTypeOptions: "nosniff",
 		frameOptions: "DENY",
-		// API doesn't need CSP
-		contentSecurityPolicy: false,
+    // API doesn't need CSP
+    contentSecurityPolicy: false,
 	}),
 );
 
@@ -46,22 +46,23 @@ app.use(
  * Middleware: CORS (dynamic based on environment)
  */
 app.use("*", async (context, next) => {
-	const corsMiddleware = createCors(context.env.APPROVED_ORIGINS);
-	return corsMiddleware(context, next);
+  const corsMiddleware = createCors(context.env.APPROVED_ORIGINS);
+  return corsMiddleware(context, next);
 });
 
 /**
- * Middleware: Bot Protection (skip health checks)
+ * Middleware: Bot Protection (skip health checks and metrics)
  */
 app.use("*", async (context, next) => {
-	if (context.req.path === "/health") {
-		return next();
-	}
-	return botProtection({
-		blockEmptyUserAgent: true,
-		blockKnownBots: true,
-		checkCloudflareIp: true,
-	})(context, next);
+	// Skip bot protection for health checks and metrics
+	if (context.req.path === "/health" || context.req.path === "/metrics") {
+    return next();
+  }
+  return botProtection({
+		blockEmptyUserAgent: false, // Allow browser requests (browsers always send User-Agent)
+    blockKnownBots: true,
+		checkCloudflareIp: false, // Disable strict IP check to prevent hanging
+  })(context, next);
 });
 
 /**
@@ -69,9 +70,9 @@ app.use("*", async (context, next) => {
  */
 app.use(
 	"/fixtures*",
-	rateLimiter({
-		limit: 60,
-		windowSec: 60,
+  rateLimiter({
+    limit: 60,
+    windowSec: 60,
 		skip: (context) => context.req.path === "/health",
 	}),
 );
@@ -80,21 +81,21 @@ app.use(
  * Health check endpoint
  */
 app.get("/health", (context) => {
-	return context.json({
+  return context.json({
 		status: "ok",
-		timestamp: new Date().toISOString(),
-	});
+    timestamp: new Date().toISOString(),
+  });
 });
 
 /**
  * Metrics endpoint (for monitoring)
  */
 app.get("/metrics", (context) => {
-	const metrics = getMetrics();
-	return context.json({
+  const metrics = getMetrics();
+  return context.json({
 		status: "ok",
-		metrics,
-	});
+    metrics,
+  });
 });
 
 /**
@@ -106,13 +107,13 @@ app.route("/fixtures", createFixturesRoutes());
  * 404 handler
  */
 app.notFound((context) => {
-	return context.json(
-		{
+  return context.json(
+    {
 			status: "error",
 			message: "Not found",
-		},
+    },
 		404,
-	);
+  );
 });
 
 /**
@@ -144,10 +145,10 @@ app.onError((error, context) => {
 
 	// Create response with CORS headers
 	const response = context.json(
-		{
+    {
 			status: "error",
 			message: "Internal server error",
-		},
+    },
 		500,
 	);
 
@@ -169,54 +170,106 @@ app.onError((error, context) => {
 });
 
 /**
+ * Timeout wrapper to prevent infinite hangs
+ */
+async function withTimeout<T>(
+	promise: Promise<T>,
+	timeoutMs: number,
+	errorMessage: string,
+): Promise<T> {
+	return Promise.race([
+		promise,
+		new Promise<T>((_, reject) =>
+			setTimeout(() => reject(new Error(errorMessage)), timeoutMs),
+		),
+	]);
+}
+
+/**
  * Cloudflare Workers export
  */
 export default {
-	/**
-	 * Handle HTTP requests
-	 */
+  /**
+   * Handle HTTP requests
+   */
 	async fetch(
 		request: Request,
 		env: Env,
 		ctx: ExecutionContext,
 	): Promise<Response> {
-		const requestStartTime = performance.now();
-		const url = new URL(request.url);
+    const requestStartTime = performance.now();
+    const url = new URL(request.url);
 
-		// Process request
-		const response = await app.fetch(request, env, ctx);
+		try {
+			// Process request with 30 second timeout
+			const responsePromise = Promise.resolve(app.fetch(request, env, ctx));
+			const response = await withTimeout(
+				responsePromise,
+				30000,
+				"Request timeout after 30 seconds",
+			);
 
-		// Add response time header
-		const durationMs = performance.now() - requestStartTime;
-		const responseTime = durationMs.toFixed(2);
-		response.headers.set("X-Response-Time", `${responseTime}ms`);
+    // Add response time header
+    const durationMs = performance.now() - requestStartTime;
+    const responseTime = durationMs.toFixed(2);
+			response.headers.set("X-Response-Time", `${responseTime}ms`);
 
-		// Log request (non-blocking)
-		ctx.waitUntil(
-			Promise.resolve().then(() => {
-				logRequest(
-					url.pathname,
-					request.method,
-					response.status,
-					durationMs,
-					response.headers.get("X-Source") || undefined,
-				);
-			}),
-		);
+    // Log request (non-blocking)
+    ctx.waitUntil(
+      Promise.resolve().then(() => {
+        logRequest(
+          url.pathname,
+          request.method,
+          response.status,
+          durationMs,
+						response.headers.get("X-Source") || undefined,
+        );
+				}),
+    );
 
-		return response;
-	},
+    return response;
+		} catch (error) {
+			console.error("❌ [Fetch] Error:", error);
+			const durationMs = performance.now() - requestStartTime;
 
-	/**
-	 * Handle scheduled events (Cron Triggers)
-	 */
+			// Return error response with CORS headers
+			const errorResponse = new Response(
+				JSON.stringify({
+					status: "error",
+					message:
+						error instanceof Error ? error.message : "Internal server error",
+				}),
+				{
+					status: 500,
+					headers: {
+						"Content-Type": "application/json",
+						"Access-Control-Allow-Origin": "*",
+						"Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+					},
+				},
+			);
+
+			// Log error (non-blocking)
+			ctx.waitUntil(
+				Promise.resolve().then(() => {
+					logRequest(url.pathname, request.method, 500, durationMs, undefined);
+				}),
+			);
+
+			return errorResponse;
+		}
+  },
+
+  /**
+   * Handle scheduled events (Cron Triggers)
+   */
 	async scheduled(
 		event: ScheduledEvent,
 		env: Env,
 		ctx: ExecutionContext,
 	): Promise<void> {
-		ctx.waitUntil(handleScheduledEvent(event, env));
-	},
+    ctx.waitUntil(handleScheduledEvent(event, env));
+  },
 };
 
 /**

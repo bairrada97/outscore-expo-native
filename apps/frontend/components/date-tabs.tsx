@@ -2,9 +2,9 @@ import { usePrefetchFixtures } from "@/hooks/usePrefetchFixtures";
 import { cn } from "@/lib/utils";
 import { LIVE_BUTTON_LABEL } from "@/utils/constants";
 import {
-	formatDateForApi,
-	getDateRange,
-	getTodayTabIndex,
+  formatDateForApi,
+  getDateRange,
+  getTodayTabIndex,
 } from "@/utils/date-utils";
 import { isWeb } from "@/utils/platform";
 import { format, isSameDay } from "date-fns";
@@ -304,14 +304,14 @@ export function DateTabs() {
 		// Use startTransition to mark this as a non-urgent update
 		// This keeps the tab animation smooth while React renders the new content
 		startTransition(() => {
-			setIndex(newIndex);
+		setIndex(newIndex);
 
-			if (isWeb) {
-				const route = routes[newIndex];
-				if (route) {
-					router.setParams({ date: route.key });
-				}
+		if (isWeb) {
+			const route = routes[newIndex];
+			if (route) {
+				router.setParams({ date: route.key });
 			}
+		}
 		});
 	}
 

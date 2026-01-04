@@ -3,9 +3,12 @@ import {
 	AccordionItem,
 	AccordionTrigger,
 } from "@/components/ui/accordion";
+import { cn } from "@/lib/utils";
 import type { FormattedCountry } from "@outscore/shared-types";
-import { Image, Text, View } from "react-native";
+import { Image, View } from "react-native";
 import { CompetitionSection } from "./competition-section";
+import { CountryDailyMatches } from "./country-daily-matches";
+import { Text } from "./ui/text";
 
 interface CountryItemProps {
 	country: FormattedCountry;
@@ -22,38 +25,63 @@ export function CountryItem({
 	totalLiveMatches,
 	onFixturePress,
 }: CountryItemProps) {
+	// Use world icon for "World" country
+	const isWorld = country.name === "World";
+
 	return (
-		<AccordionItem value={country.name} className="mb-1 border-0">
-			<AccordionTrigger className="flex-row items-center justify-between px-3 py-3 bg-m-01 data-[state=open]:bg-m-01-dark-01">
-				<View className="flex-row items-center flex-1">
-					{country.flag ? (
-						<Image
-							source={{ uri: country.flag }}
-							className="w-6 h-4 mr-3 rounded-sm"
-							resizeMode="cover"
+		<AccordionItem value={country.name} className="mb-0 border-0">
+			<AccordionTrigger className="h-40 min-h-40 flex-row items-center justify-between border-b border-neu-03 px-16 py-0 data-[state=expanded]:bg-m-01 dark:border-neu-10 hover:no-underline">
+				<View className="flex-1 flex-row items-center gap-x-16">
+					{/* Flag container with circular border */}
+					<View
+						className={cn(
+							"relative h-24 w-24 items-center justify-center rounded-full",
+							"shadow-sha-01 dark:shadow-sha-06",
+						)}
+					>
+						{/* Outer border ring */}
+						<View
+							className={cn(
+								"absolute -top-px -left-px h-26 w-26 rounded-full border-2",
+								"border-neu-01 dark:border-neu-10",
+								"data-[state=expanded]:border-m-01-light-03 data-[state=expanded]:shadow-sha-01",
+								"dark:data-[state=expanded]:shadow-sha-06",
+							)}
 						/>
-					) : (
-						<View className="w-6 h-4 mr-3 bg-neu-05 rounded-sm" />
-					)}
-					<Text className="text-sm font-semibold text-neu-01">
+						{/* Flag image container */}
+						<View className="absolute h-full w-full items-center justify-center overflow-hidden rounded-full">
+							{/* Overlay for depth */}
+							<View className="absolute inset-0 z-10 rounded-full bg-neu-10 opacity-[0.08]" />
+							{country.flag && !isWorld ? (
+								<Image
+									source={{ uri: country.flag }}
+									className="h-full w-full"
+									resizeMode="cover"
+								/>
+							) : (
+								<View className="h-full w-full items-center justify-center bg-neu-03 dark:bg-neu-09">
+									<Text className="text-10 text-neu-06">🌍</Text>
+								</View>
+							)}
+						</View>
+					</View>
+
+					{/* Country name */}
+					<Text
+						variant="body-01--semi"
+						className="text-left text-neu-10 dark:text-neu-06"
+					>
 						{country.name}
 					</Text>
 				</View>
-				<View className="flex-row items-center gap-2">
-					{totalLiveMatches > 0 && (
-						<View className="bg-m-01-light-03 px-2 py-0.5 rounded-full">
-							<Text className="text-xs font-semibold text-neu-01">
-								{totalLiveMatches}
-							</Text>
-						</View>
-					)}
-					<View className="border border-neu-01/30 px-2 py-0.5 rounded-full">
-						<Text className="text-xs font-medium text-neu-01">
-							{totalMatches}
-						</Text>
-					</View>
-				</View>
+
+				{/* Match count badge */}
+				<CountryDailyMatches
+					dailyMatchesLength={totalMatches}
+					liveMatchesLength={totalLiveMatches}
+				/>
 			</AccordionTrigger>
+
 			<AccordionContent className="pb-0">
 				{country.leagues.map((league) => (
 					<CompetitionSection
