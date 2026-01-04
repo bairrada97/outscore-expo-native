@@ -1,15 +1,21 @@
 import { cn } from "@/lib/utils";
 import { LIVE_BUTTON_LABEL } from "@/utils/constants";
 import {
-  formatDateForApi,
-  getDateRange,
-  getTodayTabIndex,
+	formatDateForApi,
+	getDateRange,
+	getTodayTabIndex,
 } from "@/utils/date-utils";
 import { isWeb } from "@/utils/platform";
 import { format, isSameDay } from "date-fns";
 import { useGlobalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, Text, useWindowDimensions, View } from "react-native";
+import {
+	Dimensions,
+	Pressable,
+	Text,
+	useWindowDimensions,
+	View,
+} from "react-native";
 import { type SceneRendererProps, TabView } from "react-native-tab-view";
 import { CalendarButton } from "./calendar-button";
 import { FixturesScreen } from "./fixtures-screen";
@@ -19,6 +25,23 @@ interface DateRoute {
 	title: string;
 	date?: Date;
 }
+
+export const CalendarBarButtonScreen = () => {
+	const screenWidth = Dimensions.get("screen").width;
+
+	return (
+		<View
+			className={cn(
+				"absolute left-0 z-10 flex h-48 flex-row items-center justify-start dark:bg-neu-11 dark:shadow-sha-06 box-border bg-neu-01 shadow-sha-01",
+			)}
+			style={{
+				width: (isWeb ? 800 : screenWidth) / 7,
+			}}
+		>
+			<CalendarButton onPress={() => {}} />
+		</View>
+	);
+};
 
 function createRoutes(dates: Date[]): DateRoute[] {
 	const routes: DateRoute[] = dates.map((date) => ({
@@ -43,8 +66,15 @@ interface TabBarProps {
 }
 
 function CustomTabBar({ routes, index, onIndexChange, today }: TabBarProps) {
+	const screenWidth = Dimensions.get("screen").width;
+
 	return (
-		<View className="flex-row items-stretch h-12 bg-neu-02 border-b border-neu-04">
+		<View
+			className="flex-row items-stretch h-12 bg-neu-02 border-b border-neu-04"
+			style={{
+				marginLeft: (isWeb ? 800 : screenWidth) / 7,
+			}}
+		>
 			{routes.map((route, i) => {
 				const isActive = i === index;
 				const isLive = route.key === "live";
@@ -134,27 +164,18 @@ export function DateTabs() {
 		return <FixturesScreen date={route.key} />;
 	}
 
-	const calendarButtonWidth = 52;
-	const tabViewWidth = layout.width - calendarButtonWidth;
+	const containerWidth = isWeb ? Math.min(layout.width, 800) : layout.width;
+	const calendarButtonWidth = containerWidth / 7;
+	const tabViewWidth = containerWidth - calendarButtonWidth;
 
 	return (
-		<View className={isWeb ? "flex-row" : "flex-1 flex-row"}>
-			<CalendarButton
-				onPress={() => {
-					console.log("Calendar pressed");
-				}}
-			/>
-
-			<View
-				style={
-					isWeb ? { width: tabViewWidth } : { flex: 1, width: tabViewWidth }
-				}
-			>
+		<View className={isWeb ? "" : "flex-1"}>
+			<CalendarBarButtonScreen />
+			<View>
 				<TabView
 					navigationState={{ index, routes }}
 					renderScene={renderScene}
 					onIndexChange={handleIndexChange}
-					initialLayout={{ width: tabViewWidth }}
 					renderTabBar={() => (
 						<CustomTabBar
 							routes={routes}
@@ -166,8 +187,12 @@ export function DateTabs() {
 					swipeEnabled={!isWeb}
 					lazy
 					lazyPreloadDistance={1}
-					style={isWeb ? { flex: undefined } : undefined}
-					sceneContainerStyle={isWeb ? { position: "relative" } : undefined}
+					style={
+						isWeb
+							? { flex: undefined, position: "relative", width: containerWidth }
+							: undefined
+					}
+					pagerStyle={{ width: tabViewWidth }}
 				/>
 			</View>
 		</View>

@@ -1,6 +1,5 @@
 import { LegendList, type LegendListRenderItemProps } from "@legendapp/list";
 import type { FormattedCountry } from "@outscore/shared-types";
-import { memo, useCallback } from "react";
 import { Platform, Text, View } from "react-native";
 import { CountryItem } from "./country-item";
 import { Accordion } from "./ui/accordion";
@@ -19,7 +18,7 @@ interface ItemProps {
 	onFixturePress?: (fixtureId: number) => void;
 }
 
-const Item = memo(function Item({ item, timezone, onFixturePress }: ItemProps) {
+function Item({ item, timezone, onFixturePress }: ItemProps) {
 	const totalMatches = item.leagues.reduce(
 		(acc, league) => acc + league.matches.length,
 		0,
@@ -40,7 +39,7 @@ const Item = memo(function Item({ item, timezone, onFixturePress }: ItemProps) {
 			onFixturePress={onFixturePress}
 		/>
 	);
-});
+}
 
 export function FixturesList({
 	countries,
@@ -49,11 +48,8 @@ export function FixturesList({
 	isRefetching,
 	onFixturePress,
 }: FixturesListProps) {
-	const renderItem = useCallback(
-		({ item }: LegendListRenderItemProps<FormattedCountry>) => (
-			<Item item={item} timezone={timezone} onFixturePress={onFixturePress} />
-		),
-		[timezone, onFixturePress],
+	const renderItem = ({ item }: LegendListRenderItemProps<FormattedCountry>) => (
+		<Item item={item} timezone={timezone} onFixturePress={onFixturePress} />
 	);
 
 	if (isLoading) {

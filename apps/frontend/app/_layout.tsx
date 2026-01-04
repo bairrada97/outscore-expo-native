@@ -5,7 +5,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { HeroUINativeProvider } from 'heroui-native';
 import { useEffect } from 'react';
-import { AppState, type AppStateStatus, Platform } from 'react-native';
+import { AppState, type AppStateStatus, Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { TimeZoneProvider } from '@/context/timezone-context';
@@ -17,6 +17,8 @@ import {
 
 // Import global styles for Uniwind
 import "../global.css";
+
+const isWeb = Platform.OS === 'web';
 
 // Keep splash screen visible until ready
 SplashScreen.preventAutoHideAsync();
@@ -49,21 +51,30 @@ export default function RootLayout() {
 
   return (
     <PersistQueryClientProvider
-          client={queryClient}
-          persistOptions={persistOptions}
-        >
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <HeroUINativeProvider>
-            <TimeZoneProvider>
-              <StatusBar style="auto" />
+      client={queryClient}
+      persistOptions={persistOptions}
+    >
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <HeroUINativeProvider>
+          <TimeZoneProvider>
+            <StatusBar style="auto" />
+            <View
+              style={{
+                flex: 1,
+                width: '100%',
+                maxWidth: isWeb ? 800 : undefined,
+                alignSelf: 'center',
+              }}
+            >
               <Stack
                 screenOptions={{
                   headerShown: false,
                 }}
               />
-            </TimeZoneProvider>
-          </HeroUINativeProvider>
-         </GestureHandlerRootView>
-        </PersistQueryClientProvider>
+            </View>
+          </TimeZoneProvider>
+        </HeroUINativeProvider>
+      </GestureHandlerRootView>
+    </PersistQueryClientProvider>
   );
 }
