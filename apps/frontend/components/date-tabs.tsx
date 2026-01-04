@@ -191,7 +191,7 @@ export const CalendarBarButtonScreen = () => {
 	return (
 		<View
 			className={cn(
-				"absolute left-0 z-10 flex h-48 flex-row items-center justify-start dark:bg-neu-11 dark:shadow-sha-06 box-border bg-neu-01 shadow-sha-01",
+				"absolute left-0 z-10 flex h-48 flex-row items-center justify-start dark:bg-neu-11 box-border bg-neu-01",
 			)}
 			style={{
 				width: (isWeb ? 800 : screenWidth) / 7,
@@ -320,6 +320,12 @@ export function DateTabs() {
 
 	return (
 		<View className={isWeb ? "" : "flex-1"}>
+			{/* Shadow bar that spans the full width - transparent so tabs show through */}
+			<View
+				className="absolute left-0 right-0 h-12 z-20 shadow-sha-01 dark:shadow-sha-06"
+				style={{ backgroundColor: "transparent" }}
+				pointerEvents="none"
+			/>
 			<CalendarBarButtonScreen />
 			<View>
 				<TabView
