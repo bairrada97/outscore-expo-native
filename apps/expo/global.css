@@ -1,0 +1,204 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* @layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  } 
+} */
+
+@layer base {
+  :root {
+    --m-01: 24 124 86;
+    --m-01--light-01: 38 151 108;
+    --m-01--light-02: 52 183 120;
+    --m-01--light-03: 58 206 135;
+    --m-01--light-04: 102 227 167;
+    --m-01--dark-01: 36 87 68;
+
+    --m-02: 118 197 39;
+    --m-02--dark-01: 106 184 69;
+    --m-02--dark-02: 103 170 71;
+    --m-02--light-01: 139 221 33;
+    --m-02--light-02: 151 233 46;
+    --m-02--light-03: 191 243 124;
+
+    --neu-01: 255 255 255;
+    --neu-02: 249 249 249;
+    --neu-03: 240 241 241;
+    --neu-04: 227 229 228;
+    --neu-05: 218 221 219;
+    --neu-06: 195 200 198;
+    --neu-07: 139 149 145;
+    --neu-08: 112 123 119;
+    --neu-09: 94 103 99;
+    --neu-10: 79 86 84;
+    --neu-11: 49 53 52;
+    --neu-12: 31 34 32;
+    --neu-13: 19 20 19;
+
+    --burgundy: 120 47 47;
+    --red: 212 66 66;
+    --orange: 248 148 32;
+    --yellow: 255 209 46;
+    --teal: 35 205 174;
+    --cyan: 56 186 215;
+    --lime: 139 221 33;
+    --lightGreen: 52 183 120;
+    --darkGreen: 24 124 86;
+    --blue: 20 121 178;
+
+    --gra-01: 106.45deg, rgb(var(--m-01--light-01)) 8.47%,
+      rgb(var(--m-02--dark-01)) 92.4%;
+    --gra-02: 112.63deg, rgb(var(--m-02)) 10.93%,
+      rgb(var(--m-01--light-01)) 88.2%;
+    --gra-03: 97.5deg, rgb(var(--m-02--dark-01)) 4.32%,
+      rgb(var(--m-02--light-02)) 94.22%, --gra-03--inverted: 97.5deg,
+      rgb(var(--m-02--light-02)) 4.32%, rgb(var(--m-02--dark-01)) 94.22%;
+    --gra-04: 360deg, rgb(var(--m-01)) 0%, rgb(var(--m-01--light-01)) 100%;
+    --gra-05: 97.5deg, rgb(var(--neu-10)) 4.32%, rgb(var(--neu-09)) 94.22%;
+    --gra-05--inverted: 97.5deg, rgb(var(--neu-09)) 4.32%,
+      rgb(var(--neu-1)) 94.22%;
+    --gra-06: 97.5deg, rgb(var(--neu-08)) 4.32%, rgb(var(--neu-07)) 94.22%;
+    --gra-06--inverted: 97.5deg, rgb(var(--neu-07)) 4.32%,
+      rgb(var(--neu-08)) 94.22%;
+    --gra-07: 97.5deg, rgb(var(--neu-06)) 4.32%, rgb(var(--neu-05)) 94.22%;
+    --gra-07--inverted: 97.5deg, rgb(var(--neu-05)) 4.32%,
+      rgb(var(--neu-06)) 94.22%;
+    --appSize: 800px;
+
+    --font-size-16: 16px;
+  }
+}
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+  --background: "white";
+  --foreground: "black";
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+@layer components {
+  .cardMatch:not(:last-of-type)::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    height: 1px;
+    width: calc(100% - 16px);
+    transform: translateX(-50%);
+    background: rgb(var(--neu-04));
+  }
+  .dark .cardMatch:not(:last-of-type)::after {
+    background: rgb(var(--neu-12));
+  }
+  .cardEvent:not(:last-of-type) {
+    border-bottom: 1px solid rgb(var(--neu-04));
+  }
+  .dark .cardEvent:not(:last-of-type) {
+    border-bottom: 1px solid rgb(var(--neu-11));
+  }
+
+  .cardEvent:last-child {
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+  }
+
+  .dark .cardEvent:not(:last-of-type) {
+    border-bottom: 1px solid rgb(var(--neu-11));
+  }
+
+  .dark .cardEvent[data-side="away"]:not(:last-of-type) {
+    border-bottom: 1px solid rgb(var(--neu-12));
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* For IE, Edge and Firefox */
+  .scrollbar-hide {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .rtl-grid {
+    direction: rtl;
+  }
+
+  .rtl-grid[data-side="away"] {
+    direction: rtl;
+  }
+
+  .ltr-grid {
+    direction: ltr;
+  }
+
+  [data-side="away"] .ltr-grid {
+    direction: ltr;
+  }
+
+  [data-id="0"] .rtl-grid {
+    direction: rtl;
+  }
+
+  .statisticSide:last-of-type {
+    direction: ltr;
+  }
+
+  .teamWon {
+    background: rgb(var(--darkGreen));
+  }
+
+  .teamDraw {
+    background: rgb(var(--neu-09));
+  }
+
+  .teamLost {
+    background: rgb(var(--red));
+  }
+}
+
+html {
+  background: rgb(var(--neu-02));
+  overflow-y: scroll;
+  font-family: "sourceSansPro_regular", sans-serif;
+  scrollbar-gutter: stable;
+  /* &[data-theme="dark"]: {
+      background: rgb(var(--neu-12));
+    } */
+}
+body {
+  margin: 0 auto;
+  color: rgb(var(--neu-10));
+  line-height: normal;
+  font-weight: var(--font-weight-regular);
+  font-family: "sourceSansPro_regular", sans-serif;
+
+  /* "-webkit-tap-highlight-color":transparent ; */
+}
+
+main {
+  padding-bottom: 80px;
+  position: relative;
+  max-width: var(--appSize);
+  min-height: 100vh;
+  margin: 0 auto;
+}
+
+a {
+  color: currentColor;
+}

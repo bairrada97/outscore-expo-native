@@ -1,0 +1,122 @@
+@import "tailwindcss";
+@import "uniwind";
+
+@import "tw-animate-css"; 
+
+@theme {
+  /* Primary colors */
+  --color-m-01: rgb(24 124 86);
+  --color-m-01-light-01: rgb(38 151 108);
+  --color-m-01-light-02: rgb(52 183 120);
+  --color-m-01-light-03: rgb(58 206 135);
+  --color-m-01-light-04: rgb(102 227 167);
+  --color-m-01-dark-01: rgb(36 87 68);
+
+  /* Secondary colors */
+  --color-m-02: rgb(118 197 39);
+  --color-m-02-dark-01: rgb(106 184 69);
+  --color-m-02-dark-02: rgb(103 170 71);
+  --color-m-02-light-01: rgb(139 221 33);
+  --color-m-02-light-02: rgb(151 233 46);
+  --color-m-02-light-03: rgb(191 243 124);
+
+  /* Neutral colors */
+  --color-neu-01: rgb(255 255 255);
+  --color-neu-02: rgb(249 249 249);
+  --color-neu-03: rgb(240 241 241);
+  --color-neu-04: rgb(227 229 228);
+  --color-neu-05: rgb(218 221 219);
+  --color-neu-06: rgb(195 200 198);
+  --color-neu-07: rgb(139 149 145);
+  --color-neu-08: rgb(112 123 119);
+  --color-neu-09: rgb(94 103 99);
+  --color-neu-10: rgb(79 86 84);
+  --color-neu-11: rgb(49 53 52);
+  --color-neu-12: rgb(31 34 32);
+  --color-neu-13: rgb(19 20 19);
+
+  /* Semantic colors */
+  --color-burgundy: rgb(120 47 47);
+  --color-red: rgb(212 66 66);
+  --color-orange: rgb(248 148 32);
+  --color-yellow: rgb(255 209 46);
+  --color-teal: rgb(35 205 174);
+  --color-cyan: rgb(56 186 215);
+  --color-lime: rgb(139 221 33);
+  --color-light-green: rgb(52 183 120);
+  --color-dark-green: rgb(24 124 86);
+  --color-blue: rgb(20 121 178);
+
+  /* Spacing scale */
+  --spacing-0: 0px;
+  --spacing-4: 4px;
+  --spacing-8: 8px;
+  --spacing-16: 16px;
+  --spacing-24: 24px;
+  --spacing-32: 32px;
+  --spacing-40: 40px;
+  --spacing-48: 48px;
+  --spacing-56: 56px;
+  --spacing-64: 64px;
+
+  /* Font sizes */
+  --font-size-10: 0.625rem;
+  --font-size-12: 0.75rem;
+  --font-size-14: 0.875rem;
+  --font-size-16: 1rem;
+  --font-size-18: 1.125rem;
+  --font-size-20: 1.25rem;
+
+  /* Shadows */
+  --shadow-sha-01: 0px 5px 10px rgba(19, 20, 19, 0.12);
+  --shadow-sha-02: 0px 4px 12px rgba(19, 20, 19, 0.04);
+  --shadow-sha-03: 0px 6px 24px rgba(52, 183, 120, 0.2);
+  --shadow-sha-04: 0px 32px 72px rgba(19, 20, 19, 0.4);
+  --shadow-sha-05: 0px -5px 10px rgba(19, 20, 19, 0.12);
+  --shadow-sha-06: 0px 5px 18px rgba(19, 20, 19, 0.3);
+  --shadow-sha-07: -2px 2px 3px -1px rgba(19, 20, 19, 0.32);
+
+  /* App size */
+  --app-size: 800px;
+}
+
+@layer base {
+  :root {
+    --foreground: var(--color-neu-13);
+    --background: var(--color-neu-02);
+  }
+}
+
+@layer components {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .fixture-card:not(:last-of-type)::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    height: 1px;
+    width: calc(100% - 16px);
+    transform: translateX(-50%);
+    background: var(--color-neu-04);
+  }
+
+  .dark .fixture-card:not(:last-of-type)::after {
+    background: var(--color-neu-12);
+  }
+}
+
+@layer utilities {
+  .flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}

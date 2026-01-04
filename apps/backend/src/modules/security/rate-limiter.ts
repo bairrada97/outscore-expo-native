@@ -64,6 +64,7 @@ function cleanupExpiredEntries(now: number): void {
 /**
  * Start the periodic cleanup interval
  * Automatically cleans up expired entries every 5 minutes
+ * Must be called within a request handler (not at module scope)
  */
 const startPeriodicCleanup = (): void => {
   if (cleanupIntervalId !== null) {
@@ -84,9 +85,6 @@ export const stopPeriodicCleanup = (): void => {
     cleanupIntervalId = null;
   }
 };
-
-// Start periodic cleanup at module initialization
-startPeriodicCleanup();
 
 /**
  * Get client IP from request
@@ -115,6 +113,10 @@ export const rateLimiter = (config: RateLimiterConfig): MiddlewareHandler => {
   const windowMs = windowSec * 1000;
 
   return async (context, next) => {
+    // Start periodic cleanup on first request (lazy initialization)
+    // This must be done within a handler, not at module scope
+    startPeriodicCleanup();
+
     // Check if we should skip rate limiting
     if (skip?.(context)) {
       // Still set rate limit headers for skipped requests using configured defaults

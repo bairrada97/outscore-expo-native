@@ -1,0 +1,77 @@
+{
+  "expo": {
+    "name": "outscore",
+    "slug": "outscore",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "myapp",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.imeggcellent.outscore"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.imeggcellent.outscore"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/SourceCodePro-Black.ttf",
+            "./assets/fonts/SourceCodePro-BlackItalic.ttf",
+            "./assets/fonts/SourceCodePro-Bold.ttf",
+            "./assets/fonts/SourceCodePro-BoldItalic.ttf",
+            "./assets/fonts/SourceCodePro-ExtraBold.ttf",
+            "./assets/fonts/SourceCodePro-ExtraBoldItalic.ttf",
+            "./assets/fonts/SourceCodePro-ExtraLight.ttf",
+            "./assets/fonts/SourceCodePro-ExtraLightItalic.ttf",
+            "./assets/fonts/SourceCodePro-Italic.ttf",
+            "./assets/fonts/SourceCodePro-Light.ttf",
+            "./assets/fonts/SourceCodePro-LightItalic.ttf",
+            "./assets/fonts/SourceCodePro-Medium.ttf",
+            "./assets/fonts/SourceCodePro-MediumItalic.ttf",
+            "./assets/fonts/SourceCodePro-Regular.ttf",
+            "./assets/fonts/SourceCodePro-SemiBold.ttf",
+            "./assets/fonts/SourceCodePro-SemiBoldItalic.ttf"
+          ]
+        }
+      ],
+      "expo-localization"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "7259011d-cbba-4495-ad04-23459bcc31b0"
+      }
+    }
+  }
+}
