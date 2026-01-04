@@ -47,6 +47,24 @@
   --color-dark-green: rgb(24 124 86);
   --color-blue: rgb(20 121 178);
 
+  --gra-01: 106.45deg, rgb(var(--m-01--light-01)) 8.47%,
+      rgb(var(--m-02--dark-01)) 92.4%;
+  --gra-02: 112.63deg, rgb(var(--m-02)) 10.93%,
+    rgb(var(--m-01--light-01)) 88.2%;
+  --gra-03: 97.5deg, rgb(var(--m-02--dark-01)) 4.32%,
+    rgb(var(--m-02--light-02)) 94.22%, --gra-03--inverted: 97.5deg,
+    rgb(var(--m-02--light-02)) 4.32%, rgb(var(--m-02--dark-01)) 94.22%;
+  --gra-04: 360deg, rgb(var(--m-01)) 0%, rgb(var(--m-01--light-01)) 100%;
+  --gra-05: 97.5deg, rgb(var(--neu-10)) 4.32%, rgb(var(--neu-09)) 94.22%;
+  --gra-05--inverted: 97.5deg, rgb(var(--neu-09)) 4.32%,
+    rgb(var(--neu-1)) 94.22%;
+  --gra-06: 97.5deg, rgb(var(--neu-08)) 4.32%, rgb(var(--neu-07)) 94.22%;
+  --gra-06--inverted: 97.5deg, rgb(var(--neu-07)) 4.32%,
+    rgb(var(--neu-08)) 94.22%;
+  --gra-07: 97.5deg, rgb(var(--neu-06)) 4.32%, rgb(var(--neu-05)) 94.22%;
+  --gra-07--inverted: 97.5deg, rgb(var(--neu-05)) 4.32%,
+    rgb(var(--neu-06)) 94.22%;
+
   /* Spacing scale */
   --spacing-0: 0px;
   --spacing-4: 4px;
