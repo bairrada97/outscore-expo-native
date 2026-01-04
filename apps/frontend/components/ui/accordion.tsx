@@ -2,6 +2,7 @@ import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import * as AccordionPrimitive from "@rn-primitives/accordion";
 import { ChevronDown } from "lucide-react-native";
+import * as React from "react";
 import { Platform, Pressable, View } from "react-native";
 import Animated, {
 	FadeOutUp,
@@ -18,11 +19,20 @@ function Accordion({
 	...props
 }: Omit<AccordionPrimitive.RootProps, "asChild"> &
 	React.RefAttributes<AccordionPrimitive.RootRef>) {
+	// Skip heavy layout animations on web for better performance
+	if (Platform.OS === "web") {
+		return (
+			<AccordionPrimitive.Root {...(props as AccordionPrimitive.RootProps)}>
+				{children}
+			</AccordionPrimitive.Root>
+		);
+	}
+
 	return (
 		<LayoutAnimationConfig skipEntering>
 			<AccordionPrimitive.Root
 				{...(props as AccordionPrimitive.RootProps)}
-				asChild={Platform.OS !== "web"}
+				asChild
 			>
 				<Animated.View layout={LinearTransition.duration(200)}>
 					{children}
@@ -39,20 +49,35 @@ function AccordionItem({
 	...props
 }: AccordionPrimitive.ItemProps &
 	React.RefAttributes<AccordionPrimitive.ItemRef>) {
+	const itemClassName = cn(
+		"border-border border-b",
+		Platform.select({ web: "last:border-b-0" }),
+		className,
+	);
+
+	// Skip Animated.View wrapper on web for better performance
+	if (Platform.OS === "web") {
+		return (
+			<AccordionPrimitive.Item
+				className={itemClassName}
+				value={value}
+				{...props}
+			>
+				{children}
+			</AccordionPrimitive.Item>
+		);
+	}
+
 	return (
 		<AccordionPrimitive.Item
-			className={cn(
-				"border-border border-b",
-				Platform.select({ web: "last:border-b-0" }),
-				className,
-			)}
+			className={itemClassName}
 			value={value}
 			asChild
 			{...props}
 		>
 			<Animated.View
-				className="native:overflow-hidden"
-				layout={Platform.select({ native: LinearTransition.duration(200) })}
+				className="overflow-hidden"
+				layout={LinearTransition.duration(200)}
 			>
 				{children}
 			</Animated.View>
@@ -130,6 +155,17 @@ function AccordionContent({
 }: AccordionPrimitive.ContentProps &
 	React.RefAttributes<AccordionPrimitive.ContentRef>) {
 	const { isExpanded } = AccordionPrimitive.useItemContext();
+
+	// Lazy render: only render children when expanded (or was expanded)
+	// This dramatically reduces initial render cost for large lists
+	const [hasBeenExpanded, setHasBeenExpanded] = React.useState(isExpanded);
+
+	React.useEffect(() => {
+		if (isExpanded && !hasBeenExpanded) {
+			setHasBeenExpanded(true);
+		}
+	}, [isExpanded, hasBeenExpanded]);
+
 	return (
 		<TextClassContext.Provider value="text-sm">
 			<AccordionPrimitive.Content
@@ -145,7 +181,8 @@ function AccordionContent({
 					exiting={Platform.select({ native: FadeOutUp.duration(200) })}
 					className={cn("pb-4", className)}
 				>
-					{children}
+					{/* Only render children if accordion has been opened at least once */}
+					{hasBeenExpanded ? children : null}
 				</Animated.View>
 			</AccordionPrimitive.Content>
 		</TextClassContext.Provider>

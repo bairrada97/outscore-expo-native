@@ -9,7 +9,7 @@ import {
 import { isWeb } from "@/utils/platform";
 import { format, isSameDay } from "date-fns";
 import { useGlobalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { startTransition, useState } from "react";
 import {
 	Animated,
 	Dimensions,
@@ -301,14 +301,18 @@ export function DateTabs() {
 	const [index, setIndex] = useState(getInitialIndex);
 
 	function handleIndexChange(newIndex: number) {
-		setIndex(newIndex);
+		// Use startTransition to mark this as a non-urgent update
+		// This keeps the tab animation smooth while React renders the new content
+		startTransition(() => {
+			setIndex(newIndex);
 
-		if (isWeb) {
-			const route = routes[newIndex];
-			if (route) {
-				router.setParams({ date: route.key });
+			if (isWeb) {
+				const route = routes[newIndex];
+				if (route) {
+					router.setParams({ date: route.key });
+				}
 			}
-		}
+		});
 	}
 
 	function renderScene({ route }: SceneRendererProps & { route: DateRoute }) {
