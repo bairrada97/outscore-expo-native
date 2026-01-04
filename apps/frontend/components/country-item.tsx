@@ -5,9 +5,10 @@ import {
 } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import type { FormattedCountry } from "@outscore/shared-types";
-import { Image, View } from "react-native";
+import { View } from "react-native";
 import { CompetitionSection } from "./competition-section";
 import { CountryDailyMatches } from "./country-daily-matches";
+import { SvgFlag } from "./svg-flag";
 import { Text } from "./ui/text";
 
 interface CountryItemProps {
@@ -42,7 +43,7 @@ export function CountryItem({
 						{/* Outer border ring */}
 						<View
 							className={cn(
-								"absolute -top-px -left-px h-26 w-26 rounded-full border-2",
+								"absolute -top-px -left-px h-[26px] w-[26px] rounded-full border-2",
 								"border-neu-01 dark:border-neu-10",
 								"data-[state=expanded]:border-m-01-light-03 data-[state=expanded]:shadow-sha-01",
 								"dark:data-[state=expanded]:shadow-sha-06",
@@ -53,11 +54,7 @@ export function CountryItem({
 							{/* Overlay for depth */}
 							<View className="absolute inset-0 z-10 rounded-full bg-neu-10 opacity-[0.08]" />
 							{country.flag && !isWorld ? (
-								<Image
-									source={{ uri: country.flag }}
-									className="h-full w-full"
-									resizeMode="cover"
-								/>
+								<SvgFlag uri={country.flag} size={24} />
 							) : (
 								<View className="h-full w-full items-center justify-center bg-neu-03 dark:bg-neu-09">
 									<Text className="text-10 text-neu-06">🌍</Text>
