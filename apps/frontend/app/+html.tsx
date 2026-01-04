@@ -33,4 +33,22 @@ body {
   body {
     background-color: #131413;
   }
+}
+
+/* Critical CSS - primary color for icons using currentColor */
+:root {
+  --color-m-01: rgb(24 124 86);
+}
+
+/* Hide content until React hydrates to prevent FOUC */
+#root > div {
+  opacity: 0;
+  animation: fadeIn 0.15s ease-in forwards;
+  animation-delay: 0.05s;
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
 }`;
