@@ -9,21 +9,83 @@ import { isWeb } from "@/utils/platform";
 import { format, isSameDay } from "date-fns";
 import { useGlobalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import {
-	Dimensions,
-	Pressable,
-	Text,
-	useWindowDimensions,
-	View,
-} from "react-native";
+import { Dimensions, Pressable, useWindowDimensions, View } from "react-native";
 import { type SceneRendererProps, TabView } from "react-native-tab-view";
 import { CalendarButton } from "./calendar-button";
 import { FixturesScreen } from "./fixtures-screen";
+import { Text } from "./ui/text";
 
 interface DateRoute {
 	key: string;
 	title: string;
 	date?: Date;
+}
+
+interface CalendarBarDayProps {
+	date: Date;
+	isActive: boolean;
+	isToday: boolean;
+	onPress: () => void;
+}
+
+function CalendarBarDay({
+	date,
+	isActive,
+	isToday,
+	onPress,
+}: CalendarBarDayProps) {
+	const textColorClass = cn(
+		isActive && "text-neu-01",
+		!isActive && isToday && "text-m-01 dark:text-m-01-light-04",
+		!isActive && !isToday && "text-neu-09/70 dark:text-neu-06",
+	);
+
+	return (
+		<Pressable
+			onPress={onPress}
+			className={cn(
+				"flex-1 items-center justify-center overflow-hidden",
+				isActive && "bg-m-01",
+				!isActive && "bg-neu-01 dark:bg-neu-11",
+			)}
+		>
+			<Text variant="highlight-01" className={textColorClass}>
+				{format(date, "d")}
+			</Text>
+			<Text variant="caption-02" className={cn("uppercase", textColorClass)}>
+				{isToday ? "Today" : format(date, "EEE")}
+			</Text>
+		</Pressable>
+	);
+}
+
+interface LiveTabProps {
+	isActive: boolean;
+	onPress: () => void;
+}
+
+function LiveTab({ isActive, onPress }: LiveTabProps) {
+	return (
+		<Pressable
+			onPress={onPress}
+			className={cn(
+				"flex-1 items-center justify-center",
+				isActive && "bg-m-01",
+				!isActive && "bg-neu-01 dark:bg-neu-11",
+			)}
+		>
+			<Text
+				variant="caption-01"
+				className={cn(
+					"uppercase",
+					isActive && "text-neu-01",
+					!isActive && "text-m-01",
+				)}
+			>
+				{LIVE_BUTTON_LABEL}
+			</Text>
+		</Pressable>
+	);
 }
 
 export const CalendarBarButtonScreen = () => {
@@ -70,7 +132,7 @@ function CustomTabBar({ routes, index, onIndexChange, today }: TabBarProps) {
 
 	return (
 		<View
-			className="flex-row items-stretch h-12 bg-neu-02 border-b border-neu-04"
+			className="flex-row items-stretch h-12"
 			style={{
 				marginLeft: (isWeb ? 800 : screenWidth) / 7,
 			}}
@@ -78,46 +140,28 @@ function CustomTabBar({ routes, index, onIndexChange, today }: TabBarProps) {
 			{routes.map((route, i) => {
 				const isActive = i === index;
 				const isLive = route.key === "live";
-				const isToday = !isLive && route.date && isSameDay(route.date, today);
+				const isToday = !isLive && !!route.date && isSameDay(route.date, today);
+
+				if (isLive) {
+					return (
+						<LiveTab
+							key={route.key}
+							isActive={isActive}
+							onPress={() => onIndexChange(i)}
+						/>
+					);
+				}
+
+				if (!route.date) return null;
 
 				return (
-					<Pressable
+					<CalendarBarDay
 						key={route.key}
+						date={route.date}
+						isActive={isActive}
+						isToday={isToday}
 						onPress={() => onIndexChange(i)}
-						className={cn(
-							"flex-1 items-center justify-center",
-							isActive && "border-b-2 border-m-01",
-						)}
-					>
-						<Text
-							className={cn(
-								"text-xs font-semibold uppercase",
-								isActive && !isLive && "text-m-01",
-								isActive && isLive && "text-red",
-								!isActive && "text-neu-07",
-							)}
-						>
-							{route.title}
-						</Text>
-						{!isLive && route.date && (
-							<Text
-								className={cn(
-									"text-[10px]",
-									isActive ? "text-m-01" : "text-neu-06",
-								)}
-							>
-								{format(route.date, "d")}
-							</Text>
-						)}
-						{isToday && (
-							<View
-								className={cn(
-									"absolute bottom-1 w-1 h-1 rounded-full",
-									isActive ? "bg-m-01" : "bg-neu-06",
-								)}
-							/>
-						)}
-					</Pressable>
+					/>
 				);
 			})}
 		</View>
