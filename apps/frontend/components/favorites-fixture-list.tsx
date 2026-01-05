@@ -6,13 +6,11 @@ import { NoResultsBox } from "./no-results-box";
 
 interface FavoriteLeaguesListProps {
 	data: FormattedLeague[];
-	timezone: string;
 	onFixturePress?: (fixtureId: number) => void;
 }
 
 function FavoriteLeaguesList({
 	data,
-	timezone,
 	onFixturePress,
 }: FavoriteLeaguesListProps) {
 	return (
@@ -27,7 +25,6 @@ function FavoriteLeaguesList({
 						<FixtureCard
 							key={match.id}
 							fixture={match}
-							timezone={timezone}
 							isLastMatch={matchIndex === league.matches.length - 1}
 							onPress={() => onFixturePress?.(match.id)}
 						/>
@@ -40,7 +37,6 @@ function FavoriteLeaguesList({
 
 export interface FavoritesFixtureListProps {
 	data: FormattedCountry[];
-	timezone: string;
 	groupBy?: boolean;
 	onFixturePress?: (fixtureId: number) => void;
 }
@@ -51,7 +47,6 @@ export interface FavoritesFixtureListProps {
  */
 export function FavoritesFixtureList({
 	data,
-	timezone,
 	groupBy = true,
 	onFixturePress,
 }: FavoritesFixtureListProps) {
@@ -102,7 +97,6 @@ export function FavoritesFixtureList({
 	return (
 		<FavoriteLeaguesList
 			data={formatFavoriteData}
-			timezone={timezone}
 			onFixturePress={onFixturePress}
 		/>
 	);

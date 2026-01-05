@@ -1,8 +1,8 @@
 import { useTimeZone } from "@/context/timezone-context";
-import { cn } from "@/lib/utils";
 import { fixturesByDateQuery } from "@/queries/fixtures-by-date";
 import { isWeb } from "@/utils/platform";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo } from "react";
 import { View } from "react-native";
 import { FavoritesFixtureList } from "./favorites-fixture-list";
 import { FixturesList } from "./fixtures-list";
@@ -16,7 +16,7 @@ interface FixturesScreenProps {
 export function FixturesScreen({ date, live }: FixturesScreenProps) {
 	const { timeZone } = useTimeZone();
 
-	const { data, isLoading, isRefetching } = useQuery(
+	const { data, isLoading, isRefetching, error } = useQuery(
 		fixturesByDateQuery({
 			date,
 			timezone: timeZone,
@@ -24,24 +24,66 @@ export function FixturesScreen({ date, live }: FixturesScreenProps) {
 		}),
 	);
 
-	return (
-		<View
-			className={cn(
-				"mt-16",
-				isWeb ? "bg-neu-02 dark:bg-neu-13" : "flex-1 bg-neu-02 dark:bg-neu-13",
-			)}
-		>
-			{/* Favorite competitions section */}
-			<TitleSection>Favorite competitions</TitleSection>
-			<FavoritesFixtureList data={data ?? []} timezone={timeZone} />
+	// Log errors and data for debugging
+	useEffect(() => {
+		if (error) {
+			console.error("Fixtures fetch error:", error);
+			if (error instanceof Error) {
+				console.error("Error message:", error.message);
+				console.error("Error stack:", error.stack);
+			}
+		}
+	}, [error]);
 
-			{/* All competitions section */}
-			<TitleSection>All competitions</TitleSection>
+	// Log data for debugging
+	useEffect(() => {
+		console.log(
+			`[FixturesScreen] date=${date}, isLoading=${isLoading}, dataLength=${data?.length ?? 0}`,
+		);
+	}, [date, isLoading, data]);
+
+	// Memoize header component for LegendList
+	const listHeader = useMemo(
+		() => (
+			<View>
+				{/* Favorite competitions section */}
+				<TitleSection>Favorite competitions</TitleSection>
+				<FavoritesFixtureList data={data ?? []} />
+
+				{/* All competitions section */}
+				<TitleSection>All competitions</TitleSection>
+			</View>
+		),
+		[data],
+	);
+
+	// On web, use ScrollView for native page scrolling behavior
+	if (isWeb) {
+		return (
+			<View className="mt-16 bg-neu-02 dark:bg-neu-13">
+				{/* Favorite competitions section */}
+				<TitleSection>Favorite competitions</TitleSection>
+				<FavoritesFixtureList data={data ?? []} />
+
+				{/* All competitions section */}
+				<TitleSection>All competitions</TitleSection>
+				<FixturesList
+					countries={data ?? []}
+					isLoading={isLoading}
+					isRefetching={isRefetching}
+				/>
+			</View>
+		);
+	}
+
+	// On native, use FixturesList with header component for unified scrolling
+	return (
+		<View className="mt-16 flex-1 bg-neu-02 dark:bg-neu-13">
 			<FixturesList
 				countries={data ?? []}
-				timezone={timeZone}
 				isLoading={isLoading}
 				isRefetching={isRefetching}
+				listHeader={listHeader}
 			/>
 		</View>
 	);

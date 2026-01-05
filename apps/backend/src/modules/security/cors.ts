@@ -43,8 +43,25 @@ const defaultOrigins = [
   'https://www.outscore.live',
   'http://localhost:3000',
   'http://localhost:8081',
+  'exp://127.0.0.1:8081', // Expo development server (iOS simulator)
+  'exp://localhost:8081', // Expo development server (alternative)
   'http://10.0.2.2:3000', // Android emulator
+  'http://10.0.2.2:8081', // Android emulator (alternative)
 ];
+
+/**
+ * Check if origin is from Expo Go (handles various formats)
+ */
+const isExpoOrigin = (origin: string): boolean => {
+  if (!origin) return false;
+  // Expo Go can send origins in various formats
+  return (
+    origin.startsWith('exp://') ||
+    origin.includes('expo') ||
+    origin === 'null' || // Some native apps send 'null' as origin
+    origin === ''
+  );
+};
 
 /**
  * Check if origin is allowed
@@ -53,6 +70,11 @@ const isOriginAllowed = (
   origin: string,
   allowedOrigins: string | string[] | ((origin: string) => boolean)
 ): boolean => {
+  // Allow requests with no origin (e.g., native apps, Postman, curl)
+  if (!origin || origin === 'null') {
+    return true;
+  }
+
   if (typeof allowedOrigins === 'function') {
     return allowedOrigins(origin);
   }
@@ -61,7 +83,20 @@ const isOriginAllowed = (
     return allowedOrigins === '*' || allowedOrigins === origin;
   }
 
-  return allowedOrigins.includes(origin);
+  // Check exact match
+  if (allowedOrigins.includes(origin)) {
+    return true;
+  }
+
+  // Check if it's an Expo origin and we have any exp:// origins configured
+  if (isExpoOrigin(origin)) {
+    const hasExpoOrigins = allowedOrigins.some((o) => o.startsWith('exp://'));
+    if (hasExpoOrigins) {
+      return true; // Allow any exp:// origin if we have exp:// origins configured
+    }
+  }
+
+  return false;
 };
 
 /**
@@ -121,6 +156,11 @@ export const cors = (config: CorsConfig = {}): MiddlewareHandler => {
 
   return async (context, next) => {
     const requestOrigin = context.req.header('origin') || '';
+    
+    // Debug logging for Expo Go (can be removed in production)
+    if (requestOrigin && (requestOrigin.startsWith('exp://') || requestOrigin.includes('expo'))) {
+      console.log(`[CORS] Expo origin detected: ${requestOrigin}`);
+    }
 
     // Handle preflight OPTIONS request
     if (context.req.method === 'OPTIONS') {

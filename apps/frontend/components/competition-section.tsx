@@ -29,7 +29,6 @@ export function CompetitionSection({ league, timezone, onFixturePress }: Competi
           <FixtureCard
             key={fixture.id}
             fixture={fixture}
-            timezone={timezone}
             onPress={() => onFixturePress?.(fixture.id)}
           />
         ))}

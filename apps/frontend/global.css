@@ -128,10 +128,9 @@
     content: "";
     position: absolute;
     bottom: 0;
-    left: 50%;
+    left: 8px;
+    right: 8px;
     height: 1px;
-    width: calc(100% - 16px);
-    transform: translateX(-50%);
     background: var(--color-neu-04);
   }
 

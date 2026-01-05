@@ -1,55 +1,64 @@
-import { useFixtureStatus } from "@/hooks/useFixtureStatus";
-import usePrevious from "@/hooks/usePrevious";
+import { useGoalDetection } from "@/hooks/useGoalDetection";
 import type { FormattedMatch } from "@outscore/shared-types";
-import { useEffect, useState } from "react";
+import { isLiveStatus } from "@outscore/shared-types";
+import { memo, useMemo } from "react";
 import { Pressable, View } from "react-native";
 import { FixtureStatus } from "./fixture-status";
 import { FixtureTeam } from "./fixture-team";
 
-// Add additional properties to FormattedMatch for this component
-interface ExtendedFormattedMatch extends FormattedMatch {
+// Extended match with optional type for H2H/favorites
+type ExtendedFormattedMatch = FormattedMatch & {
 	type?: "H2H" | "favorite-team" | null;
-}
+};
 
 interface FixtureCardProps {
 	fixture: ExtendedFormattedMatch;
-	timezone: string;
 	isLastMatch?: boolean;
-	isFromFavorites?: boolean;
 	onPress?: () => void;
-	onFavoritePress?: () => void;
 }
 
-const TIME_TO_RESET_GOAL_STYLES = 60_000; // 1 minute
+// Compute status text directly without hooks
+function getStatusText(fixture: ExtendedFormattedMatch): string {
+	const { status, time } = fixture;
+	const statusShort = status?.short;
 
-export function FixtureCard({
+	if (!statusShort) return "";
+
+	// Live match
+	if (isLiveStatus(statusShort)) {
+		if (statusShort === "HT") return "HT";
+		if (statusShort === "P" || statusShort === "BT" || statusShort === "INT") {
+			return statusShort;
+		}
+		if (status?.elapsed != null) return `${status.elapsed}'`;
+		return "LIVE";
+	}
+
+	// Use pre-formatted time from backend for not started matches
+	if (statusShort === "NS" && time) {
+		return time;
+	}
+
+	// Finished or other status
+	return statusShort;
+}
+
+export const FixtureCard = memo(function FixtureCard({
 	fixture,
-	timezone,
 	isLastMatch = false,
 	onPress,
 }: FixtureCardProps) {
-	const [teamScored, setTeamScored] = useState<{
-		home: boolean;
-		away: boolean;
-	}>({
-		home: false,
-		away: false,
-	});
+	const { status, teams, score, goals, type = null } = fixture;
 
-	const { status, teams, score, goals, date, time, type = null } = fixture;
-
-	const { renderFixtureStatus, fixtureStatus } = useFixtureStatus({
-		status,
-		date,
-		time,
-		timezone,
-		type,
-	});
-
-	const matchIsLive = fixtureStatus.isLive;
-	const matchIsFinished = fixtureStatus.isFinished;
-	const matchHasNotStarted = fixtureStatus.haveNotStarted;
+	const statusShort = status?.short;
+	const matchIsLive = statusShort ? isLiveStatus(statusShort) : false;
+	const matchIsFinished =
+		statusShort === "FT" || statusShort === "AET" || statusShort === "PEN";
+	const matchHasNotStarted = statusShort === "NS";
 	const notH2H = type !== "H2H";
+
+	// Compute status text directly
+	const statusText = useMemo(() => getStatusText(fixture), [fixture]);
 
 	// Safely get the home and away goals with proper null checks
 	const homeTeamGoals =
@@ -57,36 +66,11 @@ export function FixtureCard({
 	const awayTeamGoals =
 		score?.fulltime?.away ?? score?.penalty?.away ?? goals?.away ?? 0;
 
-	const [statusState, setStatus] = useState<string | null>(null);
-	const previousHomeGoals = usePrevious(homeTeamGoals);
-	const previousAwayGoals = usePrevious(awayTeamGoals);
-
-	// Update status when fixture changes
-	useEffect(() => {
-		setStatus(renderFixtureStatus());
-	}, [renderFixtureStatus]);
-
-	// Detect home goal scoring - independent timer
-	useEffect(() => {
-		if (previousHomeGoals !== undefined && homeTeamGoals > previousHomeGoals) {
-			setTeamScored((prev) => ({ ...prev, home: true }));
-			const timer = setTimeout(() => {
-				setTeamScored((prev) => ({ ...prev, home: false }));
-			}, TIME_TO_RESET_GOAL_STYLES);
-			return () => clearTimeout(timer);
-		}
-	}, [homeTeamGoals, previousHomeGoals]);
-
-	// Detect away goal scoring - independent timer
-	useEffect(() => {
-		if (previousAwayGoals !== undefined && awayTeamGoals > previousAwayGoals) {
-			setTeamScored((prev) => ({ ...prev, away: true }));
-			const timer = setTimeout(() => {
-				setTeamScored((prev) => ({ ...prev, away: false }));
-			}, TIME_TO_RESET_GOAL_STYLES);
-			return () => clearTimeout(timer);
-		}
-	}, [awayTeamGoals, previousAwayGoals]);
+	// Only use goal detection for live matches (avoids hooks for 95%+ of cards)
+	const teamScored = useGoalDetection(
+		matchIsLive ? homeTeamGoals : null,
+		matchIsLive ? awayTeamGoals : null,
+	);
 
 	return (
 		<Pressable onPress={onPress} className="relative h-64 px-16">
@@ -103,7 +87,7 @@ export function FixtureCard({
 
 				{/* Status */}
 				<FixtureStatus
-					status={statusState ?? ""}
+					status={statusText}
 					matchIsLiveOrFinished={matchIsLive || (matchIsFinished && notH2H)}
 				/>
 
@@ -134,8 +118,8 @@ export function FixtureCard({
 
 			{/* Divider - full width minus 8px on each side */}
 			{!isLastMatch && (
-				<View className="absolute bottom-0 left-8 right-8 h-[1px] bg-neu-04 dark:bg-neu-10" />
+				<View className="absolute bottom-0 left-8 right-8 h-px bg-neu-04 dark:bg-neu-10" />
 			)}
 		</Pressable>
 	);
-}
+});

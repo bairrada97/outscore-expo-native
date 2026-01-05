@@ -9,7 +9,13 @@ import {
 import { isWeb } from "@/utils/platform";
 import { format, isSameDay } from "date-fns";
 import { useGlobalSearchParams, useRouter } from "expo-router";
-import { startTransition, useCallback, useMemo, useState } from "react";
+import {
+	startTransition,
+	useCallback,
+	useEffect,
+	useMemo,
+	useState,
+} from "react";
 import { Animated, Pressable, useWindowDimensions, View } from "react-native";
 import { type SceneRendererProps, TabView } from "react-native-tab-view";
 import { CalendarButton } from "./calendar-button";
@@ -55,9 +61,19 @@ function CalendarBarDay({
 		? "text-m-01 dark:text-m-01-light-04"
 		: "text-neu-09/70 dark:text-neu-06";
 
+	const accessibilityLabel = useMemo(
+		() =>
+			isToday
+				? `Today, ${format(date, "MMMM d")}`
+				: format(date, "EEEE, MMMM d"),
+		[date, isToday],
+	);
+
 	return (
 		<Pressable
 			onPress={onPress}
+			accessibilityRole="button"
+			accessibilityLabel={accessibilityLabel}
 			className="flex-1 items-center justify-center overflow-hidden z-10"
 			style={{ backgroundColor: "transparent" }}
 		>
@@ -120,6 +136,8 @@ function LiveTab({ tabIndex, position, onPress }: LiveTabProps) {
 	return (
 		<Pressable
 			onPress={onPress}
+			accessibilityRole="button"
+			accessibilityLabel="View live matches"
 			className="flex-1 items-center justify-center z-10"
 			style={{ backgroundColor: "transparent" }}
 		>
@@ -127,7 +145,7 @@ function LiveTab({ tabIndex, position, onPress }: LiveTabProps) {
 				{/* Inactive state */}
 				<Animated.View
 					style={{ opacity: inactiveOpacity }}
-					className="flex-col items-center gap-x-4"
+					className="flex-col items-center gap-y-4"
 				>
 					<SvgB021
 						width={24}
@@ -146,7 +164,7 @@ function LiveTab({ tabIndex, position, onPress }: LiveTabProps) {
 						opacity: activeOpacity,
 						position: "absolute",
 					}}
-					className="flex-col items-center gap-x-4"
+					className="flex-col items-center gap-y-4"
 				>
 					<SvgB021
 						width={24}
@@ -170,8 +188,11 @@ interface TabIndicatorProps {
 }
 
 function TabIndicator({ position, routes, tabWidth }: TabIndicatorProps) {
-	const inputRange = routes.map((_, i) => i);
-	const outputRange = routes.map((_, i) => i * tabWidth);
+	const inputRange = useMemo(() => routes.map((_, i) => i), [routes]);
+	const outputRange = useMemo(
+		() => routes.map((_, i) => i * tabWidth),
+		[routes, tabWidth],
+	);
 
 	const translateX = position.interpolate({
 		inputRange,
@@ -215,7 +236,7 @@ export const CalendarBarButtonScreen = ({
 				width: calendarButtonWidth,
 			}}
 		>
-			<CalendarButton onPress={() => {}} />
+			<CalendarButton />
 		</View>
 	);
 };
@@ -255,10 +276,10 @@ function CustomTabBar({
 	const tabBarWidth = containerWidth - calendarButtonWidth;
 	const tabWidth = tabBarWidth / routes.length;
 
-	// Memoize tab press handlers to prevent unnecessary re-renders
-	const createTabPressHandler = useCallback(
-		(index: number) => () => onIndexChange(index),
-		[onIndexChange],
+	// Memoize tab press handlers array to prevent unnecessary re-renders
+	const tabPressHandlers = useMemo(
+		() => routes.map((_, i) => () => onIndexChange(i)),
+		[routes, onIndexChange],
 	);
 
 	return (
@@ -282,7 +303,7 @@ function CustomTabBar({
 							key={route.key}
 							tabIndex={i}
 							position={position}
-							onPress={createTabPressHandler(i)}
+							onPress={tabPressHandlers[i]}
 						/>
 					);
 				}
@@ -296,7 +317,7 @@ function CustomTabBar({
 						tabIndex={i}
 						position={position}
 						isToday={isToday}
-						onPress={createTabPressHandler(i)}
+						onPress={tabPressHandlers[i]}
 					/>
 				);
 			})}
@@ -328,6 +349,16 @@ export function DateTabs() {
 	}, [params.date, routes]);
 
 	const [index, setIndex] = useState(initialIndex);
+
+	// Sync index state when params.date changes (e.g., from deep link or browser navigation)
+	useEffect(() => {
+		setIndex((currentIndex) => {
+			if (initialIndex !== currentIndex) {
+				return initialIndex;
+			}
+			return currentIndex;
+		});
+	}, [initialIndex]);
 
 	const handleIndexChange = useCallback(
 		(newIndex: number) => {
@@ -393,7 +424,7 @@ export function DateTabs() {
 				pointerEvents="none"
 			/>
 			<CalendarBarButtonScreen containerWidth={containerWidth} />
-			<View>
+			<View style={{ flex: 1 }}>
 				<TabView
 					navigationState={{ index, routes }}
 					renderScene={renderScene}
@@ -401,13 +432,13 @@ export function DateTabs() {
 					renderTabBar={renderTabBar}
 					swipeEnabled={!isWeb}
 					lazy
-					lazyPreloadDistance={0}
+					lazyPreloadDistance={2}
 					style={
 						isWeb
 							? { flex: undefined, position: "relative", width: containerWidth }
-							: undefined
+							: { flex: 1 }
 					}
-					pagerStyle={{ width: tabViewWidth }}
+					pagerStyle={isWeb ? { width: tabViewWidth } : undefined}
 				/>
 			</View>
 		</View>

@@ -1,5 +1,6 @@
 import { LegendList, type LegendListRenderItemProps } from "@legendapp/list";
 import { type FormattedCountry, isLiveStatus } from "@outscore/shared-types";
+import type { ReactNode } from "react";
 import { useCallback, useMemo } from "react";
 import { Platform, Text, View } from "react-native";
 import { CountryItem } from "./country-item";
@@ -7,19 +8,18 @@ import { Accordion } from "./ui/accordion";
 
 interface FixturesListProps {
 	countries: FormattedCountry[];
-	timezone: string;
 	isLoading?: boolean;
 	isRefetching?: boolean;
 	onFixturePress?: (fixtureId: number) => void;
+	listHeader?: ReactNode;
 }
 
 interface ItemProps {
 	item: FormattedCountry;
-	timezone: string;
 	onFixturePress?: (fixtureId: number) => void;
 }
 
-function Item({ item, timezone, onFixturePress }: ItemProps) {
+function Item({ item, onFixturePress }: ItemProps) {
 	const totalMatches = useMemo(
 		() => item.leagues.reduce((acc, league) => acc + league.matches.length, 0),
 		[item.leagues],
@@ -39,7 +39,6 @@ function Item({ item, timezone, onFixturePress }: ItemProps) {
 	return (
 		<CountryItem
 			country={item}
-			timezone={timezone}
 			totalMatches={totalMatches}
 			totalLiveMatches={totalLiveMatches}
 			onFixturePress={onFixturePress}
@@ -49,16 +48,16 @@ function Item({ item, timezone, onFixturePress }: ItemProps) {
 
 export function FixturesList({
 	countries,
-	timezone,
 	isLoading,
 	isRefetching,
 	onFixturePress,
+	listHeader,
 }: FixturesListProps) {
 	const renderItem = useCallback(
 		({ item }: LegendListRenderItemProps<FormattedCountry>) => (
-			<Item item={item} timezone={timezone} onFixturePress={onFixturePress} />
+			<Item item={item} onFixturePress={onFixturePress} />
 		),
-		[timezone, onFixturePress],
+		[onFixturePress],
 	);
 
 	const keyExtractor = useCallback(
@@ -97,7 +96,6 @@ export function FixturesList({
 						<Item
 							key={country.name}
 							item={country}
-							timezone={timezone}
 							onFixturePress={onFixturePress}
 						/>
 					))}
@@ -109,7 +107,7 @@ export function FixturesList({
 	// On native, use LegendList for virtualization
 	return (
 		<View className="flex-1">
-			<Accordion type="multiple" className="w-full">
+			<Accordion type="multiple" className="w-full flex-1">
 				<LegendList
 					data={countries}
 					renderItem={renderItem}
@@ -118,9 +116,13 @@ export function FixturesList({
 					drawDistance={500}
 					recycleItems={false}
 					showsVerticalScrollIndicator={false}
+					style={{ flex: 1 }}
 					contentContainerStyle={{ paddingBottom: 100 }}
 					ListHeaderComponent={
-						isRefetching ? <View className="py-2 items-center" /> : null
+						<>
+							{listHeader}
+							{isRefetching && <View className="py-2 items-center" />}
+						</>
 					}
 				/>
 			</Accordion>

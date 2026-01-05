@@ -15,7 +15,6 @@ import { Text } from "./ui/text";
 
 interface CountryItemProps {
 	country: FormattedCountry;
-	timezone: string;
 	totalMatches: number;
 	totalLiveMatches: number;
 	onFixturePress?: (fixtureId: number) => void;
@@ -23,7 +22,6 @@ interface CountryItemProps {
 
 export function CountryItem({
 	country,
-	timezone,
 	totalMatches,
 	totalLiveMatches,
 	onFixturePress,
@@ -39,7 +37,13 @@ export function CountryItem({
 		[onFixturePress],
 	);
 
-	// Memoize leagues content to prevent re-rendering when accordion expands/collapses
+	// Create memoized match press handlers to avoid creating new functions on every render
+	const createMatchPressHandler = useCallback(
+		(matchId: number) => () => handleFixturePress(matchId),
+		[handleFixturePress],
+	);
+
+	// Memoize leagues content
 	const leaguesContent = useMemo(
 		() =>
 			country.leagues.map((league, index) => (
@@ -52,14 +56,13 @@ export function CountryItem({
 						<FixtureCard
 							key={match.id}
 							fixture={match}
-							timezone={timezone}
 							isLastMatch={matchIndex === league.matches.length - 1}
-							onPress={() => handleFixturePress(match.id)}
+							onPress={createMatchPressHandler(match.id)}
 						/>
 					))}
 				</CardsBlock>
 			)),
-		[country.leagues, timezone, handleFixturePress],
+		[country.leagues, createMatchPressHandler],
 	);
 
 	return (

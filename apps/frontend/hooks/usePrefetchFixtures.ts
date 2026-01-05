@@ -3,7 +3,7 @@ import { fixturesByDateQuery } from "@/queries/fixtures-by-date";
 import { formatDateForApi, getDateRange } from "@/utils/date-utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { InteractionManager, Platform } from "react-native";
+import { Platform } from "react-native";
 
 /**
  * Prefetch fixtures for all date tabs in the background.
@@ -47,8 +47,9 @@ export function usePrefetchFixtures() {
 			return () => global.cancelIdleCallback(idleId);
 		}
 
-		// On native, run after interactions complete
-		const task = InteractionManager.runAfterInteractions(prefetchDates);
-		return () => task.cancel();
+		// On native, start prefetching immediately with a small delay
+		// to allow the initial render to complete first
+		const timeoutId = setTimeout(prefetchDates, 100);
+		return () => clearTimeout(timeoutId);
 	}, [queryClient, timeZone]);
 }

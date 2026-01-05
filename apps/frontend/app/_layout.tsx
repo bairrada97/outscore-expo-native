@@ -36,7 +36,7 @@ const persister = createQueryPersister();
 const persistOptions = createPersistOptions(persister);
 
 export default function RootLayout() {
-	const [fontsLoaded] = useFonts({
+	const [fontsLoaded, fontError] = useFonts({
 		"SourceSans3-Regular": SourceSans3Regular,
 		"SourceSans3-SemiBold": SourceSans3SemiBold,
 		"SourceSans3-Bold": SourceSans3Bold,
@@ -45,10 +45,38 @@ export default function RootLayout() {
 	const [appIsReady, setAppIsReady] = useState(false);
 
 	useEffect(() => {
-		if (fontsLoaded) {
+		// Set app as ready if fonts loaded OR if there's an error (don't block on font errors)
+		if (fontsLoaded || fontError) {
 			setAppIsReady(true);
 		}
-	}, [fontsLoaded]);
+	}, [fontsLoaded, fontError]);
+
+	// Fallback timeout: hide splash screen after 3 seconds even if fonts haven't loaded
+	useEffect(() => {
+		const timeout = setTimeout(() => {
+			if (!appIsReady) {
+				console.warn("Font loading timeout - proceeding without fonts");
+				setAppIsReady(true);
+			}
+		}, 3000);
+
+		return () => clearTimeout(timeout);
+	}, [appIsReady]);
+
+	// Safety: Force hide splash screen after app is ready, even if onLayoutRootView doesn't fire
+	useEffect(() => {
+		if (appIsReady) {
+			const timeout = setTimeout(async () => {
+				try {
+					await SplashScreen.hideAsync();
+				} catch (error) {
+					console.warn("Error hiding splash screen in timeout:", error);
+				}
+			}, 500); // Small delay to allow layout to complete
+
+			return () => clearTimeout(timeout);
+		}
+	}, [appIsReady]);
 
 	useEffect(() => {
 		// Setup focus management for React Query
@@ -69,7 +97,12 @@ export default function RootLayout() {
 	const onLayoutRootView = useCallback(async () => {
 		if (appIsReady) {
 			// Hide splash screen once layout is ready
-			await SplashScreen.hideAsync();
+			try {
+				await SplashScreen.hideAsync();
+			} catch (error) {
+				console.warn("Error hiding splash screen:", error);
+				// Continue anyway - don't block the app
+			}
 		}
 	}, [appIsReady]);
 

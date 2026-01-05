@@ -133,7 +133,10 @@ app.onError((error, context) => {
 		"https://www.outscore.live",
 		"http://localhost:3000",
 		"http://localhost:8081",
-		"http://10.0.2.2:3000",
+		"exp://127.0.0.1:8081", // Expo development server (iOS simulator)
+		"exp://localhost:8081", // Expo development server (alternative)
+		"http://10.0.2.2:3000", // Android emulator
+		"http://10.0.2.2:8081", // Android emulator (alternative)
 	];
 
 	// Check if origin is allowed (also check env variable)
@@ -141,22 +144,48 @@ app.onError((error, context) => {
 		context.env.APPROVED_ORIGINS?.split(",").map((o: string) => o.trim()) || [];
 	const allowedOrigins = [...defaultOrigins, ...envOrigins];
 
-	const isAllowed = allowedOrigins.includes(requestOrigin);
+	// Check if origin is allowed
+	let isAllowed = false;
+	let originToUse: string | null = null;
+
+	if (!requestOrigin || requestOrigin === "null") {
+		// No origin header (common for native apps) - allow it
+		isAllowed = true;
+		originToUse = "*";
+	} else if (allowedOrigins.includes(requestOrigin)) {
+		// Exact match
+		isAllowed = true;
+		originToUse = requestOrigin;
+	} else if (requestOrigin.startsWith("exp://")) {
+		// Any exp:// origin is allowed if we have exp:// origins configured
+		const hasExpoOrigins = allowedOrigins.some((o) => o.startsWith("exp://"));
+		if (hasExpoOrigins) {
+			isAllowed = true;
+			originToUse = requestOrigin;
+		}
+	}
 
 	// Create response with CORS headers
 	const response = context.json(
-    {
+		{
 			status: "error",
 			message: "Internal server error",
-    },
+		},
 		500,
 	);
 
-	// Add CORS headers to error response
-	if (isAllowed && requestOrigin) {
-		response.headers.set("Access-Control-Allow-Origin", requestOrigin);
-		response.headers.set("Vary", "Origin");
+	// Always add CORS headers to error response to prevent CORS errors
+	if (isAllowed && originToUse) {
+		response.headers.set("Access-Control-Allow-Origin", originToUse);
+		if (originToUse !== "*") {
+			response.headers.set("Vary", "Origin");
+		}
+	} else {
+		// If origin doesn't match, still add CORS headers with wildcard for error responses
+		// This prevents CORS errors from masking the actual error
+		response.headers.set("Access-Control-Allow-Origin", "*");
 	}
+
 	response.headers.set(
 		"Access-Control-Allow-Methods",
 		"GET, POST, PUT, DELETE, OPTIONS",

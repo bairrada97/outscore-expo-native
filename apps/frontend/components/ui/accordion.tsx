@@ -3,6 +3,7 @@ import * as AccordionPrimitive from "@rn-primitives/accordion";
 import * as React from "react";
 import { Platform, Pressable, View } from "react-native";
 import Animated, {
+	FadeIn,
 	FadeOutUp,
 	LayoutAnimationConfig,
 	LinearTransition,
@@ -163,33 +164,68 @@ function AccordionContent({
 	React.RefAttributes<AccordionPrimitive.ContentRef>) {
 	const { isExpanded } = AccordionPrimitive.useItemContext();
 
-	// Lazy render: only render children when expanded (or was expanded)
-	// This dramatically reduces initial render cost for large lists
+	// Track if content has been expanded at least once (for lazy rendering)
 	const [hasBeenExpanded, setHasBeenExpanded] = React.useState(isExpanded);
+	// Track if content is ready to show (for deferred rendering on native)
+	const [contentReady, setContentReady] = React.useState(isExpanded);
 
+	// Handle expand/collapse
 	React.useEffect(() => {
-		if (isExpanded && !hasBeenExpanded) {
-			setHasBeenExpanded(true);
+		if (isExpanded) {
+			// Mark as has been expanded
+			if (!hasBeenExpanded) {
+				setHasBeenExpanded(true);
+			}
+			// On native, delay content render to let accordion animation start first
+			if (Platform.OS !== "web") {
+				setContentReady(false);
+				const frameId = requestAnimationFrame(() => {
+					setContentReady(true);
+				});
+				return () => cancelAnimationFrame(frameId);
+			}
+			setContentReady(true);
+		} else {
+			// Reset contentReady when closing
+			setContentReady(false);
 		}
 	}, [isExpanded, hasBeenExpanded]);
 
+	// Web: use CSS animations
+	if (Platform.OS === "web") {
+		return (
+			<TextClassContext.Provider value="text-sm">
+				<AccordionPrimitive.Content
+					className={cn(
+						"overflow-hidden",
+						isExpanded ? "animate-accordion-down" : "animate-accordion-up",
+					)}
+					{...props}
+				>
+					<View className={cn("pb-4", className)}>
+						{hasBeenExpanded ? children : null}
+					</View>
+				</AccordionPrimitive.Content>
+			</TextClassContext.Provider>
+		);
+	}
+
+	// Native: show placeholder immediately, fade in content after
 	return (
 		<TextClassContext.Provider value="text-sm">
-			<AccordionPrimitive.Content
-				className={cn(
-					"overflow-hidden",
-					Platform.select({
-						web: isExpanded ? "animate-accordion-down" : "animate-accordion-up",
-					}),
-				)}
-				{...props}
-			>
+			<AccordionPrimitive.Content className="overflow-hidden" {...props}>
 				<Animated.View
-					exiting={Platform.select({ native: FadeOutUp.duration(200) })}
+					exiting={FadeOutUp.duration(200)}
 					className={cn("pb-4", className)}
 				>
-					{/* Only render children if accordion has been opened at least once */}
-					{hasBeenExpanded ? children : null}
+					{hasBeenExpanded && contentReady ? (
+						<Animated.View entering={FadeIn.duration(200)}>
+							{children}
+						</Animated.View>
+					) : hasBeenExpanded ? (
+						// Placeholder while content is rendering
+						<View className="min-h-[100px] bg-neu-02 dark:bg-neu-13" />
+					) : null}
 				</Animated.View>
 			</AccordionPrimitive.Content>
 		</TextClassContext.Provider>

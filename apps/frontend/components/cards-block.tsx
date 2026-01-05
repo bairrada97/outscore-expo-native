@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type { ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 import { View } from "react-native";
 import { TitleBlock } from "./ui/title-block";
 
@@ -15,7 +15,7 @@ export interface CardsBlockProps {
  * Container component for displaying a list of cards.
  * Provides a styled block with a title and optional extra info.
  */
-export function CardsBlock({
+export const CardsBlock = memo(function CardsBlock({
 	title,
 	extraInfo,
 	className,
@@ -33,4 +33,4 @@ export function CardsBlock({
 			<View className={cn("px-4 pb-4", cardsClassName)}>{children}</View>
 		</View>
 	);
-}
+});

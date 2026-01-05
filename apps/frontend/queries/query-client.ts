@@ -29,13 +29,40 @@ export function createQueryClient(): QueryClient {
  * Create the AsyncStorage persister for React Query
  */
 export function createQueryPersister() {
-  return createAsyncStoragePersister({
-    storage: AsyncStorage,
-    key: 'outscore-query-cache',
-    serialize: (data) => JSON.stringify(data),
-    deserialize: (data) => JSON.parse(data),
-    throttleTime: 500,
-  });
+  try {
+    return createAsyncStoragePersister({
+      storage: AsyncStorage,
+      key: 'outscore-query-cache',
+      serialize: (data) => {
+        try {
+          return JSON.stringify(data);
+        } catch (error) {
+          console.warn('Failed to serialize query cache:', error);
+          return '{}';
+        }
+      },
+      deserialize: (data) => {
+        try {
+          return JSON.parse(data);
+        } catch (error) {
+          console.warn('Failed to deserialize query cache:', error);
+          return {};
+        }
+      },
+      throttleTime: 500,
+    });
+  } catch (error) {
+    console.warn('Failed to create query persister:', error);
+    // Return a no-op persister if AsyncStorage fails
+    return createAsyncStoragePersister({
+      storage: {
+        getItem: async () => null,
+        setItem: async () => {},
+        removeItem: async () => {},
+      } as any,
+      key: 'outscore-query-cache',
+    });
+  }
 }
 
 /**
