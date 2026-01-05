@@ -16,7 +16,7 @@ function FavoriteLeaguesList({
 	onFixturePress,
 }: FavoriteLeaguesListProps) {
 	return (
-		<View>
+		<View className="px-8">
 			{data.map((league, index) => (
 				<CardsBlock
 					key={`${league.id}-${index}`}

@@ -33,8 +33,8 @@ export function CountryItem({
 	return (
 		<AccordionItem value={country.name} className="mb-0 border-0">
 			<AccordionTrigger className="group/trigger relative h-40 min-h-40 flex-row items-center justify-between px-16 py-0 in-data-[state=expanded]:bg-linear-to-br in-data-[state=expanded]:from-m-01-light-01 in-data-[state=expanded]:to-m-02-dark-01 hover:no-underline">
-				{/* Divider - full width minus 8px on each side */}
-				<View className="absolute bottom-0 left-8 right-8 h-px bg-neu-03 dark:bg-neu-10" />
+				{/* Divider - full width minus 8px on each side, hidden when expanded */}
+				<View className="absolute bottom-0 left-8 right-8 h-px bg-neu-03 dark:bg-neu-10 in-data-[state=expanded]:hidden" />
 				<View className="flex-1 flex-row items-center gap-x-16">
 					{/* Flag container with circular border */}
 					<View
@@ -82,7 +82,7 @@ export function CountryItem({
 				/>
 			</AccordionTrigger>
 
-			<AccordionContent className="pb-0">
+			<AccordionContent className="pb-0 pt-8 px-8">
 				{country.leagues.map((league, index) => (
 					<CardsBlock
 						key={`${league.id}-${index}`}
