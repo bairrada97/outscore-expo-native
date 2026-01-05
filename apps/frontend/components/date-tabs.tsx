@@ -2,9 +2,9 @@ import { usePrefetchFixtures } from "@/hooks/usePrefetchFixtures";
 import { cn } from "@/lib/utils";
 import { LIVE_BUTTON_LABEL } from "@/utils/constants";
 import {
-  formatDateForApi,
-  getDateRange,
-  getTodayTabIndex,
+	formatDateForApi,
+	getDateRange,
+	getTodayTabIndex,
 } from "@/utils/date-utils";
 import { isWeb } from "@/utils/platform";
 import { format, isSameDay } from "date-fns";
@@ -12,10 +12,9 @@ import { useGlobalSearchParams, useRouter } from "expo-router";
 import { startTransition, useState } from "react";
 import {
 	Animated,
-	Dimensions,
 	Pressable,
 	useWindowDimensions,
-	View,
+	View
 } from "react-native";
 import { type SceneRendererProps, TabView } from "react-native-tab-view";
 import { CalendarButton } from "./calendar-button";
@@ -186,8 +185,14 @@ function TabIndicator({ position, routes, tabWidth }: TabIndicatorProps) {
 	);
 }
 
-export const CalendarBarButtonScreen = () => {
-	const screenWidth = Dimensions.get("screen").width;
+interface CalendarBarButtonScreenProps {
+	containerWidth: number;
+}
+
+export const CalendarBarButtonScreen = ({
+	containerWidth,
+}: CalendarBarButtonScreenProps) => {
+	const calendarButtonWidth = containerWidth / 7;
 
 	return (
 		<View
@@ -195,7 +200,7 @@ export const CalendarBarButtonScreen = () => {
 				"absolute left-0 z-10 flex h-48 flex-row items-center justify-start dark:bg-neu-11 box-border bg-neu-01",
 			)}
 			style={{
-				width: (isWeb ? 800 : screenWidth) / 7,
+				width: calendarButtonWidth,
 			}}
 		>
 			<CalendarButton onPress={() => {}} />
@@ -223,12 +228,18 @@ interface TabBarProps {
 	position: Animated.AnimatedInterpolation<number>;
 	onIndexChange: (index: number) => void;
 	today: Date;
+	containerWidth: number;
+	calendarButtonWidth: number;
 }
 
-function CustomTabBar({ routes, position, onIndexChange, today }: TabBarProps) {
-	const screenWidth = Dimensions.get("screen").width;
-	const containerWidth = isWeb ? 800 : screenWidth;
-	const calendarButtonWidth = containerWidth / 7;
+function CustomTabBar({
+	routes,
+	position,
+	onIndexChange,
+	today,
+	containerWidth,
+	calendarButtonWidth,
+}: TabBarProps) {
 	const tabBarWidth = containerWidth - calendarButtonWidth;
 	const tabWidth = tabBarWidth / routes.length;
 
@@ -304,14 +315,14 @@ export function DateTabs() {
 		// Use startTransition to mark this as a non-urgent update
 		// This keeps the tab animation smooth while React renders the new content
 		startTransition(() => {
-		setIndex(newIndex);
+			setIndex(newIndex);
 
-		if (isWeb) {
-			const route = routes[newIndex];
-			if (route) {
-				router.setParams({ date: route.key });
+			if (isWeb) {
+				const route = routes[newIndex];
+				if (route) {
+					router.setParams({ date: route.key });
+				}
 			}
-		}
 		});
 	}
 
@@ -334,7 +345,7 @@ export function DateTabs() {
 				style={{ backgroundColor: "transparent" }}
 				pointerEvents="none"
 			/>
-			<CalendarBarButtonScreen />
+			<CalendarBarButtonScreen containerWidth={containerWidth} />
 			<View>
 				<TabView
 					navigationState={{ index, routes }}
@@ -346,6 +357,8 @@ export function DateTabs() {
 							position={props.position}
 							onIndexChange={handleIndexChange}
 							today={today}
+							containerWidth={containerWidth}
+							calendarButtonWidth={calendarButtonWidth}
 						/>
 					)}
 					swipeEnabled={!isWeb}

@@ -51,6 +51,7 @@ export function FixtureCardNewDesign({
 
 	const matchIsLive = fixtureStatus.isLive;
 	const matchIsFinished = fixtureStatus.isFinished;
+	const matchHasNotStarted = fixtureStatus.haveNotStarted;
 
 	const homeTeamGoals =
 		score?.fulltime?.home ?? score?.penalty?.home ?? goals?.home ?? 0;
@@ -223,11 +224,13 @@ export function FixtureCardNewDesign({
 									teamScored.home && "text-m-01 dark:text-m-01-light-02",
 								)}
 							>
-								{homeTeamGoals}
+								{matchHasNotStarted ? "" : homeTeamGoals}
 							</Text>
 						</View>
 
-						<Text className="text-14 text-neu-06 dark:text-neu-07">-</Text>
+						<Text className="text-14 text-neu-06 dark:text-neu-07">
+							{matchHasNotStarted ? "" : "-"}
+						</Text>
 
 						<View
 							className={cn(
@@ -242,7 +245,7 @@ export function FixtureCardNewDesign({
 									teamScored.away && "text-m-01 dark:text-m-01-light-02",
 								)}
 							>
-								{awayTeamGoals}
+								{matchHasNotStarted ? "" : awayTeamGoals}
 							</Text>
 						</View>
 					</View>

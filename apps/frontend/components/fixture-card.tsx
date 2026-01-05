@@ -48,6 +48,7 @@ export function FixtureCard({
 
 	const matchIsLive = fixtureStatus.isLive;
 	const matchIsFinished = fixtureStatus.isFinished;
+	const matchHasNotStarted = fixtureStatus.haveNotStarted;
 	const notH2H = type !== "H2H";
 
 	// Safely get the home and away goals with proper null checks
@@ -89,7 +90,7 @@ export function FixtureCard({
 
 	return (
 		<Pressable onPress={onPress} className="relative h-64 px-16">
-			<View className="relative flex h-full flex-row items-center gap-x-16">
+			<View className="relative flex h-full flex-row items-center gap-x-[14px]">
 				{/* Live indicator bar */}
 				{matchIsLive && (
 					<View className="absolute left-[-10px] h-48 w-[2px] rounded-[4px] bg-m-01-light-03" />
@@ -110,13 +111,13 @@ export function FixtureCard({
 				<View className="flex flex-1 flex-col justify-center gap-y-1">
 					<FixtureTeam
 						isGoal={teamScored.home}
-						score={homeTeamGoals}
+						score={matchHasNotStarted ? undefined : homeTeamGoals}
 						name={teams.home.name}
 						winner={matchIsFinished && teams.home.winner === true}
 					/>
 					<FixtureTeam
 						isGoal={teamScored.away}
-						score={awayTeamGoals}
+						score={matchHasNotStarted ? undefined : awayTeamGoals}
 						name={teams.away.name}
 						winner={matchIsFinished && teams.away.winner === true}
 					/>

@@ -15,7 +15,7 @@ const fixtureTeam = tva({
 export interface FixtureTeamProps {
 	isInFavorites?: boolean;
 	isGoal: boolean;
-	score: number;
+	score?: number;
 	name: string;
 	winner: boolean;
 }
@@ -32,7 +32,7 @@ export function FixtureTeam({
 			<Text
 				className={cn("min-w-[16px]", fixtureTeam({ bold: winner || isGoal }))}
 			>
-				{score}
+				{score !== undefined ? score : ""}
 			</Text>
 			<Text
 				className={cn(

@@ -47,6 +47,7 @@ export function FixtureCardCompact({
 
 	const matchIsLive = fixtureStatus.isLive;
 	const matchIsFinished = fixtureStatus.isFinished;
+	const matchHasNotStarted = fixtureStatus.haveNotStarted;
 
 	const homeTeamGoals =
 		score?.fulltime?.home ?? score?.penalty?.home ?? goals?.home ?? 0;
@@ -127,7 +128,7 @@ export function FixtureCardCompact({
 
 			<View className="flex h-full flex-row items-center">
 				{/* Status */}
-				<View className="w-36 items-center">
+				<View className="min-w-40 items-center">
 					<Text
 							className={cn(
 								"text-11 font-sans-regular",
@@ -207,7 +208,7 @@ export function FixtureCardCompact({
 								: "text-neu-10 dark:text-neu-05",
 						)}
 					>
-						{homeTeamGoals}
+						{matchHasNotStarted ? "" : homeTeamGoals}
 					</Text>
 					<Text
 						className={cn(
@@ -217,7 +218,7 @@ export function FixtureCardCompact({
 								: "text-neu-10 dark:text-neu-05",
 						)}
 					>
-						{awayTeamGoals}
+						{matchHasNotStarted ? "" : awayTeamGoals}
 					</Text>
 				</View>
 			</View>
