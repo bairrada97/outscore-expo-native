@@ -1,9 +1,9 @@
 import {
-  API_BASE_URL,
-  FIFTEEN_SECONDS_CACHE,
-  ONE_DAY_CACHE,
-  ONE_HOUR_CACHE,
-  ONE_WEEK_CACHE,
+	API_BASE_URL,
+	FIFTEEN_SECONDS_CACHE,
+	ONE_DAY_CACHE,
+	ONE_HOUR_CACHE,
+	ONE_WEEK_CACHE,
 } from "@/utils/constants";
 import type { FormattedCountry } from "@outscore/shared-types";
 import { isBefore, isSameDay } from "date-fns";
@@ -66,7 +66,9 @@ async function fetchFixtures({
 	}
 
 	try {
-		const response = await fetch(`${API_BASE_URL}/fixtures?${params.toString()}`, {
+		const url = new URL("/fixtures", API_BASE_URL);
+		url.search = params.toString();
+		const response = await fetch(url.toString(), {
 			signal: abortSignal,
 		});
 
@@ -83,8 +85,8 @@ async function fetchFixtures({
 		return json.data as FormattedCountry[];
 	} catch (error) {
 		if (timeoutId) clearTimeout(timeoutId);
-		if (error instanceof Error && error.name === 'AbortError') {
-			throw new FetchError('Request timeout or aborted', 408);
+		if (error instanceof Error && error.name === "AbortError") {
+			throw new FetchError("Request timeout or aborted", 408);
 		}
 		throw error;
 	}
@@ -109,7 +111,11 @@ export function fixturesByDateQuery({
 }: FixturesQueryParams) {
 	const queryKey = createFixturesQueryKey(date, timezone);
 
-	const queryFn = async ({ signal }: { signal?: AbortSignal }): Promise<FormattedCountry[]> => {
+	const queryFn = async ({
+		signal,
+	}: {
+		signal?: AbortSignal;
+	}): Promise<FormattedCountry[]> => {
 		return fetchFixtures({ date, timezone, live, signal });
 	};
 
