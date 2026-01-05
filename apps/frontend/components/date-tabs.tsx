@@ -14,6 +14,7 @@ import {
 	useCallback,
 	useEffect,
 	useMemo,
+	useRef,
 	useState,
 } from "react";
 import { Animated, Pressable, useWindowDimensions, View } from "react-native";
@@ -258,7 +259,7 @@ function createRoutes(dates: Date[]): DateRoute[] {
 
 interface TabBarProps {
 	routes: DateRoute[];
-	position: Animated.AnimatedInterpolation<number>;
+	position: Animated.AnimatedInterpolation<number> | Animated.Value;
 	onIndexChange: (index: number) => void;
 	today: Date;
 	containerWidth: number;
@@ -350,6 +351,9 @@ export function DateTabs() {
 
 	const [index, setIndex] = useState(initialIndex);
 
+	// Animated position for web tab indicator (native uses TabView's position)
+	const webAnimatedPosition = useRef(new Animated.Value(initialIndex)).current;
+
 	// Sync index state when params.date changes (e.g., from deep link or browser navigation)
 	useEffect(() => {
 		setIndex((currentIndex) => {
@@ -362,6 +366,16 @@ export function DateTabs() {
 
 	const handleIndexChange = useCallback(
 		(newIndex: number) => {
+			// Animate tab indicator on web
+			if (isWeb) {
+				Animated.spring(webAnimatedPosition, {
+					toValue: newIndex,
+					useNativeDriver: true,
+					tension: 300,
+					friction: 30,
+				}).start();
+			}
+
 			// Use startTransition to mark this as a non-urgent update
 			// This keeps the tab animation smooth while React renders the new content
 			startTransition(() => {
@@ -375,15 +389,21 @@ export function DateTabs() {
 				}
 			});
 		},
-		[routes, router],
+		[routes, router, webAnimatedPosition],
 	);
 
 	const renderScene = useCallback(
 		({ route }: SceneRendererProps & { route: DateRoute }) => {
 			if (route.key === "live") {
-				return <FixturesScreen date={formatDateForApi(today)} live />;
+				return (
+					<FixturesScreen
+						key={`screen-live-${formatDateForApi(today)}`}
+						date={formatDateForApi(today)}
+						live
+					/>
+				);
 			}
-			return <FixturesScreen date={route.key} />;
+			return <FixturesScreen key={`screen-${route.key}`} date={route.key} />;
 		},
 		[today],
 	);
@@ -395,10 +415,6 @@ export function DateTabs() {
 	const calendarButtonWidth = useMemo(
 		() => containerWidth / 7,
 		[containerWidth],
-	);
-	const tabViewWidth = useMemo(
-		() => containerWidth - calendarButtonWidth,
-		[containerWidth, calendarButtonWidth],
 	);
 
 	const renderTabBar = useCallback(
@@ -415,8 +431,51 @@ export function DateTabs() {
 		[routes, handleIndexChange, today, containerWidth, calendarButtonWidth],
 	);
 
+	// Get current route for web rendering
+	const currentRoute = routes[index];
+
+	// On web, render tab bar and content directly (no pager = no fixed height issues)
+	if (isWeb) {
+		return (
+			<View>
+				{/* Shadow bar that spans the full width - transparent so tabs show through */}
+				<View
+					className="absolute left-0 right-0 h-12 z-20 shadow-sha-01 dark:shadow-sha-06"
+					style={{ backgroundColor: "transparent" }}
+					pointerEvents="none"
+				/>
+				<CalendarBarButtonScreen containerWidth={containerWidth} />
+				{/* Tab bar */}
+				<CustomTabBar
+					routes={routes}
+					position={webAnimatedPosition}
+					onIndexChange={handleIndexChange}
+					today={today}
+					containerWidth={containerWidth}
+					calendarButtonWidth={calendarButtonWidth}
+				/>
+				{/* Content - rendered directly, not through pager */}
+				<View style={{ width: containerWidth }}>
+					{currentRoute?.key === "live" ? (
+						<FixturesScreen
+							key={`screen-live-${formatDateForApi(today)}`}
+							date={formatDateForApi(today)}
+							live
+						/>
+					) : currentRoute ? (
+						<FixturesScreen
+							key={`screen-${currentRoute.key}`}
+							date={currentRoute.key}
+						/>
+					) : null}
+				</View>
+			</View>
+		);
+	}
+
+	// On native, use TabView with pager for swipe gestures
 	return (
-		<View className={isWeb ? "" : "flex-1"}>
+		<View className="flex-1">
 			{/* Shadow bar that spans the full width - transparent so tabs show through */}
 			<View
 				className="absolute left-0 right-0 h-12 z-20 shadow-sha-01 dark:shadow-sha-06"
@@ -430,15 +489,10 @@ export function DateTabs() {
 					renderScene={renderScene}
 					onIndexChange={handleIndexChange}
 					renderTabBar={renderTabBar}
-					swipeEnabled={!isWeb}
+					swipeEnabled
 					lazy
 					lazyPreloadDistance={2}
-					style={
-						isWeb
-							? { flex: undefined, position: "relative", width: containerWidth }
-							: { flex: 1 }
-					}
-					pagerStyle={isWeb ? { width: tabViewWidth } : undefined}
+					style={{ flex: 1 }}
 				/>
 			</View>
 		</View>

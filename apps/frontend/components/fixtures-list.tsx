@@ -12,6 +12,7 @@ interface FixturesListProps {
 	isRefetching?: boolean;
 	onFixturePress?: (fixtureId: number) => void;
 	listHeader?: ReactNode;
+	resetKey?: string; // Key to force remount when switching tabs
 }
 
 interface ItemProps {
@@ -52,6 +53,7 @@ export function FixturesList({
 	isRefetching,
 	onFixturePress,
 	listHeader,
+	resetKey,
 }: FixturesListProps) {
 	const renderItem = useCallback(
 		({ item }: LegendListRenderItemProps<FormattedCountry>) => (
@@ -105,14 +107,27 @@ export function FixturesList({
 	}
 
 	// On native, use LegendList for virtualization
+	// Force complete remount by using resetKey + countries count in key
+	// This ensures scroll position and content height reset when switching tabs
+	const uniqueKey = resetKey
+		? `${resetKey}-${countries.length}`
+		: `fallback-${countries.length}`;
+
 	return (
-		<View className="flex-1">
-			<Accordion type="multiple" className="w-full flex-1">
+		<View key={`wrapper-${uniqueKey}`} className="flex-1">
+			<Accordion
+				key={`accordion-${uniqueKey}`}
+				type="multiple"
+				defaultValue={[]}
+				className="w-full flex-1"
+			>
 				<LegendList
+					key={`legend-${uniqueKey}`}
 					data={countries}
 					renderItem={renderItem}
 					keyExtractor={keyExtractor}
-					estimatedItemSize={200}
+					estimatedItemSize={80}
+					initialContainerPoolRatio={2}
 					drawDistance={500}
 					recycleItems={false}
 					showsVerticalScrollIndicator={false}
