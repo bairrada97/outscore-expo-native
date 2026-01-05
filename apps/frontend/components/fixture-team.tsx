@@ -1,10 +1,9 @@
 import { cn } from "@/lib/utils";
-import { tva } from "@gluestack-ui/nativewind-utils/tva";
+import { cva } from "class-variance-authority";
 import { View } from "react-native";
 import { Text } from "./ui/text";
 
-const fixtureTeam = tva({
-	base: "flex flex-row gap-y-0 gap-x-8",
+const fixtureTeam = cva(["flex flex-row gap-y-0 gap-x-8"], {
 	variants: {
 		bold: {
 			true: ["font-sans-bold", "dark:text-neu-01"],

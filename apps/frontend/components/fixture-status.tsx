@@ -1,10 +1,9 @@
 import { cn } from "@/lib/utils";
-import { tva } from "@gluestack-ui/nativewind-utils/tva";
+import { cva } from "class-variance-authority";
 import { View } from "react-native";
 import { Text } from "./ui/text";
 
-const fixtureStatus = tva({
-	base: "",
+const fixtureStatus = cva([], {
 	variants: {
 		matchIsLiveOrFinished: {
 			true: ["text-neu-10", "dark:text-neu-04"],
