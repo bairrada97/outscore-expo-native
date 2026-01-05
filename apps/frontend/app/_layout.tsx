@@ -66,7 +66,7 @@ export default function RootLayout() {
 		);
 
 		return () => clearTimeout(timeout);
-	}, [appIsReady, isWeb]);
+	}, [appIsReady]);
 
 	// Safety: Force hide splash screen after app is ready, even if onLayoutRootView doesn't fire
 	useEffect(() => {

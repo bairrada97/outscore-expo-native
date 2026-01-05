@@ -1,4 +1,10 @@
 import { useGoalDetection } from "@/hooks/useGoalDetection";
+import {
+	FIXTURE_BREAK_TIME,
+	FIXTURE_HALF_TIME,
+	FIXTURE_INTERRUPTED,
+	FIXTURE_PENALTY,
+} from "@/utils/fixtures-status-constants";
 import type { FormattedMatch } from "@outscore/shared-types";
 import {
 	isFinishedStatus,
@@ -29,8 +35,12 @@ function getStatusText(fixture: ExtendedFormattedMatch): string {
 
 	// Live match
 	if (isLiveStatus(statusShort)) {
-		if (statusShort === "HT") return "HT";
-		if (statusShort === "P" || statusShort === "BT" || statusShort === "INT") {
+		if (statusShort === FIXTURE_HALF_TIME) return FIXTURE_HALF_TIME;
+		if (
+			statusShort === FIXTURE_PENALTY ||
+			statusShort === FIXTURE_BREAK_TIME ||
+			statusShort === FIXTURE_INTERRUPTED
+		) {
 			return statusShort;
 		}
 		if (status?.elapsed != null) return `${status.elapsed}'`;
@@ -120,7 +130,6 @@ export function FixtureCard({
 				</View>
 			</View>
 
-			{/* Divider - full width minus 8px on each side */}
 			{!isLastMatch && (
 				<View className="absolute bottom-0 left-8 right-8 h-px bg-neu-04 dark:bg-neu-10" />
 			)}

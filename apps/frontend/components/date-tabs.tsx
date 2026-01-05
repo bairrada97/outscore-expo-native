@@ -13,6 +13,7 @@ import {
 	startTransition,
 	useCallback,
 	useEffect,
+	useMemo,
 	useRef,
 	useState,
 } from "react";
@@ -205,7 +206,6 @@ function TabIndicator({ position, routes, tabWidth }: TabIndicatorProps) {
 				transform: [{ translateX }],
 			}}
 		>
-			{/* Gradient background using gra-02: from m-02 to m-01-light-01 */}
 			<View className="absolute inset-0 bg-linear-to-r from-m-02 to-m-01-light-01" />
 		</Animated.View>
 	);
@@ -266,10 +266,19 @@ function CustomTabBar({
 	containerWidth,
 	calendarButtonWidth,
 }: TabBarProps) {
-	const tabBarWidth = containerWidth - calendarButtonWidth;
-	const tabWidth = tabBarWidth / routes.length;
+	const tabBarWidth = useMemo(
+		() => containerWidth - calendarButtonWidth,
+		[containerWidth, calendarButtonWidth],
+	);
+	const tabWidth = useMemo(
+		() => tabBarWidth / routes.length,
+		[tabBarWidth, routes.length],
+	);
 
-	const tabPressHandlers = routes.map((_, i) => () => onIndexChange(i));
+	const tabPressHandlers = useMemo(
+		() => routes.map((_, i) => () => onIndexChange(i)),
+		[routes, onIndexChange],
+	);
 
 	return (
 		<View
@@ -347,10 +356,10 @@ export function DateTabs() {
 		return () => clearTimeout(timeoutId);
 	}, []);
 
-	const dates = getDateRange(today);
-	const routes = createRoutes(dates);
+	const dates = useMemo(() => getDateRange(today), [today]);
+	const routes = useMemo(() => createRoutes(dates), [dates]);
 
-	const initialIndex = (() => {
+	const initialIndex = useMemo(() => {
 		if (params.date === "live") {
 			return routes.length - 1;
 		}
@@ -359,7 +368,7 @@ export function DateTabs() {
 			if (idx >= 0) return idx;
 		}
 		return getTodayTabIndex();
-	})();
+	}, [params.date, routes]);
 
 	const [index, setIndex] = useState(initialIndex);
 
@@ -415,8 +424,14 @@ export function DateTabs() {
 		[today],
 	);
 
-	const containerWidth = isWeb ? Math.min(layout.width, 800) : layout.width;
-	const calendarButtonWidth = containerWidth / 7;
+	const containerWidth = useMemo(
+		() => (isWeb ? Math.min(layout.width, 800) : layout.width),
+		[layout.width],
+	);
+	const calendarButtonWidth = useMemo(
+		() => containerWidth / 7,
+		[containerWidth],
+	);
 
 	const renderTabBar = useCallback(
 		(props: { position: Animated.AnimatedInterpolation<number> }) => (

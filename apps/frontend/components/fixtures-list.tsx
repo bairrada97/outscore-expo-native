@@ -86,7 +86,6 @@ export function FixturesList({
 		return (
 			<View className="pb-24">
 				{listHeader}
-			
 				<Accordion type="multiple" className="w-full">
 					{countries.map((country) => (
 						<Item
@@ -126,7 +125,6 @@ export function FixturesList({
 					recycleItems={false}
 					showsVerticalScrollIndicator={false}
 					style={{ flex: 1 }}
-					contentContainerStyle={{ paddingBottom: 100 }}
 					ListHeaderComponent={
 						<>
 							{listHeader}
