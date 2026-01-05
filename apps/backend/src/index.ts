@@ -1,13 +1,13 @@
 import { Hono } from "hono";
 import {
-  botProtection,
-  createCors,
-  createFixturesRoutes,
-  type FixturesEnv,
-  handleScheduledEvent,
-  rateLimiter,
-  type SchedulerEnv,
-  secureHeaders,
+	botProtection,
+	createCors,
+	createFixturesRoutes,
+	type FixturesEnv,
+	handleScheduledEvent,
+	rateLimiter,
+	type SchedulerEnv,
+	secureHeaders,
 } from "./modules";
 import { getMetrics, logRequest } from "./utils";
 import QuotaDurableObject from "./utils/quota-durable-object";
@@ -137,6 +137,7 @@ app.onError((error, context) => {
 		"exp://localhost:8081", // Expo development server (alternative)
 		"http://10.0.2.2:3000", // Android emulator
 		"http://10.0.2.2:8081", // Android emulator (alternative)
+		"https://outscore-native-expo--xp9ieslur0.expo.app/"
 	];
 
 	// Check if origin is allowed (also check env variable)

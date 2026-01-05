@@ -47,6 +47,7 @@ const defaultOrigins = [
   'exp://localhost:8081', // Expo development server (alternative)
   'http://10.0.2.2:3000', // Android emulator
   'http://10.0.2.2:8081', // Android emulator (alternative)
+  'https://outscore-native-expo--xp9ieslur0.expo.app/', // Expo development server (alternative)
 ];
 
 /**
