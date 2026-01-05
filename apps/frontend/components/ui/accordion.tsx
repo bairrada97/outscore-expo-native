@@ -3,8 +3,7 @@ import * as AccordionPrimitive from "@rn-primitives/accordion";
 import * as React from "react";
 import { Platform, Pressable, View } from "react-native";
 import Animated, {
-	FadeIn,
-	FadeOutUp,
+	Easing,
 	LayoutAnimationConfig,
 	LinearTransition,
 	useAnimatedStyle,
@@ -13,6 +12,11 @@ import Animated, {
 } from "react-native-reanimated";
 import SvgB007 from "./SvgIcons/B007";
 import { TextClassContext } from "./text";
+
+// Smooth easing curve for accordion animations
+const smoothTransition = LinearTransition.duration(300).easing(
+	Easing.bezier(0.25, 0.1, 0.25, 1), // ease-out curve
+);
 
 function Accordion({
 	children,
@@ -34,9 +38,7 @@ function Accordion({
 				{...(props as AccordionPrimitive.RootProps)}
 				asChild
 			>
-				<Animated.View layout={LinearTransition.duration(200)}>
-					{children}
-				</Animated.View>
+				<Animated.View layout={smoothTransition}>{children}</Animated.View>
 			</AccordionPrimitive.Root>
 		</LayoutAnimationConfig>
 	);
@@ -75,10 +77,7 @@ function AccordionItem({
 			asChild
 			{...props}
 		>
-			<Animated.View
-				className="overflow-hidden"
-				layout={LinearTransition.duration(200)}
-			>
+			<Animated.View className="overflow-hidden" layout={smoothTransition}>
 				{children}
 			</Animated.View>
 		</AccordionPrimitive.Item>
@@ -99,8 +98,14 @@ function AccordionTrigger({
 	const progress = useDerivedValue(
 		() =>
 			isExpanded
-				? withTiming(1, { duration: 250 })
-				: withTiming(0, { duration: 200 }),
+				? withTiming(1, {
+						duration: 300,
+						easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+					})
+				: withTiming(0, {
+						duration: 250,
+						easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+					}),
 		[isExpanded],
 	);
 	const chevronStyle = useAnimatedStyle(
@@ -166,30 +171,31 @@ function AccordionContent({
 
 	// Track if content has been expanded at least once (for lazy rendering)
 	const [hasBeenExpanded, setHasBeenExpanded] = React.useState(isExpanded);
-	// Track if content is ready to show (for deferred rendering on native)
-	const [contentReady, setContentReady] = React.useState(isExpanded);
 
-	// Handle expand/collapse
 	React.useEffect(() => {
-		if (isExpanded) {
-			// Mark as has been expanded
-			if (!hasBeenExpanded) {
-				setHasBeenExpanded(true);
-			}
-			// On native, delay content render to let accordion animation start first
-			if (Platform.OS !== "web") {
-				setContentReady(false);
-				const frameId = requestAnimationFrame(() => {
-					setContentReady(true);
-				});
-				return () => cancelAnimationFrame(frameId);
-			}
-			setContentReady(true);
-		} else {
-			// Reset contentReady when closing
-			setContentReady(false);
+		if (isExpanded && !hasBeenExpanded) {
+			setHasBeenExpanded(true);
 		}
 	}, [isExpanded, hasBeenExpanded]);
+
+	// Animated opacity for smooth fade in/out
+	const opacity = useDerivedValue(
+		() =>
+			isExpanded
+				? withTiming(1, {
+						duration: 250,
+						easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+					})
+				: withTiming(0, {
+						duration: 150,
+						easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+					}),
+		[isExpanded],
+	);
+
+	const animatedStyle = useAnimatedStyle(() => ({
+		opacity: opacity.value,
+	}));
 
 	// Web: use CSS animations
 	if (Platform.OS === "web") {
@@ -210,22 +216,12 @@ function AccordionContent({
 		);
 	}
 
-	// Native: show placeholder immediately, fade in content after
+	// Native: render content immediately, animate opacity for smooth transition
 	return (
 		<TextClassContext.Provider value="text-sm">
 			<AccordionPrimitive.Content className="overflow-hidden" {...props}>
-				<Animated.View
-					exiting={FadeOutUp.duration(200)}
-					className={cn("pb-4", className)}
-				>
-					{hasBeenExpanded && contentReady ? (
-						<Animated.View entering={FadeIn.duration(200)}>
-							{children}
-						</Animated.View>
-					) : hasBeenExpanded ? (
-						// Placeholder while content is rendering
-						<View className="min-h-[100px] bg-neu-02 dark:bg-neu-13" />
-					) : null}
+				<Animated.View style={animatedStyle} className={cn("pb-4", className)}>
+					{hasBeenExpanded ? children : null}
 				</Animated.View>
 			</AccordionPrimitive.Content>
 		</TextClassContext.Provider>
