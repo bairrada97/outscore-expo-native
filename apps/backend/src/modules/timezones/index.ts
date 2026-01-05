@@ -17,6 +17,7 @@ export const commonTimezones = [
   'Europe/Lisbon',
   'Europe/Paris',
   'Europe/Berlin',
+  'Europe/Amsterdam',
   'Europe/Madrid',
   'Europe/Rome',
   'America/New_York',

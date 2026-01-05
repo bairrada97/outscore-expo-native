@@ -40,22 +40,49 @@ const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 const MAX_ENTRIES = 10000;
 
 /**
- * Maximum iterations per cleanup cycle to prevent performance degradation
+ * Periodic cleanup interval in milliseconds (5 minutes)
  */
-const MAX_CLEANUP_ITERATIONS = 1000;
+const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
+
+/**
+ * Reference to the periodic cleanup interval
+ */
+let cleanupIntervalId: ReturnType<typeof setInterval> | null = null;
 
 /**
  * Clean up expired entries from the store
- * Called lazily when the store exceeds MAX_ENTRIES
+ * Performs a single pass over the entire Map to remove all expired entries
  */
-const cleanupExpiredEntries = (now: number): void => {
-  let cleaned = 0;
+function cleanupExpiredEntries(now: number): void {
   for (const [rateLimitKey, rateLimitEntry] of rateLimitStore.entries()) {
-    if (cleaned >= MAX_CLEANUP_ITERATIONS) break;
     if (rateLimitEntry.resetAt < now) {
       rateLimitStore.delete(rateLimitKey);
-      cleaned++;
     }
+  }
+}
+
+/**
+ * Start the periodic cleanup interval
+ * Automatically cleans up expired entries every 5 minutes
+ * Must be called within a request handler (not at module scope)
+ */
+const startPeriodicCleanup = (): void => {
+  if (cleanupIntervalId !== null) {
+    return; // Already running
+  }
+  cleanupIntervalId = setInterval(() => {
+    cleanupExpiredEntries(Date.now());
+  }, CLEANUP_INTERVAL_MS);
+};
+
+/**
+ * Stop the periodic cleanup interval
+ * Call this during module shutdown to prevent memory leaks
+ */
+export const stopPeriodicCleanup = (): void => {
+  if (cleanupIntervalId !== null) {
+    clearInterval(cleanupIntervalId);
+    cleanupIntervalId = null;
   }
 };
 
@@ -86,13 +113,18 @@ export const rateLimiter = (config: RateLimiterConfig): MiddlewareHandler => {
   const windowMs = windowSec * 1000;
 
   return async (context, next) => {
+    // Start periodic cleanup on first request (lazy initialization)
+    // This must be done within a handler, not at module scope
+    startPeriodicCleanup();
+
     // Check if we should skip rate limiting
     if (skip?.(context)) {
       // Still set rate limit headers for skipped requests using configured defaults
       // This ensures consistent API behavior and allows clients to know the limits
+      const resetTimestamp = Math.floor(Date.now() / 1000) + windowSec;
       context.header('X-RateLimit-Limit', limit.toString());
       context.header('X-RateLimit-Remaining', limit.toString());
-      context.header('X-RateLimit-Reset', windowSec.toString());
+      context.header('X-RateLimit-Reset', String(resetTimestamp));
       await next();
       return;
     }
@@ -122,11 +154,12 @@ export const rateLimiter = (config: RateLimiterConfig): MiddlewareHandler => {
     // Calculate remaining and reset time
     const remaining = Math.max(0, limit - entry.count);
     const resetSeconds = Math.ceil((entry.resetAt - now) / 1000);
+    const resetTimestamp = Math.floor(entry.resetAt / 1000);
 
     // Set rate limit headers
     context.header('X-RateLimit-Limit', limit.toString());
     context.header('X-RateLimit-Remaining', remaining.toString());
-    context.header('X-RateLimit-Reset', resetSeconds.toString());
+    context.header('X-RateLimit-Reset', String(resetTimestamp));
 
     // Check if over limit
     if (entry.count > limit) {

@@ -43,8 +43,30 @@ const defaultOrigins = [
   'https://www.outscore.live',
   'http://localhost:3000',
   'http://localhost:8081',
+  'exp://127.0.0.1:8081', // Expo development server (iOS simulator)
+  'exp://localhost:8081', // Expo development server (alternative)
   'http://10.0.2.2:3000', // Android emulator
+  'http://10.0.2.2:8081', // Android emulator (alternative)
 ];
+
+/**
+ * Allowed Expo origin patterns
+ * Only accept exp:// protocol origins for security
+ */
+const ALLOWED_EXPO_ORIGINS = [
+  'exp://127.0.0.1:8081', // Expo development server (iOS simulator)
+  'exp://localhost:8081', // Expo development server (alternative)
+] as const;
+
+/**
+ * Check if origin is from Expo Go (strict check)
+ * Only accepts exp:// protocol origins to avoid matching unrelated hosts
+ */
+const isExpoOrigin = (origin: string): boolean => {
+  if (!origin) return false;
+  // Only accept exp:// protocol origins
+  return origin.startsWith('exp://');
+};
 
 /**
  * Check if origin is allowed
@@ -53,6 +75,11 @@ const isOriginAllowed = (
   origin: string,
   allowedOrigins: string | string[] | ((origin: string) => boolean)
 ): boolean => {
+  // Allow requests with no origin (e.g., native apps, Postman, curl)
+  if (!origin || origin === 'null') {
+    return true;
+  }
+
   if (typeof allowedOrigins === 'function') {
     return allowedOrigins(origin);
   }
@@ -61,23 +88,27 @@ const isOriginAllowed = (
     return allowedOrigins === '*' || allowedOrigins === origin;
   }
 
-  return allowedOrigins.includes(origin);
+  // Check exact match
+  if (allowedOrigins.includes(origin)) {
+    return true;
+  }
+
+  // Check if it's an Expo origin and we have any exp:// origins configured
+  if (isExpoOrigin(origin)) {
+    const hasExpoOrigins = allowedOrigins.some((o) => o.startsWith('exp://'));
+    if (hasExpoOrigins) {
+      return true; // Allow any exp:// origin if we have exp:// origins configured
+    }
+  }
+
+  return false;
 };
 
 /**
  * Check if origins configuration contains a wildcard
  */
 const hasWildcardOrigin = (origins: string | string[] | ((origin: string) => boolean) | undefined): boolean => {
-  if (origins === '*') {
-    return true;
-  }
-  if (typeof origins === 'string' && origins === '*') {
-    return true;
-  }
-  if (Array.isArray(origins) && origins.includes('*')) {
-    return true;
-  }
-  return false;
+  return origins === '*' || (Array.isArray(origins) && origins.includes('*'));
 };
 
 /**
@@ -130,6 +161,11 @@ export const cors = (config: CorsConfig = {}): MiddlewareHandler => {
 
   return async (context, next) => {
     const requestOrigin = context.req.header('origin') || '';
+    
+    // Debug logging for Expo Go (only in non-production)
+    if (process.env.NODE_ENV !== 'production' && requestOrigin && requestOrigin.startsWith('exp://')) {
+      console.log(`[CORS] Expo origin detected: ${requestOrigin}`);
+    }
 
     // Handle preflight OPTIONS request
     if (context.req.method === 'OPTIONS') {

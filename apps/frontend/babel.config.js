@@ -1,0 +1,21 @@
+module.exports = function (api) {
+  api.cache(true);
+  return {
+    presets: [
+      ['babel-preset-expo', { jsxImportSource: 'react' }]
+    ],
+    plugins: [
+      ['babel-plugin-react-compiler'],
+      [
+        'module-resolver',
+        {
+          root: ['./'],
+          alias: {
+            '@': './'
+          }
+        }
+      ],
+      'react-native-reanimated/plugin'
+    ]
+  };
+};

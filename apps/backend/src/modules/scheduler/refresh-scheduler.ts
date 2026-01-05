@@ -4,6 +4,7 @@ import {
   cacheSet,
   cacheSetEdgeOnly,
   checkFixturesDateTransition,
+  cleanupOldCacheData,
   getCurrentUtcDate,
   getTomorrowUtcDate,
 } from '../cache';
@@ -152,7 +153,21 @@ export const handleScheduledEvent = async (
   event: ScheduledEvent,
   env: SchedulerEnv
 ): Promise<void> => {
-  console.log(`⚡ [Scheduler] Cron triggered at ${new Date(event.scheduledTime).toISOString()}`);
+  const scheduledTime = new Date(event.scheduledTime);
+  console.log(`⚡ [Scheduler] Cron triggered at ${scheduledTime.toISOString()}`);
+
+  // Run cleanup once per day at 2 AM UTC
+  const hour = scheduledTime.getUTCHours();
+  const minute = scheduledTime.getUTCMinutes();
+  if (hour === 2 && minute < 5) {
+    console.log(`🧹 [Scheduler] Running daily cleanup`);
+    try {
+      const result = await cleanupOldCacheData(env, 30, 14);
+      console.log(`✅ [Scheduler] Cleanup completed: deleted ${result.deleted} files, ${result.errors} errors`);
+    } catch (error) {
+      console.error(`❌ [Scheduler] Cleanup failed:`, error);
+    }
+  }
 
   if (!env.REFRESH_SCHEDULER_DO) {
     // Fallback: if DO not configured, refresh directly

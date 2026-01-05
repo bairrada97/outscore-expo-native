@@ -143,16 +143,46 @@ export interface FormattedCountry {
 
 export type FormattedFixturesResponse = FormattedCountry[]; 
 
-export type FixtureStatusShort =
-	| 'CANC'
-	| 'PST'
-	| 'ABD'
-	| 'WO'
-	| 'FT'
-	| 'HT'
-	| 'INT'
-	| 'PEN'
-	| 'NS'
-	| 'AET'
-	| 'BT'
-	| 'P'
+/**
+ * Fixture status constants for classification
+ */
+export const FIXTURE_STATUS = {
+  LIVE: ['1H', '2H', 'HT', 'ET', 'INT', 'BT', 'P'],
+  FINISHED: ['FT', 'AET', 'PEN'],
+  NOT_STARTED: ['NS'],
+  CANCELLED: ['CANC', 'PST', 'ABD', 'WO', 'TBD'],
+} as const;
+
+/**
+ * Derived types from FIXTURE_STATUS to avoid drift
+ */
+type LiveStatus = typeof FIXTURE_STATUS.LIVE[number];
+type FinishedStatus = typeof FIXTURE_STATUS.FINISHED[number];
+type NotStartedStatus = typeof FIXTURE_STATUS.NOT_STARTED[number];
+type CancelledStatus = typeof FIXTURE_STATUS.CANCELLED[number];
+
+/**
+ * Union type derived from FIXTURE_STATUS constant
+ */
+export type FixtureStatusShort = LiveStatus | FinishedStatus | NotStartedStatus | CancelledStatus;
+
+/**
+ * Check if a fixture status indicates the match is live
+ */
+export function isLiveStatus(status: FixtureStatusShort): status is LiveStatus {
+  return (FIXTURE_STATUS.LIVE as readonly string[]).includes(status);
+}
+
+/**
+ * Check if a fixture status indicates the match is finished
+ */
+export function isFinishedStatus(status: FixtureStatusShort): status is FinishedStatus {
+  return (FIXTURE_STATUS.FINISHED as readonly string[]).includes(status);
+}
+
+/**
+ * Check if a fixture status indicates the match has not started
+ */
+export function isNotStartedStatus(status: FixtureStatusShort): status is NotStartedStatus {
+  return (FIXTURE_STATUS.NOT_STARTED as readonly string[]).includes(status);
+}
