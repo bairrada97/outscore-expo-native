@@ -78,8 +78,10 @@ export const SvgFlag = memo(function SvgFlag({ uri, size }: SvgFlagProps) {
 			})
 			.then((svgString) => {
 				if (cancelled) return;
-				if (!svgString.startsWith('<svg')) {
-					throw new Error('Invalid SVG format');
+				const trimmed = svgString.trim();
+				// Check if it's a valid SVG (may have XML declaration or whitespace)
+				if (!trimmed.includes('<svg')) {
+					throw new Error('Invalid SVG format: missing <svg> tag');
 				}
 				const svg = Skia.SVG.MakeFromString(svgString);
 				if (!svg) {

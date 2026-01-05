@@ -21,8 +21,10 @@ export function SvgFlag({ uri, size }: SvgFlagProps) {
 					throw new Error(`Invalid content type for SVG: ${contentType}`);
 				}
 				const svgText = await response.text();
-				if (!svgText.startsWith('<svg')) {
-					throw new Error('Invalid SVG format');
+				const trimmed = svgText.trim();
+				// Check if it's a valid SVG (may have XML declaration or whitespace)
+				if (!trimmed.includes('<svg')) {
+					throw new Error('Invalid SVG format: missing <svg> tag');
 				}
 				// Convert to data URI for caching
 				return `data:image/svg+xml;base64,${btoa(svgText)}`;
