@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "outscore",
-    "slug": "outscore",
+    "name": "outscore-expo",
+    "slug": "outscore-expo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "outscore",
+    "scheme": "outscore-expo",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -58,7 +58,7 @@
         "origin": false
       },
       "eas": {
-        "projectId": "7259011d-cbba-4495-ad04-23459bcc31b0"
+        "projectId": "3294ad84-a97c-4c9f-83b4-ab29751dd78b"
       }
     }
   }
