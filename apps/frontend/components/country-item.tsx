@@ -5,6 +5,7 @@ import {
 } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import type { FormattedCountry } from "@outscore/shared-types";
+import { useCallback, useMemo } from "react";
 import { View } from "react-native";
 import { CardsBlock } from "./cards-block";
 import { CountryDailyMatches } from "./country-daily-matches";
@@ -29,6 +30,37 @@ export function CountryItem({
 }: CountryItemProps) {
 	// Use world icon for "World" country
 	const isWorld = country.name === "World";
+
+	// Memoize fixture press handler to prevent unnecessary re-renders
+	const handleFixturePress = useCallback(
+		(fixtureId: number) => {
+			onFixturePress?.(fixtureId);
+		},
+		[onFixturePress],
+	);
+
+	// Memoize leagues content to prevent re-rendering when accordion expands/collapses
+	const leaguesContent = useMemo(
+		() =>
+			country.leagues.map((league, index) => (
+				<CardsBlock
+					key={`${league.id}-${index}`}
+					title={league.name}
+					cardsClassName="gap-0"
+				>
+					{league.matches.map((match, matchIndex) => (
+						<FixtureCard
+							key={match.id}
+							fixture={match}
+							timezone={timezone}
+							isLastMatch={matchIndex === league.matches.length - 1}
+							onPress={() => handleFixturePress(match.id)}
+						/>
+					))}
+				</CardsBlock>
+			)),
+		[country.leagues, timezone, handleFixturePress],
+	);
 
 	return (
 		<AccordionItem value={country.name} className="mb-0 border-0">
@@ -83,23 +115,7 @@ export function CountryItem({
 			</AccordionTrigger>
 
 			<AccordionContent className="pb-0 pt-8 px-8">
-				{country.leagues.map((league, index) => (
-					<CardsBlock
-						key={`${league.id}-${index}`}
-						title={league.name}
-						cardsClassName="gap-0"
-					>
-						{league.matches.map((match, matchIndex) => (
-							<FixtureCard
-								key={match.id}
-								fixture={match}
-								timezone={timezone}
-								isLastMatch={matchIndex === league.matches.length - 1}
-								onPress={() => onFixturePress?.(match.id)}
-							/>
-						))}
-					</CardsBlock>
-				))}
+				{leaguesContent}
 			</AccordionContent>
 		</AccordionItem>
 	);

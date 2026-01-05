@@ -9,16 +9,12 @@ import {
 import { isWeb } from "@/utils/platform";
 import { format, isSameDay } from "date-fns";
 import { useGlobalSearchParams, useRouter } from "expo-router";
-import { startTransition, useState } from "react";
-import {
-	Animated,
-	Pressable,
-	useWindowDimensions,
-	View
-} from "react-native";
+import { startTransition, useCallback, useMemo, useState } from "react";
+import { Animated, Pressable, useWindowDimensions, View } from "react-native";
 import { type SceneRendererProps, TabView } from "react-native-tab-view";
 import { CalendarButton } from "./calendar-button";
 import { FixturesScreen } from "./fixtures-screen";
+import SvgB021 from "./ui/SvgIcons/B021";
 import { Text } from "./ui/text";
 
 interface DateRoute {
@@ -127,9 +123,18 @@ function LiveTab({ tabIndex, position, onPress }: LiveTabProps) {
 			className="flex-1 items-center justify-center z-10"
 			style={{ backgroundColor: "transparent" }}
 		>
-			<View className="relative items-center justify-center">
+			<View className="relative flex-row items-center justify-center">
 				{/* Inactive state */}
-				<Animated.View style={{ opacity: inactiveOpacity }}>
+				<Animated.View
+					style={{ opacity: inactiveOpacity }}
+					className="flex-col items-center gap-x-4"
+				>
+					<SvgB021
+						width={24}
+						height={24}
+						className="text-m-01"
+						color="currentColor"
+					/>
 					<Text variant="caption-01" className="uppercase text-m-01">
 						{LIVE_BUTTON_LABEL}
 					</Text>
@@ -141,7 +146,14 @@ function LiveTab({ tabIndex, position, onPress }: LiveTabProps) {
 						opacity: activeOpacity,
 						position: "absolute",
 					}}
+					className="flex-col items-center gap-x-4"
 				>
+					<SvgB021
+						width={24}
+						height={24}
+						className="text-neu-01"
+						color="currentColor"
+					/>
 					<Text variant="caption-01" className="uppercase text-neu-01">
 						{LIVE_BUTTON_LABEL}
 					</Text>
@@ -243,6 +255,12 @@ function CustomTabBar({
 	const tabBarWidth = containerWidth - calendarButtonWidth;
 	const tabWidth = tabBarWidth / routes.length;
 
+	// Memoize tab press handlers to prevent unnecessary re-renders
+	const createTabPressHandler = useCallback(
+		(index: number) => () => onIndexChange(index),
+		[onIndexChange],
+	);
+
 	return (
 		<View
 			className="flex-row items-stretch h-12 relative bg-neu-01 dark:bg-neu-11"
@@ -264,7 +282,7 @@ function CustomTabBar({
 							key={route.key}
 							tabIndex={i}
 							position={position}
-							onPress={() => onIndexChange(i)}
+							onPress={createTabPressHandler(i)}
 						/>
 					);
 				}
@@ -278,7 +296,7 @@ function CustomTabBar({
 						tabIndex={i}
 						position={position}
 						isToday={isToday}
-						onPress={() => onIndexChange(i)}
+						onPress={createTabPressHandler(i)}
 					/>
 				);
 			})}
@@ -294,11 +312,11 @@ export function DateTabs() {
 	// Prefetch all date tabs in the background for instant tab switching
 	usePrefetchFixtures();
 
-	const today = new Date();
-	const dates = getDateRange(today);
-	const routes = createRoutes(dates);
+	const today = useMemo(() => new Date(), []);
+	const dates = useMemo(() => getDateRange(today), [today]);
+	const routes = useMemo(() => createRoutes(dates), [dates]);
 
-	function getInitialIndex(): number {
+	const initialIndex = useMemo(() => {
 		if (params.date === "live") {
 			return routes.length - 1;
 		}
@@ -307,35 +325,64 @@ export function DateTabs() {
 			if (idx >= 0) return idx;
 		}
 		return getTodayTabIndex();
-	}
+	}, [params.date, routes]);
 
-	const [index, setIndex] = useState(getInitialIndex);
+	const [index, setIndex] = useState(initialIndex);
 
-	function handleIndexChange(newIndex: number) {
-		// Use startTransition to mark this as a non-urgent update
-		// This keeps the tab animation smooth while React renders the new content
-		startTransition(() => {
-			setIndex(newIndex);
+	const handleIndexChange = useCallback(
+		(newIndex: number) => {
+			// Use startTransition to mark this as a non-urgent update
+			// This keeps the tab animation smooth while React renders the new content
+			startTransition(() => {
+				setIndex(newIndex);
 
-			if (isWeb) {
-				const route = routes[newIndex];
-				if (route) {
-					router.setParams({ date: route.key });
+				if (isWeb) {
+					const route = routes[newIndex];
+					if (route) {
+						router.setParams({ date: route.key });
+					}
 				}
+			});
+		},
+		[routes, router],
+	);
+
+	const renderScene = useCallback(
+		({ route }: SceneRendererProps & { route: DateRoute }) => {
+			if (route.key === "live") {
+				return <FixturesScreen date={formatDateForApi(today)} live />;
 			}
-		});
-	}
+			return <FixturesScreen date={route.key} />;
+		},
+		[today],
+	);
 
-	function renderScene({ route }: SceneRendererProps & { route: DateRoute }) {
-		if (route.key === "live") {
-			return <FixturesScreen date={formatDateForApi(today)} live />;
-		}
-		return <FixturesScreen date={route.key} />;
-	}
+	const containerWidth = useMemo(
+		() => (isWeb ? Math.min(layout.width, 800) : layout.width),
+		[layout.width],
+	);
+	const calendarButtonWidth = useMemo(
+		() => containerWidth / 7,
+		[containerWidth],
+	);
+	const tabViewWidth = useMemo(
+		() => containerWidth - calendarButtonWidth,
+		[containerWidth, calendarButtonWidth],
+	);
 
-	const containerWidth = isWeb ? Math.min(layout.width, 800) : layout.width;
-	const calendarButtonWidth = containerWidth / 7;
-	const tabViewWidth = containerWidth - calendarButtonWidth;
+	const renderTabBar = useCallback(
+		(props: { position: Animated.AnimatedInterpolation<number> }) => (
+			<CustomTabBar
+				routes={routes}
+				position={props.position}
+				onIndexChange={handleIndexChange}
+				today={today}
+				containerWidth={containerWidth}
+				calendarButtonWidth={calendarButtonWidth}
+			/>
+		),
+		[routes, handleIndexChange, today, containerWidth, calendarButtonWidth],
+	);
 
 	return (
 		<View className={isWeb ? "" : "flex-1"}>
@@ -351,19 +398,10 @@ export function DateTabs() {
 					navigationState={{ index, routes }}
 					renderScene={renderScene}
 					onIndexChange={handleIndexChange}
-					renderTabBar={(props) => (
-						<CustomTabBar
-							routes={routes}
-							position={props.position}
-							onIndexChange={handleIndexChange}
-							today={today}
-							containerWidth={containerWidth}
-							calendarButtonWidth={calendarButtonWidth}
-						/>
-					)}
+					renderTabBar={renderTabBar}
 					swipeEnabled={!isWeb}
 					lazy
-					lazyPreloadDistance={1}
+					lazyPreloadDistance={0}
 					style={
 						isWeb
 							? { flex: undefined, position: "relative", width: containerWidth }

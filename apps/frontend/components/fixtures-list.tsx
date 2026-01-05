@@ -1,5 +1,6 @@
 import { LegendList, type LegendListRenderItemProps } from "@legendapp/list";
 import { type FormattedCountry, isLiveStatus } from "@outscore/shared-types";
+import { useCallback, useMemo } from "react";
 import { Platform, Text, View } from "react-native";
 import { CountryItem } from "./country-item";
 import { Accordion } from "./ui/accordion";
@@ -19,16 +20,21 @@ interface ItemProps {
 }
 
 function Item({ item, timezone, onFixturePress }: ItemProps) {
-	const totalMatches = item.leagues.reduce(
-		(acc, league) => acc + league.matches.length,
-		0,
+	const totalMatches = useMemo(
+		() => item.leagues.reduce((acc, league) => acc + league.matches.length, 0),
+		[item.leagues],
 	);
-	const totalLiveMatches = item.leagues.reduce((acc, league) => {
-		return (
-			acc +
-			league.matches.filter((match) => isLiveStatus(match.status?.short)).length
-		);
-	}, 0);
+	const totalLiveMatches = useMemo(
+		() =>
+			item.leagues.reduce((acc, league) => {
+				return (
+					acc +
+					league.matches.filter((match) => isLiveStatus(match.status?.short))
+						.length
+				);
+			}, 0),
+		[item.leagues],
+	);
 
 	return (
 		<CountryItem
@@ -48,10 +54,16 @@ export function FixturesList({
 	isRefetching,
 	onFixturePress,
 }: FixturesListProps) {
-	const renderItem = ({
-		item,
-	}: LegendListRenderItemProps<FormattedCountry>) => (
-		<Item item={item} timezone={timezone} onFixturePress={onFixturePress} />
+	const renderItem = useCallback(
+		({ item }: LegendListRenderItemProps<FormattedCountry>) => (
+			<Item item={item} timezone={timezone} onFixturePress={onFixturePress} />
+		),
+		[timezone, onFixturePress],
+	);
+
+	const keyExtractor = useCallback(
+		(country: FormattedCountry) => country.name,
+		[],
 	);
 
 	if (isLoading) {
@@ -101,7 +113,7 @@ export function FixturesList({
 				<LegendList
 					data={countries}
 					renderItem={renderItem}
-					keyExtractor={(country: FormattedCountry) => country.name}
+					keyExtractor={keyExtractor}
 					estimatedItemSize={200}
 					drawDistance={500}
 					recycleItems={false}
