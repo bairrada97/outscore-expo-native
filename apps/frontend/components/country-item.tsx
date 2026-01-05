@@ -5,7 +5,6 @@ import {
 } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import type { FormattedCountry } from "@outscore/shared-types";
-import { useCallback, useMemo } from "react";
 import { View } from "react-native";
 import { CardsBlock } from "./cards-block";
 import { CountryDailyMatches } from "./country-daily-matches";
@@ -26,33 +25,22 @@ export function CountryItem({
 	totalLiveMatches,
 	onFixturePress,
 }: CountryItemProps) {
-	// Create memoized match press handlers to avoid creating new functions on every render
-	const createMatchPressHandler = useCallback(
-		(matchId: number) => () => onFixturePress?.(matchId),
-		[onFixturePress],
-	);
-
-	// Memoize leagues content
-	const leaguesContent = useMemo(
-		() =>
-			country.leagues.map((league, index) => (
-				<CardsBlock
-					key={`${league.id}-${index}`}
-					title={league.name}
-					cardsClassName="gap-0"
-				>
-					{league.matches.map((match, matchIndex) => (
-						<FixtureCard
-							key={match.id}
-							fixture={match}
-							isLastMatch={matchIndex === league.matches.length - 1}
-							onPress={createMatchPressHandler(match.id)}
-						/>
-					))}
-				</CardsBlock>
-			)),
-		[country.leagues, createMatchPressHandler],
-	);
+	const leaguesContent = country.leagues.map((league, index) => (
+		<CardsBlock
+			key={`${league.id}-${index}`}
+			title={league.name}
+			cardsClassName="gap-0"
+		>
+			{league.matches.map((match, matchIndex) => (
+				<FixtureCard
+					key={match.id}
+					fixture={match}
+					isLastMatch={matchIndex === league.matches.length - 1}
+					onPress={() => onFixturePress?.(match.id)}
+				/>
+			))}
+		</CardsBlock>
+	));
 
 	return (
 		<AccordionItem value={country.name} className="mb-0 border-0">

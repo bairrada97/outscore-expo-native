@@ -20,12 +20,11 @@ import "../global.css";
 
 // Import fonts
 
+import { isWeb } from "@/utils/platform";
 import SourceSans3Bold from "../assets/fonts/SourceSans3-Bold.ttf";
 // Import SourceSans3 fonts
 import SourceSans3Regular from "../assets/fonts/SourceSans3-Regular.ttf";
 import SourceSans3SemiBold from "../assets/fonts/SourceSans3-SemiBold.ttf";
-
-const isWeb = Platform.OS === "web";
 
 // Keep splash screen visible until ready
 SplashScreen.preventAutoHideAsync();
@@ -36,6 +35,8 @@ const persister = createQueryPersister();
 const persistOptions = createPersistOptions(persister);
 
 export default function RootLayout() {
+	// Load fonts on all platforms to prevent layout shifts
+	// Fonts are preloaded in +html.tsx and use font-display: block to prevent shifts
 	const [fontsLoaded, fontError] = useFonts({
 		"SourceSans3-Regular": SourceSans3Regular,
 		"SourceSans3-SemiBold": SourceSans3SemiBold,
@@ -51,17 +52,21 @@ export default function RootLayout() {
 		}
 	}, [fontsLoaded, fontError]);
 
-	// Fallback timeout: hide splash screen after 3 seconds even if fonts haven't loaded
+	// Fallback timeout: hide splash screen after 1.5s (web) or 3s (native) if fonts haven't loaded
+	// Reduced timeout on web since fonts are preloaded and should load faster
 	useEffect(() => {
-		const timeout = setTimeout(() => {
-			if (!appIsReady) {
-				console.warn("Font loading timeout - proceeding without fonts");
-				setAppIsReady(true);
-			}
-		}, 3000);
+		const timeout = setTimeout(
+			() => {
+				if (!appIsReady) {
+					console.warn("Font loading timeout - proceeding without fonts");
+					setAppIsReady(true);
+				}
+			},
+			isWeb ? 1500 : 3000,
+		);
 
 		return () => clearTimeout(timeout);
-	}, [appIsReady]);
+	}, [appIsReady, isWeb]);
 
 	// Safety: Force hide splash screen after app is ready, even if onLayoutRootView doesn't fire
 	useEffect(() => {

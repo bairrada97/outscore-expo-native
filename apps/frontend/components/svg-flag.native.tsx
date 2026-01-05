@@ -1,5 +1,5 @@
 import { Canvas, FitBox, ImageSVG, rect, Skia, type SkSVG } from "@shopify/react-native-skia";
-import { memo, useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { View } from "react-native";
 
 interface SvgFlagProps {
@@ -49,7 +49,7 @@ function parseSvgDimensions(svgString: string): { width: number; height: number 
 }
 
 // Native: use Skia for GPU-accelerated SVG rendering
-export const SvgFlag = memo(function SvgFlag({ uri, size }: SvgFlagProps) {
+export function SvgFlag({ uri, size }: SvgFlagProps) {
 	const [data, setData] = useState<SvgData | null>(() => svgCache.get(uri) ?? null);
 
 	useEffect(() => {
@@ -103,17 +103,14 @@ export const SvgFlag = memo(function SvgFlag({ uri, size }: SvgFlagProps) {
 		};
 	}, [uri, data]);
 
-	const rects = useMemo(() => {
-		if (!data) return null;
-		return {
-			src: rect(0, 0, data.width, data.height),
-			dst: rect(0, 0, size, size),
-		};
-	}, [data, size]);
-
-	if (!data || !rects) {
+	if (!data) {
 		return <View style={{ width: size, height: size }} />;
 	}
+
+	const rects = {
+		src: rect(0, 0, data.width, data.height),
+		dst: rect(0, 0, size, size),
+	};
 
 	return (
 		<Canvas style={{ width: size, height: size }}>
@@ -122,5 +119,5 @@ export const SvgFlag = memo(function SvgFlag({ uri, size }: SvgFlagProps) {
 			</FitBox>
 		</Canvas>
 	);
-});
+}
 

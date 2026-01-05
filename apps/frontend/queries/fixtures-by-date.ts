@@ -58,7 +58,7 @@ async function fetchFixtures({
 	const abortSignal = signal ?? controller!.signal;
 
 	// Set up timeout if no external signal provided
-	let timeoutId: NodeJS.Timeout | null = null;
+	let timeoutId: ReturnType<typeof setTimeout> | null = null;
 	if (!signal && timeoutMs > 0) {
 		timeoutId = setTimeout(() => {
 			controller!.abort();
@@ -68,9 +68,10 @@ async function fetchFixtures({
 	try {
 		const url = new URL("/fixtures", API_BASE_URL);
 		url.search = params.toString();
-		const response = await fetch(url.toString(), {
-			signal: abortSignal,
-		});
+		const fetchOptions: RequestInit = {
+			signal: abortSignal as any,
+		};
+		const response = await fetch(url.toString(), fetchOptions);
 
 		if (timeoutId) clearTimeout(timeoutId);
 

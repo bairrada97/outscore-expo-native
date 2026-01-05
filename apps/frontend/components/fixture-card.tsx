@@ -5,7 +5,6 @@ import {
 	isLiveStatus,
 	isNotStartedStatus,
 } from "@outscore/shared-types";
-import { memo, useMemo } from "react";
 import { Pressable, View } from "react-native";
 import { FixtureStatus } from "./fixture-status";
 import { FixtureTeam } from "./fixture-team";
@@ -47,7 +46,7 @@ function getStatusText(fixture: ExtendedFormattedMatch): string {
 	return statusShort;
 }
 
-export const FixtureCard = memo(function FixtureCard({
+export function FixtureCard({
 	fixture,
 	isLastMatch = false,
 	onPress,
@@ -63,7 +62,7 @@ export const FixtureCard = memo(function FixtureCard({
 	const notH2H = type !== "H2H";
 
 	// Compute status text directly
-	const statusText = useMemo(() => getStatusText(fixture), [fixture]);
+	const statusText = getStatusText(fixture);
 
 	// Safely get the home and away goals with proper null checks
 	const homeTeamGoals =
@@ -127,4 +126,4 @@ export const FixtureCard = memo(function FixtureCard({
 			)}
 		</Pressable>
 	);
-});
+}

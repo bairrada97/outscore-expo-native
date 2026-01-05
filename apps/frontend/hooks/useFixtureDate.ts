@@ -1,7 +1,6 @@
+import { useTimeZone } from "@/context/timezone-context";
 import { DEFAULT_TIMEZONE } from "@/utils/constants";
 import { useDatePicker } from "./useDatePicker";
-import { queryToTimezone } from "@/utils/format-timezone";
-import { useTimeZone } from "@/context/timezone-context";
 
 export function useFixtureDate() {
 	const { getDateInHoursAndMinutes } = useDatePicker();
@@ -64,10 +63,7 @@ export function useFixtureDate() {
 
 			return (
 				daysLeftText +
-				getDateInHoursAndMinutes(
-					date,
-					queryToTimezone(timeZone) || queryToTimezone(DEFAULT_TIMEZONE),
-				)
+				getDateInHoursAndMinutes(date, timeZone || DEFAULT_TIMEZONE)
 			);
 		} else {
 			return fixtureDate(date);
@@ -85,4 +81,3 @@ export function useFixtureDate() {
 		fixtureInHours,
 	};
 }
-

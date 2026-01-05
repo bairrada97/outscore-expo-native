@@ -2,7 +2,6 @@ import { useTimeZone } from "@/context/timezone-context";
 import { fixturesByDateQuery } from "@/queries/fixtures-by-date";
 import { isWeb } from "@/utils/platform";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
 import { Platform, View } from "react-native";
 import { FavoritesFixtureList } from "./favorites-fixture-list";
 import { FixturesList } from "./fixtures-list";
@@ -24,10 +23,9 @@ export function FixturesScreen({ date, live }: FixturesScreenProps) {
 		}),
 	);
 
-	// Memoize header component for LegendList (only for native)
-	const listHeader = useMemo(() => {
-		if (Platform.OS === "web") return null;
-		return (
+	// Header component for LegendList (only for native)
+	const listHeader =
+		Platform.OS === "web" ? null : (
 			<View>
 				{/* Favorite competitions section */}
 				<TitleSection>Favorite competitions</TitleSection>
@@ -37,12 +35,11 @@ export function FixturesScreen({ date, live }: FixturesScreenProps) {
 				<TitleSection>All competitions</TitleSection>
 			</View>
 		);
-	}, [data]);
 
 	// On web, render content directly (no TabView pager = natural height)
 	if (isWeb) {
 		return (
-			<View className="mt-16 bg-neu-02 dark:bg-neu-13">
+			<View className="pt-16 bg-neu-02 dark:bg-neu-13">
 				{/* Favorite competitions section */}
 				<TitleSection>Favorite competitions</TitleSection>
 				<FavoritesFixtureList data={data ?? []} />

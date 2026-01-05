@@ -13,7 +13,6 @@ import {
 	startTransition,
 	useCallback,
 	useEffect,
-	useMemo,
 	useRef,
 	useState,
 } from "react";
@@ -62,13 +61,9 @@ function CalendarBarDay({
 		? "text-m-01 dark:text-m-01-light-04"
 		: "text-neu-09/70 dark:text-neu-06";
 
-	const accessibilityLabel = useMemo(
-		() =>
-			isToday
-				? `Today, ${format(date, "MMMM d")}`
-				: format(date, "EEEE, MMMM d"),
-		[date, isToday],
-	);
+	const accessibilityLabel = isToday
+		? `Today, ${format(date, "MMMM d")}`
+		: format(date, "EEEE, MMMM d");
 
 	return (
 		<Pressable
@@ -189,11 +184,8 @@ interface TabIndicatorProps {
 }
 
 function TabIndicator({ position, routes, tabWidth }: TabIndicatorProps) {
-	const inputRange = useMemo(() => routes.map((_, i) => i), [routes]);
-	const outputRange = useMemo(
-		() => routes.map((_, i) => i * tabWidth),
-		[routes, tabWidth],
-	);
+	const inputRange = routes.map((_, i) => i);
+	const outputRange = routes.map((_, i) => i * tabWidth);
 
 	const translateX = position.interpolate({
 		inputRange,
@@ -277,11 +269,7 @@ function CustomTabBar({
 	const tabBarWidth = containerWidth - calendarButtonWidth;
 	const tabWidth = tabBarWidth / routes.length;
 
-	// Memoize tab press handlers array to prevent unnecessary re-renders
-	const tabPressHandlers = useMemo(
-		() => routes.map((_, i) => () => onIndexChange(i)),
-		[routes, onIndexChange],
-	);
+	const tabPressHandlers = routes.map((_, i) => () => onIndexChange(i));
 
 	return (
 		<View
@@ -359,10 +347,10 @@ export function DateTabs() {
 		return () => clearTimeout(timeoutId);
 	}, []);
 
-	const dates = useMemo(() => getDateRange(today), [today]);
-	const routes = useMemo(() => createRoutes(dates), [dates]);
+	const dates = getDateRange(today);
+	const routes = createRoutes(dates);
 
-	const initialIndex = useMemo(() => {
+	const initialIndex = (() => {
 		if (params.date === "live") {
 			return routes.length - 1;
 		}
@@ -371,7 +359,7 @@ export function DateTabs() {
 			if (idx >= 0) return idx;
 		}
 		return getTodayTabIndex();
-	}, [params.date, routes]);
+	})();
 
 	const [index, setIndex] = useState(initialIndex);
 
@@ -427,14 +415,8 @@ export function DateTabs() {
 		[today],
 	);
 
-	const containerWidth = useMemo(
-		() => (isWeb ? Math.min(layout.width, 800) : layout.width),
-		[layout.width],
-	);
-	const calendarButtonWidth = useMemo(
-		() => containerWidth / 7,
-		[containerWidth],
-	);
+	const containerWidth = isWeb ? Math.min(layout.width, 800) : layout.width;
+	const calendarButtonWidth = containerWidth / 7;
 
 	const renderTabBar = useCallback(
 		(props: { position: Animated.AnimatedInterpolation<number> }) => (

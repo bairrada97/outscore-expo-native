@@ -1,7 +1,7 @@
 import { LegendList, type LegendListRenderItemProps } from "@legendapp/list";
 import { type FormattedCountry, isLiveStatus } from "@outscore/shared-types";
 import type { ReactNode } from "react";
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import { Platform, Text, View } from "react-native";
 import { CountryItem } from "./country-item";
 import { Accordion } from "./ui/accordion";
@@ -21,21 +21,14 @@ interface ItemProps {
 }
 
 function Item({ item, onFixturePress }: ItemProps) {
-	const totalMatches = useMemo(
-		() => item.leagues.reduce((acc, league) => acc + league.matches.length, 0),
-		[item.leagues],
-	);
-	const totalLiveMatches = useMemo(
-		() =>
-			item.leagues.reduce((acc, league) => {
-				return (
-					acc +
-					league.matches.filter((match) => isLiveStatus(match.status?.short))
-						.length
-				);
-			}, 0),
-		[item.leagues],
-	);
+	const totalMatches = item.leagues.reduce((acc, league) => acc + league.matches.length, 0);
+	const totalLiveMatches = item.leagues.reduce((acc, league) => {
+		return (
+			acc +
+			league.matches.filter((match) => isLiveStatus(match.status?.short))
+				.length
+		);
+	}, 0);
 
 	return (
 		<CountryItem
@@ -93,11 +86,7 @@ export function FixturesList({
 		return (
 			<View className="pb-24">
 				{listHeader}
-				{isRefetching && (
-					<View className="py-2 items-center">
-						<Text className="text-sm text-neu-07">Refreshing...</Text>
-					</View>
-				)}
+			
 				<Accordion type="multiple" className="w-full">
 					{countries.map((country) => (
 						<Item
@@ -141,11 +130,6 @@ export function FixturesList({
 					ListHeaderComponent={
 						<>
 							{listHeader}
-							{isRefetching && (
-								<View className="py-2 items-center">
-									<Text className="text-sm text-neu-07">Refreshing...</Text>
-								</View>
-							)}
 						</>
 					}
 				/>

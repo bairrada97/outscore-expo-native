@@ -15,7 +15,32 @@ export default function Root({ children }: PropsWithChildren) {
 					content="width=device-width, initial-scale=1, shrink-to-fit=no"
 				/>
 
-				{/* Body scrolling enabled for native page scrolling experience */}
+				{/* Resource hints for API - improves connection setup time */}
+				<link
+					rel="preconnect"
+					href="https://outscore-api.outscore.workers.dev"
+					crossOrigin="anonymous"
+				/>
+				<link
+					rel="dns-prefetch"
+					href="https://outscore-api.outscore.workers.dev"
+				/>
+
+				{/* Preload critical fonts for faster rendering */}
+				<link
+					rel="preload"
+					href="/assets/fonts/SourceSans3-Regular.ttf"
+					as="font"
+					type="font/ttf"
+					crossOrigin="anonymous"
+				/>
+				<link
+					rel="preload"
+					href="/assets/fonts/SourceSans3-SemiBold.ttf"
+					as="font"
+					type="font/ttf"
+					crossOrigin="anonymous"
+				/>
 
 				{/* Using raw CSS styles as an escape-hatch to ensure the background color never flickers in dark-mode. */}
 				<style dangerouslySetInnerHTML={{ __html: responsiveBackground }} />
@@ -40,15 +65,33 @@ body {
   --color-m-01: rgb(24 124 86);
 }
 
-/* Hide content until React hydrates to prevent FOUC */
-#root > div {
-  opacity: 0;
-  animation: fadeIn 0.15s ease-in forwards;
-  animation-delay: 0.05s;
+/* Font face declarations with font-display: block to prevent layout shifts */
+/* Block ensures text is invisible until font loads, preventing CLS */
+/* Fonts are preloaded above, so this should be fast */
+@font-face {
+  font-family: 'SourceSans3-Regular';
+  src: url('/assets/fonts/SourceSans3-Regular.ttf') format('truetype');
+  font-display: block;
+  font-weight: 400;
+  font-style: normal;
 }
 
-@keyframes fadeIn {
-  to {
-    opacity: 1;
-  }
-}`;
+@font-face {
+  font-family: 'SourceSans3-SemiBold';
+  src: url('/assets/fonts/SourceSans3-SemiBold.ttf') format('truetype');
+  font-display: block;
+  font-weight: 600;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SourceSans3-Bold';
+  src: url('/assets/fonts/SourceSans3-Bold.ttf') format('truetype');
+  font-display: block;
+  font-weight: 700;
+  font-style: normal;
+}
+
+/* Remove opacity:0 to improve FCP - content renders immediately */
+/* React Query will handle loading states gracefully */
+`;
