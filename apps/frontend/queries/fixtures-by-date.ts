@@ -38,10 +38,14 @@ async function fetchFixtures({
 	date,
 	timezone,
 	live,
+	signal,
+	timeoutMs = 30000,
 }: {
 	date: string;
 	timezone?: string;
 	live?: "all";
+	signal?: AbortSignal;
+	timeoutMs?: number;
 }): Promise<FormattedCountry[]> {
 	const params = new URLSearchParams();
 	params.set("date", date);
@@ -49,17 +53,41 @@ async function fetchFixtures({
 	if (timezone) params.set("timezone", timezone);
 	if (live) params.set("live", live);
 
-	const response = await fetch(`${API_BASE_URL}/fixtures?${params.toString()}`);
+	// Create AbortController for timeout if no signal provided
+	const controller = signal ? null : new AbortController();
+	const abortSignal = signal ?? controller!.signal;
 
-	if (!response.ok) {
-		throw new FetchError(
-			`Failed to fetch fixtures: ${response.statusText}`,
-			response.status,
-		);
+	// Set up timeout if no external signal provided
+	let timeoutId: NodeJS.Timeout | null = null;
+	if (!signal && timeoutMs > 0) {
+		timeoutId = setTimeout(() => {
+			controller!.abort();
+		}, timeoutMs);
 	}
 
-	const json = (await response.json()) as { data: FormattedCountry[] };
-	return json.data as FormattedCountry[];
+	try {
+		const response = await fetch(`${API_BASE_URL}/fixtures?${params.toString()}`, {
+			signal: abortSignal,
+		});
+
+		if (timeoutId) clearTimeout(timeoutId);
+
+		if (!response.ok) {
+			throw new FetchError(
+				`Failed to fetch fixtures: ${response.statusText}`,
+				response.status,
+			);
+		}
+
+		const json = (await response.json()) as { data: FormattedCountry[] };
+		return json.data as FormattedCountry[];
+	} catch (error) {
+		if (timeoutId) clearTimeout(timeoutId);
+		if (error instanceof Error && error.name === 'AbortError') {
+			throw new FetchError('Request timeout or aborted', 408);
+		}
+		throw error;
+	}
 }
 
 /**
@@ -81,8 +109,8 @@ export function fixturesByDateQuery({
 }: FixturesQueryParams) {
 	const queryKey = createFixturesQueryKey(date, timezone);
 
-	const queryFn = async (): Promise<FormattedCountry[]> => {
-		return fetchFixtures({ date, timezone, live });
+	const queryFn = async ({ signal }: { signal?: AbortSignal }): Promise<FormattedCountry[]> => {
+		return fetchFixtures({ date, timezone, live, signal });
 	};
 
 	// Determine cache settings based on date type

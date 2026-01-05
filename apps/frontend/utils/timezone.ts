@@ -11,7 +11,7 @@ export function getDeviceTimeZone(): string {
   // First try Expo Localization
   try {
     const timeZone = Localization.getCalendars()[0]?.timeZone;
-    if (timeZone && timeZone !== 'UTC') {
+    if (timeZone) {
       return timeZone;
     }
   } catch (error) {
@@ -21,7 +21,7 @@ export function getDeviceTimeZone(): string {
   // Then try the browser/JS API
   try {
     const browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (browserTimeZone && browserTimeZone !== 'UTC') {
+    if (browserTimeZone) {
       return browserTimeZone;
     }
   } catch (error) {
@@ -67,12 +67,5 @@ export async function getStoredTimeZone(): Promise<string> {
     console.error('Failed to retrieve the time zone', error);
     return getDeviceTimeZone();
   }
-}
-
-/**
- * Initializes the timezone, ensuring we always have a valid value
- */
-export async function initializeTimeZone(): Promise<string> {
-  return getStoredTimeZone();
 }
 

@@ -16,9 +16,7 @@ export function CalendarButton({ onPress }: CalendarButtonProps) {
 				"active:bg-neu-03",
 			)}
 		>
-			<View className="w-6 h-6 items-center justify-center">
-				<SvgB022 width={24} height={24} className="text-m-01" />
-			</View>
+			<SvgB022 width={24} height={24} className="text-m-01" />
 		</Pressable>
 	);
 }

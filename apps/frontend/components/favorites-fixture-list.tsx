@@ -49,22 +49,19 @@ export function FavoritesFixtureList({
 	data,
 	groupBy = true,
 	onFixturePress,
-}: FavoritesFixtureListProps) {
-	// Favorite league IDs
-	const favoriteLeaguesID = [
+	favoriteLeaguesID,
+}: FavoritesFixtureListProps & { favoriteLeaguesID?: number[] }) {
+	// TODO: Replace with real user preferences from context/store or API
+	// Favorite league IDs - temporary dev data
+	const defaultFavoriteLeaguesID = [
 		1, 2, 3, 5, 94, 39, 88, 140, 135, 61, 78, 743, 960, 858, 10, 34,
 	];
+	const favoriteIds = favoriteLeaguesID ?? defaultFavoriteLeaguesID;
 
-	let formatFavoriteData: FormattedLeague[] = [];
-
-	if (groupBy) {
-		// Flatten all leagues from all countries and filter by favorite IDs
-		formatFavoriteData = data
-			.flatMap((country) => country.leagues)
-			.filter((league: FormattedLeague) =>
-				favoriteLeaguesID.includes(league.id),
-			);
-	}
+	// Flatten all leagues from all countries and filter by favorite IDs
+	const formatFavoriteData: FormattedLeague[] = data
+		.flatMap((country) => country.leagues)
+		.filter((league: FormattedLeague) => favoriteIds.includes(league.id));
 
 	// Check if there are any matches in favorite leagues
 	const hasMatches = formatFavoriteData.some(

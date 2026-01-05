@@ -19,19 +19,21 @@ export function getTodayFormatted(): string {
  * Get the date range for the tabs (2 days before, today, 2 days after)
  */
 export function getDateRange(baseDate: Date = new Date()): Date[] {
+  // Normalize to start of day to ensure consistent times
+  const normalized = startOfDay(baseDate);
   const dates: Date[] = [];
   
   // Add days before today
   for (let i = DAYS_BEFORE_TODAY; i > 0; i--) {
-    dates.push(subDays(baseDate, i));
+    dates.push(subDays(normalized, i));
   }
   
   // Add today
-  dates.push(baseDate);
+  dates.push(normalized);
   
   // Add days after today
   for (let i = 1; i <= DAYS_AFTER_TODAY; i++) {
-    dates.push(addDays(baseDate, i));
+    dates.push(addDays(normalized, i));
   }
   
   return dates;

@@ -1,6 +1,10 @@
 import { useGoalDetection } from "@/hooks/useGoalDetection";
 import type { FormattedMatch } from "@outscore/shared-types";
-import { isLiveStatus } from "@outscore/shared-types";
+import {
+	isFinishedStatus,
+	isLiveStatus,
+	isNotStartedStatus,
+} from "@outscore/shared-types";
 import { memo, useMemo } from "react";
 import { Pressable, View } from "react-native";
 import { FixtureStatus } from "./fixture-status";
@@ -52,9 +56,10 @@ export const FixtureCard = memo(function FixtureCard({
 
 	const statusShort = status?.short;
 	const matchIsLive = statusShort ? isLiveStatus(statusShort) : false;
-	const matchIsFinished =
-		statusShort === "FT" || statusShort === "AET" || statusShort === "PEN";
-	const matchHasNotStarted = statusShort === "NS";
+	const matchIsFinished = statusShort ? isFinishedStatus(statusShort) : false;
+	const matchHasNotStarted = statusShort
+		? isNotStartedStatus(statusShort)
+		: false;
 	const notH2H = type !== "H2H";
 
 	// Compute status text directly

@@ -3,8 +3,6 @@ import { Text } from "./ui/text";
 
 export interface NoResultsBoxProps {
 	text: string;
-	ctaText?: string;
-	variant?: "alternate";
 }
 
 export function NoResultsBox({ text }: NoResultsBoxProps) {
@@ -13,7 +11,6 @@ export function NoResultsBox({ text }: NoResultsBoxProps) {
 			<Text variant="body-02" className="m-auto max-w-[640px]">
 				{text}
 			</Text>
-			{/* {ctaText && <Button variant="alt-01">{ctaText}</Button>} */}
 		</View>
 	);
 }

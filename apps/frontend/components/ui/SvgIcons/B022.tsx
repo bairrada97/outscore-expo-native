@@ -1,16 +1,17 @@
 import { cssInterop } from "nativewind";
 import * as React from "react";
 import Svg, { SvgProps, Path } from "react-native-svg";
-const SvgB022 = (props: SvgProps) => {
-  cssInterop(Svg, {
-    className: {
-      target: "style",
-      nativeStyleToProp: { width: true, height: true },
-    },
-  });
 
+cssInterop(Svg, {
+  className: {
+    target: "style",
+    nativeStyleToProp: { width: true, height: true },
+  },
+});
+
+const SvgB022 = (props: SvgProps) => {
   return (
-    <Svg fill="none" role="img" {...props}>
+    <Svg width="1em" height="1em" fill="none" viewBox="0 0 24 24" role="img" {...props}>
       <Path
         fillRule="evenodd"
         clipRule="evenodd"

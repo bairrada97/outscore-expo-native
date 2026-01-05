@@ -11,12 +11,27 @@ export function SvgFlag({ uri, size }: SvgFlagProps) {
 	const { data: dataUri } = useQuery({
 		queryKey: ["flag-svg", uri],
 		queryFn: async () => {
-			const response = await fetch(uri);
-			const svgText = await response.text();
-			// Convert to data URI for caching
-			return `data:image/svg+xml;base64,${btoa(svgText)}`;
+			try {
+				const response = await fetch(uri);
+				if (!response.ok) {
+					throw new Error(`Failed to load flag SVG: ${response.status} ${response.statusText}`);
+				}
+				const contentType = response.headers.get('content-type');
+				if (contentType && !contentType.includes('svg') && !contentType.includes('image/svg+xml')) {
+					throw new Error(`Invalid content type for SVG: ${contentType}`);
+				}
+				const svgText = await response.text();
+				if (!svgText.startsWith('<svg')) {
+					throw new Error('Invalid SVG format');
+				}
+				// Convert to data URI for caching
+				return `data:image/svg+xml;base64,${btoa(svgText)}`;
+			} catch (error) {
+				console.error('Failed to load flag SVG', error);
+				throw error;
+			}
 		},
-		staleTime: Number.POSITIVE_INFINITY,
+		staleTime: Infinity,
 		gcTime: 1000 * 60 * 60 * 24,
 	});
 

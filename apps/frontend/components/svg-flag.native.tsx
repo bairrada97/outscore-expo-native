@@ -13,8 +13,23 @@ interface SvgData {
 	height: number;
 }
 
-// Simple in-memory cache for SVG data
+// Bounded in-memory cache for SVG data (LRU eviction)
+const MAX_CACHE_SIZE = 100;
 const svgCache = new Map<string, SvgData>();
+
+/**
+ * Set cache entry with LRU eviction when cache is full
+ */
+function setCacheEntry(uri: string, data: SvgData): void {
+	if (svgCache.size >= MAX_CACHE_SIZE) {
+		// Evict oldest entry (first key in Map iteration order)
+		const firstKey = svgCache.keys().next().value;
+		if (firstKey) {
+			svgCache.delete(firstKey);
+		}
+	}
+	svgCache.set(uri, data);
+}
 
 // Parse viewBox or width/height from SVG string
 function parseSvgDimensions(svgString: string): { width: number; height: number } {
@@ -51,17 +66,35 @@ export const SvgFlag = memo(function SvgFlag({ uri, size }: SvgFlagProps) {
 		let cancelled = false;
 
 		fetch(uri)
-			.then((res) => res.text())
+			.then((res) => {
+				if (!res.ok) {
+					throw new Error(`Failed to load flag SVG: ${res.status} ${res.statusText}`);
+				}
+				const contentType = res.headers.get('content-type');
+				if (contentType && !contentType.includes('svg') && !contentType.includes('image/svg+xml')) {
+					throw new Error(`Invalid content type for SVG: ${contentType}`);
+				}
+				return res.text();
+			})
 			.then((svgString) => {
 				if (cancelled) return;
+				if (!svgString.startsWith('<svg')) {
+					throw new Error('Invalid SVG format');
+				}
 				const svg = Skia.SVG.MakeFromString(svgString);
-				if (!svg) return;
+				if (!svg) {
+					throw new Error('Failed to parse SVG');
+				}
 				const dims = parseSvgDimensions(svgString);
 				const result = { svg, ...dims };
-				svgCache.set(uri, result);
+				setCacheEntry(uri, result);
 				setData(result);
 			})
-			.catch(() => {});
+			.catch((err) => {
+				if (!cancelled) {
+					console.error('Failed to load flag SVG', err);
+				}
+			});
 
 		return () => {
 			cancelled = true;

@@ -30,7 +30,7 @@ export const TTL = {
   STANDARD: 3600,
   LONG: 86400,
   KV_MIN: 60, // Cloudflare KV minimum (for resources that use KV)
-  R2_TODAY: 300, // 5 minutes for R2 staleness (but R2 is refreshed every 15s, so always fresh)
+  R2_TODAY: 300, // 5 minutes for R2 staleness window - allows eventual consistency tolerance despite 15s refresh interval (R2 serves as fallback when Edge Cache expires, providing buffer for network delays and scheduler backoff)
 } as const;
 
 export const SWR = {

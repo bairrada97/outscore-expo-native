@@ -334,7 +334,31 @@ export function DateTabs() {
 	// Prefetch all date tabs in the background for instant tab switching
 	usePrefetchFixtures();
 
-	const today = useMemo(() => new Date(), []);
+	// Track today's date and update at midnight
+	const [today, setToday] = useState(() => new Date());
+
+	useEffect(() => {
+		const updateAtMidnight = () => {
+			const now = new Date();
+			const msUntilMidnight =
+				new Date(
+					now.getFullYear(),
+					now.getMonth(),
+					now.getDate() + 1,
+				).getTime() - now.getTime();
+
+			const timeoutId = setTimeout(() => {
+				setToday(new Date());
+			}, msUntilMidnight);
+
+			return timeoutId;
+		};
+
+		const timeoutId = updateAtMidnight();
+
+		return () => clearTimeout(timeoutId);
+	}, []);
+
 	const dates = useMemo(() => getDateRange(today), [today]);
 	const routes = useMemo(() => createRoutes(dates), [dates]);
 
@@ -356,12 +380,7 @@ export function DateTabs() {
 
 	// Sync index state when params.date changes (e.g., from deep link or browser navigation)
 	useEffect(() => {
-		setIndex((currentIndex) => {
-			if (initialIndex !== currentIndex) {
-				return initialIndex;
-			}
-			return currentIndex;
-		});
+		setIndex(initialIndex);
 	}, [initialIndex]);
 
 	const handleIndexChange = useCallback(

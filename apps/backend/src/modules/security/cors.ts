@@ -50,17 +50,22 @@ const defaultOrigins = [
 ];
 
 /**
- * Check if origin is from Expo Go (handles various formats)
+ * Allowed Expo origin patterns
+ * Only accept exp:// protocol origins for security
+ */
+const ALLOWED_EXPO_ORIGINS = [
+  'exp://127.0.0.1:8081', // Expo development server (iOS simulator)
+  'exp://localhost:8081', // Expo development server (alternative)
+] as const;
+
+/**
+ * Check if origin is from Expo Go (strict check)
+ * Only accepts exp:// protocol origins to avoid matching unrelated hosts
  */
 const isExpoOrigin = (origin: string): boolean => {
   if (!origin) return false;
-  // Expo Go can send origins in various formats
-  return (
-    origin.startsWith('exp://') ||
-    origin.includes('expo') ||
-    origin === 'null' || // Some native apps send 'null' as origin
-    origin === ''
-  );
+  // Only accept exp:// protocol origins
+  return origin.startsWith('exp://');
 };
 
 /**
@@ -157,8 +162,8 @@ export const cors = (config: CorsConfig = {}): MiddlewareHandler => {
   return async (context, next) => {
     const requestOrigin = context.req.header('origin') || '';
     
-    // Debug logging for Expo Go (can be removed in production)
-    if (requestOrigin && (requestOrigin.startsWith('exp://') || requestOrigin.includes('expo'))) {
+    // Debug logging for Expo Go (only in non-production)
+    if (process.env.NODE_ENV !== 'production' && requestOrigin && requestOrigin.startsWith('exp://')) {
       console.log(`[CORS] Expo origin detected: ${requestOrigin}`);
     }
 

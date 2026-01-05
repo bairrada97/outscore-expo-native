@@ -1,5 +1,5 @@
 import * as React from "react";
-import Svg, { SvgProps, Path, Rect } from "react-native-svg";
+import Svg, { SvgProps, Path } from "react-native-svg";
 const SvgGoal = (props: SvgProps) => (
   <Svg
     width="1em"
@@ -14,7 +14,7 @@ const SvgGoal = (props: SvgProps) => (
       stroke="currentColor"
       strokeWidth={2}
     />
-    <path
+    <Path
       d="M127 0v11c0 2.761-2.245 5-5.007 5H52.007A5.006 5.006 0 0 1 47 11V0M112 75c0 8.837-11.193 16-25 16s-25-7.163-25-16"
       stroke="currentColor"
       strokeWidth={2}

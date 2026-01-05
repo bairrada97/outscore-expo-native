@@ -26,21 +26,10 @@ export function CountryItem({
 	totalLiveMatches,
 	onFixturePress,
 }: CountryItemProps) {
-	// Use world icon for "World" country
-	const isWorld = country.name === "World";
-
-	// Memoize fixture press handler to prevent unnecessary re-renders
-	const handleFixturePress = useCallback(
-		(fixtureId: number) => {
-			onFixturePress?.(fixtureId);
-		},
-		[onFixturePress],
-	);
-
 	// Create memoized match press handlers to avoid creating new functions on every render
 	const createMatchPressHandler = useCallback(
-		(matchId: number) => () => handleFixturePress(matchId),
-		[handleFixturePress],
+		(matchId: number) => () => onFixturePress?.(matchId),
+		[onFixturePress],
 	);
 
 	// Memoize leagues content
@@ -91,7 +80,7 @@ export function CountryItem({
 						<View className="absolute h-full w-full items-center justify-center overflow-hidden rounded-full">
 							{/* Overlay for depth */}
 							<View className="absolute inset-0 z-10 rounded-full bg-neu-10 opacity-[0.08]" />
-							{country.flag && !isWorld ? (
+							{country.flag ? (
 								<SvgFlag uri={country.flag} size={24} />
 							) : (
 								<View className="h-full w-full items-center justify-center bg-neu-03 dark:bg-neu-09">

@@ -51,7 +51,7 @@
       "reactCompiler": true
     },
     "assetBundlePatterns": [
-      "**/*"
+      "assets/**"
     ],
     "extra": {
       "router": {

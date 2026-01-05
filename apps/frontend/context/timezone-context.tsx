@@ -1,4 +1,4 @@
-import { getDeviceTimeZone, initializeTimeZone } from '@/utils/timezone';
+import { getDeviceTimeZone, getStoredTimeZone } from '@/utils/timezone';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
 interface TimeZoneContextType {
@@ -6,10 +6,7 @@ interface TimeZoneContextType {
   isLoading: boolean;
 }
 
-const TimeZoneContext = createContext<TimeZoneContextType>({
-  timeZone: 'UTC',
-  isLoading: true,
-});
+const TimeZoneContext = createContext<TimeZoneContextType | null>(null);
 
 export function TimeZoneProvider({ children }: { children: ReactNode }) {
   const [timeZone, setTimeZone] = useState<string>(getDeviceTimeZone());
@@ -18,7 +15,7 @@ export function TimeZoneProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function setupTimeZone() {
       try {
-        const tz = await initializeTimeZone();
+        const tz = await getStoredTimeZone();
         setTimeZone(tz);
       } catch (error) {
         console.error('Error initializing timezone:', error);

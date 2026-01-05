@@ -1,5 +1,5 @@
 import * as React from "react";
-import Svg, { SvgProps, Path, Rect } from "react-native-svg";
+import Svg, { SvgProps, Rect } from "react-native-svg";
 const SvgEventCardSecondYellow = (props: SvgProps) => (
   <Svg
     width="1em"

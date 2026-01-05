@@ -3,7 +3,7 @@ import { fixturesByDateQuery } from "@/queries/fixtures-by-date";
 import { isWeb } from "@/utils/platform";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { View } from "react-native";
+import { Platform, View } from "react-native";
 import { FavoritesFixtureList } from "./favorites-fixture-list";
 import { FixturesList } from "./fixtures-list";
 import { TitleSection } from "./title-section";
@@ -24,9 +24,10 @@ export function FixturesScreen({ date, live }: FixturesScreenProps) {
 		}),
 	);
 
-	// Memoize header component for LegendList
-	const listHeader = useMemo(
-		() => (
+	// Memoize header component for LegendList (only for native)
+	const listHeader = useMemo(() => {
+		if (Platform.OS === "web") return null;
+		return (
 			<View>
 				{/* Favorite competitions section */}
 				<TitleSection>Favorite competitions</TitleSection>
@@ -35,9 +36,8 @@ export function FixturesScreen({ date, live }: FixturesScreenProps) {
 				{/* All competitions section */}
 				<TitleSection>All competitions</TitleSection>
 			</View>
-		),
-		[data],
-	);
+		);
+	}, [data]);
 
 	// On web, render content directly (no TabView pager = natural height)
 	if (isWeb) {
@@ -53,6 +53,7 @@ export function FixturesScreen({ date, live }: FixturesScreenProps) {
 					countries={data ?? []}
 					isLoading={isLoading}
 					isRefetching={isRefetching}
+					listHeader={listHeader}
 				/>
 			</View>
 		);

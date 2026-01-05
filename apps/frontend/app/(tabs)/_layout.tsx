@@ -1,15 +1,16 @@
 import { Stack } from 'expo-router';
 import { Platform } from 'react-native';
+import { COLORS } from '@/utils/theme';
 
 export default function TabsLayout() {
   return (
     <Stack
       screenOptions={{
         headerStyle: {
-          backgroundColor: '#187C56',
+          backgroundColor: COLORS.primary,
           ...(Platform.OS === 'web' && { height: 48 }),
         },
-        headerTintColor: '#FFFFFF',
+        headerTintColor: COLORS.white,
         headerTitleStyle: {
           fontWeight: 'bold',
         },

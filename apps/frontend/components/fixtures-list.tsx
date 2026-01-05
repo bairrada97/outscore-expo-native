@@ -92,7 +92,12 @@ export function FixturesList({
 	if (Platform.OS === "web") {
 		return (
 			<View className="pb-24">
-				{isRefetching && <View className="py-2 items-center" />}
+				{listHeader}
+				{isRefetching && (
+					<View className="py-2 items-center">
+						<Text className="text-sm text-neu-07">Refreshing...</Text>
+					</View>
+				)}
 				<Accordion type="multiple" className="w-full">
 					{countries.map((country) => (
 						<Item
@@ -136,7 +141,11 @@ export function FixturesList({
 					ListHeaderComponent={
 						<>
 							{listHeader}
-							{isRefetching && <View className="py-2 items-center" />}
+							{isRefetching && (
+								<View className="py-2 items-center">
+									<Text className="text-sm text-neu-07">Refreshing...</Text>
+								</View>
+							)}
 						</>
 					}
 				/>

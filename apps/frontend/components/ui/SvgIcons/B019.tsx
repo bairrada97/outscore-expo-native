@@ -1,30 +1,27 @@
 import { cssInterop } from "nativewind";
 import Svg, { SvgProps, Path, Defs, Stop } from "react-native-svg";
 
+cssInterop(Svg, {
+  className: {
+    target: "style",
+    nativeStyleToProp: { width: true, height: true },
+  },
+});
+
 const SvgB019 = (props: SvgProps) => {
-  cssInterop(Svg, {
-    className: {
-      target: "style",
-      nativeStyleToProp: { width: true, height: true },
-    },
-  });
   return (
-    <Svg fill="none" role="img" {...props}>
+    <Svg width="1em" height="1em" fill="none" viewBox="0 0 24 24" role="img" {...props}>
       <Defs>
         <linearGradient id="B-019_svg__a" x1="0%" y1="0%" x2="100%" y2="0%">
           <Stop
             offset="10.93%"
-            // style={{
-            // 	stopColor: '#76c427',
-            // 	stopOpacity: 1,
-            // }}
+            stopColor="#76c427"
+            stopOpacity={1}
           />
           <Stop
             offset="88.2%"
-            // style={{
-            // 	stopColor: '#26976c',
-            // 	stopOpacity: 1,
-            // }}
+            stopColor="#26976c"
+            stopOpacity={1}
           />
         </linearGradient>
       </Defs>

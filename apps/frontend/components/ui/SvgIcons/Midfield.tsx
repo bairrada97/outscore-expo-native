@@ -1,5 +1,5 @@
 import * as React from "react";
-import Svg, { SvgProps, Path, Rect, Circle } from "react-native-svg";
+import Svg, { SvgProps, Circle } from "react-native-svg";
 const SvgMidfield = (props: SvgProps) => (
   <Svg
     width="1em"

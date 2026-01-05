@@ -1,7 +1,7 @@
 import * as React from "react";
-import Svg, { SvgProps, Rect, Path } from "react-native-svg";
+import Svg, { SvgProps, Path } from "react-native-svg";
 const SvgB034 = (props: SvgProps) => (
-  <Svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" {...props}>
+  <Svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" role="img" {...props}>
     <Path
       fillRule="evenodd"
       clipRule="evenodd"

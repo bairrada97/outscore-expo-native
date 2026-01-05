@@ -1,5 +1,5 @@
 import * as React from "react";
-import Svg, { SvgProps, Path, Rect, Circle } from "react-native-svg";
+import Svg, { SvgProps, Path } from "react-native-svg";
 const SvgNavMatches = (props: SvgProps) => (
   <Svg
     width="1em"

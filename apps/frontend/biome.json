@@ -1,13 +1,15 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.0.6/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.2.3/schema.json",
   "linter": {
     "enabled": true,
     "rules": {
       "recommended": true,
       "complexity": {
+        // Disabled: Intentional use of Array.prototype.forEach for side effects and legacy code compatibility
         "noForEach": "off"
       },
       "style": {
+        // Disabled: Non-null assertions are acceptable where initialization guarantees or external API guarantees exist; plan to remove gradually
         "noNonNullAssertion": "off",
         "useImportType": "error"
       },
