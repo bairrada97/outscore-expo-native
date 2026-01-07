@@ -1,6 +1,7 @@
 import { useTimeZone } from "@/context/timezone-context";
 import { fixturesByDateQuery } from "@/queries/fixtures-by-date";
 import { isWeb } from "@/utils/platform";
+import { useIsFocused } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
 import { Platform, View } from "react-native";
 import { FavoritesFixtureList } from "./favorites-fixture-list";
@@ -14,14 +15,20 @@ interface FixturesScreenProps {
 
 export function FixturesScreen({ date, live }: FixturesScreenProps) {
 	const { timeZone } = useTimeZone();
+	// Use screen focus state to disable polling when not focused
+	// This prevents fixtures-by-date from fetching when navigating to fixture detail
+	const isFocused = useIsFocused();
 
-	const { data, isLoading, isRefetching } = useQuery(
-		fixturesByDateQuery({
-			date,
-			timezone: timeZone,
-			live: live ? "all" : undefined,
-		}),
-	);
+	const queryOptions = fixturesByDateQuery({
+		date,
+		timezone: timeZone,
+		live: live ? "all" : undefined,
+	});
+
+	const { data, isLoading, isRefetching } = useQuery({
+		...queryOptions,
+		refetchInterval: isFocused ? queryOptions.refetchInterval : false,
+	});
 
 	// Header component for LegendList (only for native)
 	const listHeader =

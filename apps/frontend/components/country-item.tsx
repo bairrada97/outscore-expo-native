@@ -4,7 +4,9 @@ import {
 	AccordionTrigger,
 } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
+import { generateFixtureSlug } from "@/utils/fixture-slug";
 import type { FormattedCountry } from "@outscore/shared-types";
+import { Link } from "expo-router";
 import { View } from "react-native";
 import { CardsBlock } from "./cards-block";
 import { CountryDailyMatches } from "./country-daily-matches";
@@ -16,14 +18,12 @@ interface CountryItemProps {
 	country: FormattedCountry;
 	totalMatches: number;
 	totalLiveMatches: number;
-	onFixturePress?: (fixtureId: number) => void;
 }
 
 export function CountryItem({
 	country,
 	totalMatches,
 	totalLiveMatches,
-	onFixturePress,
 }: CountryItemProps) {
 	const leaguesContent = country.leagues.map((league, index) => (
 		<CardsBlock
@@ -32,12 +32,19 @@ export function CountryItem({
 			cardsClassName="gap-0"
 		>
 			{league.matches.map((match, matchIndex) => (
-				<FixtureCard
+				<Link
 					key={match.id}
-					fixture={match}
-					isLastMatch={matchIndex === league.matches.length - 1}
-					onPress={() => onFixturePress?.(match.id)}
-				/>
+					href={{
+						pathname: "/fixture/[slug]",
+						params: { slug: generateFixtureSlug(match) },
+					}}
+					asChild
+				>
+					<FixtureCard
+						fixture={match}
+						isLastMatch={matchIndex === league.matches.length - 1}
+					/>
+				</Link>
 			))}
 		</CardsBlock>
 	));

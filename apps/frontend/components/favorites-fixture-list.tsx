@@ -1,4 +1,6 @@
+import { generateFixtureSlug } from "@/utils/fixture-slug";
 import type { FormattedCountry, FormattedLeague } from "@outscore/shared-types";
+import { Link } from "expo-router";
 import { View } from "react-native";
 import { CardsBlock } from "./cards-block";
 import { FixtureCard } from "./fixture-card";
@@ -6,13 +8,9 @@ import { NoResultsBox } from "./no-results-box";
 
 interface FavoriteLeaguesListProps {
 	data: FormattedLeague[];
-	onFixturePress?: (fixtureId: number) => void;
 }
 
-function FavoriteLeaguesList({
-	data,
-	onFixturePress,
-}: FavoriteLeaguesListProps) {
+function FavoriteLeaguesList({ data }: FavoriteLeaguesListProps) {
 	return (
 		<View className="px-8">
 			{data.map((league, index) => (
@@ -22,12 +20,19 @@ function FavoriteLeaguesList({
 					cardsClassName="gap-0"
 				>
 					{league.matches.map((match, matchIndex) => (
-						<FixtureCard
+						<Link
 							key={match.id}
-							fixture={match}
-							isLastMatch={matchIndex === league.matches.length - 1}
-							onPress={() => onFixturePress?.(match.id)}
-						/>
+							href={{
+								pathname: "/fixture/[slug]",
+								params: { slug: generateFixtureSlug(match) },
+							}}
+							asChild
+						>
+							<FixtureCard
+								fixture={match}
+								isLastMatch={matchIndex === league.matches.length - 1}
+							/>
+						</Link>
 					))}
 				</CardsBlock>
 			))}
@@ -38,7 +43,6 @@ function FavoriteLeaguesList({
 export interface FavoritesFixtureListProps {
 	data: FormattedCountry[];
 	groupBy?: boolean;
-	onFixturePress?: (fixtureId: number) => void;
 }
 
 /**
@@ -48,7 +52,6 @@ export interface FavoritesFixtureListProps {
 export function FavoritesFixtureList({
 	data,
 	groupBy = true,
-	onFixturePress,
 	favoriteLeaguesID,
 }: FavoritesFixtureListProps & { favoriteLeaguesID?: number[] }) {
 	// TODO: Replace with real user preferences from context/store or API
@@ -91,10 +94,5 @@ export function FavoritesFixtureList({
 		);
 	}
 
-	return (
-		<FavoriteLeaguesList
-			data={formatFavoriteData}
-			onFixturePress={onFixturePress}
-		/>
-	);
+	return <FavoriteLeaguesList data={formatFavoriteData} />;
 }

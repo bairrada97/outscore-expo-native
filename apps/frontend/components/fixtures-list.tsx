@@ -10,17 +10,15 @@ interface FixturesListProps {
 	countries: FormattedCountry[];
 	isLoading?: boolean;
 	isRefetching?: boolean;
-	onFixturePress?: (fixtureId: number) => void;
 	listHeader?: ReactNode;
 	resetKey?: string; // Key to force remount when switching tabs
 }
 
 interface ItemProps {
 	item: FormattedCountry;
-	onFixturePress?: (fixtureId: number) => void;
 }
 
-function Item({ item, onFixturePress }: ItemProps) {
+function Item({ item }: ItemProps) {
 	const totalMatches = item.leagues.reduce((acc, league) => acc + league.matches.length, 0);
 	const totalLiveMatches = item.leagues.reduce((acc, league) => {
 		return (
@@ -35,7 +33,6 @@ function Item({ item, onFixturePress }: ItemProps) {
 			country={item}
 			totalMatches={totalMatches}
 			totalLiveMatches={totalLiveMatches}
-			onFixturePress={onFixturePress}
 		/>
 	);
 }
@@ -44,15 +41,14 @@ export function FixturesList({
 	countries,
 	isLoading,
 	isRefetching,
-	onFixturePress,
 	listHeader,
 	resetKey,
 }: FixturesListProps) {
 	const renderItem = useCallback(
 		({ item }: LegendListRenderItemProps<FormattedCountry>) => (
-			<Item item={item} onFixturePress={onFixturePress} />
+			<Item item={item} />
 		),
-		[onFixturePress],
+		[],
 	);
 
 	const keyExtractor = useCallback(
@@ -88,11 +84,7 @@ export function FixturesList({
 				{listHeader}
 				<Accordion type="multiple" className="w-full">
 					{countries.map((country) => (
-						<Item
-							key={country.name}
-							item={country}
-							onFixturePress={onFixturePress}
-						/>
+						<Item key={country.name} item={country} />
 					))}
 				</Accordion>
 			</View>

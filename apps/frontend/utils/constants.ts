@@ -9,7 +9,9 @@ export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://outscore
 export const FIFTEEN_SECONDS_CACHE = 15 * 1000;
 export const ONE_MINUTE_CACHE = 60 * 1000;
 export const FIVE_MINUTES_CACHE = 5 * 60 * 1000;
+export const FIFTEEN_MINUTES_CACHE = 15 * 60 * 1000;
 export const ONE_HOUR_CACHE = 60 * 60 * 1000;
+export const SIX_HOURS_CACHE = 6 * 60 * 60 * 1000;
 export const ONE_DAY_CACHE = 24 * 60 * 60 * 1000;
 export const ONE_WEEK_CACHE = 7 * 24 * 60 * 60 * 1000;
 

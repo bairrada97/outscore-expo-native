@@ -9,6 +9,128 @@
 
 ---
 
+## TO ADD TO ALGORITHM
+1. Missing Input: "The Motivation Trap"
+Your algorithm assumed Napoli would play with 100% intensity because they are in a title race.
+
+2.The Blind Spot: Your logic didn't account for the "Look-Ahead Factor." When a Tier 1 team plays the #18 team right before playing the #1 team, their psychological intensity often drops by 10-15%. Verona, playing for their lives, had 110% intensity.
+
+3.The Fix: Add a "Schedule Proximity" flag. If a team plays a "Top 3 Rival" within 4 days of today's match, reduce the win probability of today's "easy" match by 5-10%.
+
+
+---
+
+## Advanced Algorithm Layers: Mind, Mood, and DNA
+
+### Overview: Three-Layer Data Strategy
+
+To optimize the algorithm without over-correcting, we use three distinct layers that separate baseline quality (Mind), recent momentum (Mood), and technical trends (DNA). This ensures that a single bad week doesn't "break" the math, but major tactical changes are still respected.
+
+### 1. The Mind (Baseline Quality - 50 Matches)
+
+**Data Source:** Last 50 Matches  
+**Purpose:** Defines the team's "True Tier" and prevents being fooled by lucky streaks
+
+**Efficiency Index (EI):**
+$$EI = (\text{Avg Points per Game}) + (\text{Goal Difference} / 10)$$
+
+**Tier Categorization:**
+- **Tier 1:** EI ≥ 2.0 (Elite teams - e.g., Man City, Liverpool)
+- **Tier 2:** EI ≥ 1.5 (Top tier - e.g., Top 6)
+- **Tier 3:** EI ≥ 1.0 (Mid tier - e.g., Mid-table)
+- **Tier 4:** EI < 1.0 (Lower tier - e.g., Relegation battle)
+
+**Key Insight:** If a Tier 1 team has a bad week, the algorithm remembers they are still Tier 1. This is the team's "Identity."
+
+### 2. The Mood (Recent Momentum - 10 Matches)
+
+**Data Source:** Last 10 Matches (30% weight in predictions)  
+**Purpose:** Catches the team's current energy, injuries, and confidence
+
+**The "Mood vs. Mind" Gap:** This is where value bets are found
+
+**Sleeping Giant Pattern:**
+- Mind = Tier 1 | Mood = Tier 4
+- High-value bet: The odds will be high, but the "Class" remains
+- Algorithm flags this as a value opportunity (+10% probability)
+
+**Over-performer Pattern:**
+- Mind = Tier 4 | Mood = Tier 1
+- Regression risk: The algorithm warns that they are "Due" for a loss
+- Reduces probability by 8% and flags as regression risk
+
+### 3. The DNA (Technical Trends - Season Stats)
+
+**Data Source:** Season Statistics Endpoint  
+**Purpose:** Refines specific markets (BTTS, O/U, 1st Half) rather than the winner
+
+**Components:**
+- **Formation Stability:** Most played formation vs. match formation
+- **Under/Over Distributions:** Season averages (e.g., 82% Under 2.5)
+- **Goal Minute Distribution:** When teams score/concede goals
+- **Clean Sheet % & Failed to Score %:** Defensive and offensive DNA
+
+**Formation Stability Filter:**
+- **Tiered Reduction:** Based on formation usage percentage
+  - <20% usage: 20-25% confidence reduction
+  - 20-40% usage: 10-15% reduction
+  - 40-60% usage: 5-10% reduction
+  - 60-80% usage: 0-5% reduction
+- **Market-Specific Impact:**
+  - Match Result (1X2): Full reduction
+  - BTTS/O/U 2.5: 40% less impact (formations less critical for goal totals)
+  - First Half: 20% less impact
+- **Early Season Adjustment:** Reduce penalty by 50% (teams experiment more early season)
+- **Combined Impact:** Both teams experimental capped at 30% total reduction
+
+**Frustration Filter (Goal Efficiency):**
+- If team has 70%+ "Under 2.5" season average, never bet "Over" just because they scored 3 goals last week
+- Trust the long-term DNA over recent outliers
+- Adjusts Over probability by -6% to -9% when DNA strongly suggests Under
+
+### 4. The Safety Layer (Non-Mathematical Flags)
+
+Binary "Yes/No" flags that trigger confidence adjustments:
+
+| Flag | Logic | Action |
+|------|-------|--------|
+| **Regression Risk** | Tier 3 team won 5+ in a row | Reduce Confidence by 15% |
+| **Motivation Clash** | TITLE_RACE vs MID_TABLE | +5% Win Prob to motivated team |
+| **Live Dog** | Bottom team scored in 2 of last 3 away | Switch "Win to Nil" to "BTTS" (+10% BTTS prob) |
+
+---
+
+## 1. The "Stability Filter" (Lineups)
+The lineups section is arguably the most valuable part of this endpoint.
+
+The Problem: A team in good form might have achieved it playing a 4-3-3, but today the manager is switching to a 5-4-1 due to injuries.
+
+The Implementation: If the "Formation Played" today matches the formation used in >80% of the season, keep your "Mind" (Baseline) weight at 100%.
+
+The Trigger: If the formation is a "Negative Outlier" (rarely used), reduce the confidence of the match result. It shows the team is "Experimental" today, which increases the chance of a draw or upset.
+
+## 2. Goal Efficiency (Under/Over Distributions)
+Your endpoint shows that Bologna has a 14/17 (82%) Under 2.5 rate.
+
+Why it's better than raw match data: It shows the "distribution density." Even if Bologna had one crazy 4-3 game recently, this stat proves their Identity is low-scoring.
+
+Implementation: If your algorithm predicts a win, use the Under/Over stats to choose the "Safety". For Bologna, a "Win + Under 3.5" is a much more accurate bet than a straight "Win."
+
+## 3. The "In-Play" Momentum (Goal Minutes)
+You can use the minute distribution to solve the "First Half Result" market.
+
+Bologna Logic: 0% of goals in the first 15 mins; 28% in 46-60 mins.
+
+The Betting Tip: "Draw at Half Time" is a high-confidence play here because they are "Late Starters."
+
+The Progress Bar Idea: In your helper, instead of just saying BTTS 3/5, show a "Danger Zone" bar.
+
+"Danger Zone: This team concedes 35% of their goals in the 61-75 min window."
+
+## Summary: Your Data StrategyLayerSourceRole in AlgorithmThe Mind50 MatchesCalculate the Efficiency Index (EI). Defines the Tier.The Mood10 MatchesCalculate the Current Momentum (30% weight).The DNASeason StatsQualify the Bets. Use Clean Sheets to predict "To Nil" and Lineups to check "Stability."
+
+To optimize your algorithm without over-correcting, you should think of your data in three distinct layers: The Mind (Class), The Mood (Form), and The DNA (Style).By keeping these layers separate, you ensure that a single bad week doesn't "break" the math, but a major tactical change (like a new manager) is still respected.## 1. The Mind (Baseline Quality)Data Source: Last 50 Matches.Purpose: Defines the team's "True Tier" and prevents you from being fooled by a lucky streak.The Efficiency Index (EI): Instead of using standings, calculate their $EI$ over 50 games.$$EI = (\text{Avg Points per Game}) + (\text{Goal Difference} / 10)$$The Anchor: Use this $EI$ to categorize teams into Tiers (1–4). This is the team's "Identity." If a Tier 1 team has a bad week, the algorithm remembers they are still Tier 1.## 2. The Mood (Recent Momentum)Data Source: Last 10 Matches (Your core 30% weight).Purpose: Catches the team's current energy, injuries, and confidence.The "Mood vs. Mind" Gap: This is where you find Value.The Sleeping Giant: Mind = Tier 1 | Mood = Tier 4. (The odds will be high, but the "Class" remains. This is a high-value bet).The Over-performer: Mind = Tier 4 | Mood = Tier 1. (This is a "Fake Giant." The algorithm should warn you that they are "Due" for a loss).## 3. The DNA (Technical Trends)Data Source: Season Statistics Endpoint (Lineups, Under/Over, Goal Minutes).Purpose: Refines the specific market (BTTS, O/U, 1st Half) rather than the winner.Formation Stability: If today's lineup matches their "Most Played Formation" (from the stats endpoint), trust your 50-match baseline. If they switch (e.g., 4-3-3 to 5-4-1), reduce the confidence score—the team is experimenting.The "Frustration" Filter: Check the Clean Sheet % and Failed to Score %.If a team has a 70% "Under 2.5" season average, never bet the "Over" just because they scored 3 goals last week. Trust the long-term DNA.## 4. The "Safety Layer" (Non-Mathematical Flags)These are binary "Yes/No" flags that don't change your weights but trigger a Confidence Adjustment.FlagLogicActionRegression RiskIf a Tier 3 team has won 5 in a row.Reduce Confidence by 15%.New ManagerIf manager has been there $<3$ matches.Halve the "Recent Form" weight (old form is irrelevant).Motivation ClashIf one team is TITLE_RACE and other is MID_TABLE.Add +5% Win Prob to the motivated team.Live DogBottom team has scored in 2 of last 3 away games.Switch "Win to Nil" bet to "BTTS."
+
 ## Part 1: Honest Answer - Is This a Predictor Bot?
 
 ### What You're Building vs "Predictor Bots"
@@ -133,8 +255,17 @@ Think of us as a research assistant, not a crystal ball.
 
 ### Factor Relevance Matrix
 
+**Note:** Base weights shown below are adjusted dynamically based on:
+- **Rest Days:** If `daysSinceLastMatch > 10`, recent form weight reduced by 30-50%
+- **Early Season:** If round < 5, recent form reduced by 40%, H2H/historical increased
+- **Low H2H:** If H2H matches < 5, H2H weight reduced by 40-60%, redistributed to recent form
+- **Mind/Mood Gap:** Sleeping Giant (Tier 1 Mind, Tier 4 Mood) adds value, Over-performer reduces confidence
+- **Formation Stability:** Experimental formations reduce confidence by 15-25%
+- **DNA Layer:** Season Under/Over distributions override recent outliers (Frustration Filter)
+- **Safety Flags:** Regression Risk reduces confidence by 15%, Motivation Clash adds +5% win probability
+
 ```typescript
-// Weight adjustments per market
+// Weight adjustments per market (BASE weights - will be adjusted dynamically)
 const MARKET_WEIGHTS = {
   MATCH_RESULT: {
     recentForm: 30,
@@ -208,6 +339,7 @@ const MARKET_WEIGHTS = {
    
 4. H2H BTTS (25%)
    BTTS in 4 of last 5 H2H → +40
+   Note: Uses recency-weighted percentage (2025 matches weighted higher than 2023)
    
 5. Home Advantage (10%)
    Less relevant for BTTS
@@ -233,6 +365,8 @@ Defensive Form:
 
 H2H BTTS:
 - 4 of last 5 meetings → Score: +40
+- Recency weighting: 3 matches from 2025 (weight 1.0), 2 from 2023 (weight 0.5)
+- Weighted BTTS%: 85% (vs simple 80%) → Score: +42
 
 Weighted Score:
 = (20+25)*0.25 + (20+15)*0.20 + (40)*0.25
@@ -272,6 +406,12 @@ Both teams need to win:
 7 days rest:
 → Fresh, organized defense
 → DECREASES BTTS probability (-5%)
+
+10+ days rest:
+→ Recent form becomes less reliable
+→ Recent form weight reduced by 30-50%
+→ More weight given to H2H and historical data
+→ Prediction becomes more conservative
 ```
 
 ---
@@ -299,6 +439,7 @@ Both teams need to win:
    
 4. H2H Goals (20%)
    Average 3.5 goals in last 5 H2H → +35
+   Note: Uses recency-weighted average (recent high-scoring matches weighted more)
    
 5. Home Advantage (12%)
    Home teams typically score 0.3-0.5 more
@@ -480,6 +621,364 @@ Derby / Rivalry:
 ```typescript
 // /api/data/team-data.ts
 
+// Helper: Filter out friendly matches
+function filterNonFriendlyMatches(matches: Match[]): Match[] {
+  return matches.filter(match => {
+    const leagueName = match.league?.name || '';
+    return !leagueName.toLowerCase().includes('friendly');
+  });
+}
+
+// Helper: Extract round number from league.round string
+// Examples: "Regular Season - 3" → 3, "Matchday 5" → 5, "Round 2" → 2
+function extractRoundNumber(roundString: string): number | null {
+  if (!roundString) return null;
+  
+  // Try to extract number from common patterns
+  const patterns = [
+    /(\d+)/,                           // Any number
+    /regular season[^\d]*(\d+)/i,      // "Regular Season - 3"
+    /matchday[^\d]*(\d+)/i,           // "Matchday 5"
+    /round[^\d]*(\d+)/i,              // "Round 2"
+  ];
+  
+  for (const pattern of patterns) {
+    const match = roundString.match(pattern);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (num > 0 && num < 100) return num; // Sanity check
+    }
+  }
+  
+  return null;
+}
+
+// Helper: Check if match is in early season (< 5 rounds)
+function isEarlySeason(roundString: string): boolean {
+  const round = extractRoundNumber(roundString);
+  return round !== null && round < 5;
+}
+
+// Helper: Calculate recency weights for H2H matches
+// More recent matches (2025) get higher weight than older ones (2023)
+function calculateH2HRecencyWeights(matches: Match[]): number[] {
+  const currentYear = new Date().getFullYear();
+  
+  return matches.map(match => {
+    const matchDate = new Date(match.date);
+    const matchYear = matchDate.getFullYear();
+    const yearsDiff = currentYear - matchYear;
+    
+    // Exponential decay: 2025 = 1.0, 2024 = 0.7, 2023 = 0.5, 2022 = 0.3, etc.
+    // More recent matches get exponentially higher weight
+    const baseWeight = Math.pow(0.7, yearsDiff);
+    
+    // Also consider months within the same year (recent months get slight boost)
+    const monthsDiff = (currentYear - matchYear) * 12 + 
+                       (new Date().getMonth() - matchDate.getMonth());
+    const monthAdjustment = Math.max(0.9, 1 - (monthsDiff * 0.02)); // Small monthly decay
+    
+    return baseWeight * monthAdjustment;
+  });
+}
+
+// Helper: Calculate weighted average for H2H stats
+function calculateWeightedAverage(
+  values: number[],
+  weights: number[]
+): number {
+  if (values.length === 0 || values.length !== weights.length) return 0;
+  
+  const weightedSum = values.reduce((sum, val, idx) => sum + val * weights[idx], 0);
+  const weightSum = weights.reduce((sum, w) => sum + w, 0);
+  
+  return weightSum > 0 ? weightedSum / weightSum : 0;
+}
+
+// Helper: Calculate Efficiency Index (EI) for Mind layer
+// EI = (Avg Points per Game) + (Goal Difference / 10)
+function calculateEfficiencyIndex(matches: Match[]): number {
+  if (matches.length === 0) return 0;
+  
+  let totalPoints = 0;
+  let totalGoalsScored = 0;
+  let totalGoalsConceded = 0;
+  
+  for (const match of matches) {
+    // Calculate points: Win = 3, Draw = 1, Loss = 0
+    let points = 0;
+    if (match.result === 'W') points = 3;
+    else if (match.result === 'D') points = 1;
+    
+    totalPoints += points;
+    totalGoalsScored += match.goalsScored || 0;
+    totalGoalsConceded += match.goalsConceded || 0;
+  }
+  
+  const avgPointsPerGame = totalPoints / matches.length;
+  const goalDifference = totalGoalsScored - totalGoalsConceded;
+  const ei = avgPointsPerGame + (goalDifference / 10);
+  
+  return ei;
+}
+
+// Helper: Categorize team into Tier (1-4) based on Efficiency Index
+function categorizeTier(efficiencyIndex: number): 1 | 2 | 3 | 4 {
+  // Tier thresholds (adjust based on league quality)
+  if (efficiencyIndex >= 2.0) return 1;      // Elite (e.g., Man City, Liverpool)
+  if (efficiencyIndex >= 1.5) return 2;      // Top tier (e.g., Top 6)
+  if (efficiencyIndex >= 1.0) return 3;      // Mid tier (e.g., Mid-table)
+  return 4;                                  // Lower tier (e.g., Relegation battle)
+}
+
+// Helper: Calculate Mood tier from last 10 matches
+function calculateMoodTier(matches: Match[]): 1 | 2 | 3 | 4 {
+  if (matches.length === 0) return 3; // Default to mid-tier if no data
+  
+  const moodEI = calculateEfficiencyIndex(matches);
+  return categorizeTier(moodEI);
+}
+
+// Helper: Detect Mind vs Mood gap and identify patterns
+function detectMoodVsMindGap(mindTier: number, moodTier: number): TeamMood {
+  const mindMoodGap = Math.abs(mindTier - moodTier);
+  const isSleepingGiant = mindTier === 1 && moodTier === 4;
+  const isOverPerformer = mindTier === 4 && moodTier === 1;
+  
+  return {
+    tier: moodTier as 1 | 2 | 3 | 4,
+    mindMoodGap,
+    isSleepingGiant,
+    isOverPerformer,
+  };
+}
+
+// Helper: Calculate formation frequency from matches
+function calculateFormationFrequency(matches: Match[]): Record<string, number> {
+  const formationCounts: Record<string, number> = {};
+  
+  for (const match of matches) {
+    const formation = match.formation || 'unknown';
+    formationCounts[formation] = (formationCounts[formation] || 0) + 1;
+  }
+  
+  // Convert to percentages
+  const total = matches.length;
+  const frequencies: Record<string, number> = {};
+  
+  for (const [formation, count] of Object.entries(formationCounts)) {
+    frequencies[formation] = (count / total) * 100;
+  }
+  
+  return frequencies;
+}
+
+// Helper: Get most played formation
+function getMostPlayedFormation(formationFrequency: Record<string, number>): string {
+  let maxFreq = 0;
+  let mostPlayed = 'unknown';
+  
+  for (const [formation, freq] of Object.entries(formationFrequency)) {
+    if (freq > maxFreq) {
+      maxFreq = freq;
+      mostPlayed = formation;
+    }
+  }
+  
+  return mostPlayed;
+}
+
+// Helper: Calculate goal minute distribution from goal minute data (from api-football)
+function calculateGoalMinuteDistributionFromData(goalMinutes: Array<{minute: number; goals: number}>): {
+  distribution: Record<string, number>;
+  firstHalfPercentage: number;
+  earlyGoalPercentage: number;
+  dangerZones: Array<{window: string, percentage: number}>;
+} {
+  const timeWindows = {
+    '0-15': 0,
+    '16-30': 0,
+    '31-45': 0,
+    '46-60': 0,
+    '61-75': 0,
+    '76-90': 0,
+  };
+  
+  let totalGoals = 0;
+  let firstHalfGoals = 0;
+  let earlyGoals = 0;
+  
+  for (const {minute, goals} of goalMinutes) {
+    totalGoals += goals;
+    
+    if (minute <= 15) {
+      timeWindows['0-15'] += goals;
+      earlyGoals += goals;
+      firstHalfGoals += goals;
+    } else if (minute <= 30) {
+      timeWindows['16-30'] += goals;
+      firstHalfGoals += goals;
+    } else if (minute <= 45) {
+      timeWindows['31-45'] += goals;
+      firstHalfGoals += goals;
+    } else if (minute <= 60) {
+      timeWindows['46-60'] += goals;
+    } else if (minute <= 75) {
+      timeWindows['61-75'] += goals;
+    } else {
+      timeWindows['76-90'] += goals;
+    }
+  }
+  
+  // Convert to percentages
+  const distribution: Record<string, number> = {};
+  for (const [window, count] of Object.entries(timeWindows)) {
+    distribution[window] = totalGoals > 0 ? (count / totalGoals) * 100 : 0;
+  }
+  
+  const firstHalfPercentage = totalGoals > 0 ? (firstHalfGoals / totalGoals) * 100 : 0;
+  const earlyGoalPercentage = totalGoals > 0 ? (earlyGoals / totalGoals) * 100 : 0;
+  
+  // Identify danger zones (windows with >20% of goals)
+  const dangerZones = Object.entries(distribution)
+    .filter(([_, pct]) => pct > 20)
+    .map(([window, percentage]) => ({ window, percentage }))
+    .sort((a, b) => b.percentage - a.percentage);
+  
+  return {
+    distribution,
+    firstHalfPercentage,
+    earlyGoalPercentage,
+    dangerZones,
+  };
+}
+
+// Helper: Calculate goal minute distribution from matches (fallback when api-football data unavailable)
+function calculateGoalMinuteDistribution(matches: Match[]): {
+  distribution: Record<string, number>;
+  firstHalfPercentage: number;
+  earlyGoalPercentage: number;
+  dangerZones: Array<{window: string, percentage: number}>;
+} {
+  const timeWindows = {
+    '0-15': 0,
+    '16-30': 0,
+    '31-45': 0,
+    '46-60': 0,
+    '61-75': 0,
+    '76-90': 0,
+  };
+  
+  let totalGoals = 0;
+  let firstHalfGoals = 0;
+  let earlyGoals = 0;
+  
+  for (const match of matches) {
+    // Process goals scored
+    const goalsScored = match.goalsScored || 0;
+    const goalsConceded = match.goalsConceded || 0;
+    
+    // For simplicity, distribute goals evenly across match time
+    // In production, use actual goal minute data from API
+    const goalsPerWindow = (goalsScored + goalsConceded) / 6;
+    
+    timeWindows['0-15'] += goalsPerWindow;
+    timeWindows['16-30'] += goalsPerWindow;
+    timeWindows['31-45'] += goalsPerWindow;
+    firstHalfGoals += goalsPerWindow * 3;
+    earlyGoals += goalsPerWindow;
+    
+    timeWindows['46-60'] += goalsPerWindow;
+    timeWindows['61-75'] += goalsPerWindow;
+    timeWindows['76-90'] += goalsPerWindow;
+    
+    totalGoals += goalsScored + goalsConceded;
+  }
+  
+  // Convert to percentages
+  const distribution: Record<string, number> = {};
+  for (const [window, count] of Object.entries(timeWindows)) {
+    distribution[window] = totalGoals > 0 ? (count / totalGoals) * 100 : 0;
+  }
+  
+  const firstHalfPercentage = totalGoals > 0 ? (firstHalfGoals / totalGoals) * 100 : 0;
+  const earlyGoalPercentage = totalGoals > 0 ? (earlyGoals / totalGoals) * 100 : 0;
+  
+  // Identify danger zones (windows with >20% of goals)
+  const dangerZones = Object.entries(distribution)
+    .filter(([_, pct]) => pct > 20)
+    .map(([window, percentage]) => ({ window, percentage }))
+    .sort((a, b) => b.percentage - a.percentage);
+  
+  return {
+    distribution,
+    firstHalfPercentage,
+    earlyGoalPercentage,
+    dangerZones,
+  };
+}
+
+// Helper: Detect safety flags
+function detectSafetyFlags(
+  team: TeamData,
+  opponent: TeamData
+): SafetyFlags {
+  // Regression Risk: Tier 3 team won 5+ in a row
+  const regressionRisk = team.mind.tier === 3 && team.stats.currentWinStreak >= 5;
+  
+  // Motivation Clash: TITLE_RACE vs MID_TABLE
+  const homeMotivation = calculateMotivation(team);
+  const awayMotivation = calculateMotivation(opponent);
+  const motivationClash = 
+    (homeMotivation === 'TITLE_RACE' && awayMotivation === 'MID_TABLE') ||
+    (awayMotivation === 'TITLE_RACE' && homeMotivation === 'MID_TABLE');
+  
+  // Live Dog: Bottom team scored in 2 of last 3 away
+  const isBottomTeam = team.stats.leaguePosition >= 15;
+  const recentAwayGoals = team.lastAwayMatches.slice(0, 3)
+    .filter(m => (m.goalsScored || 0) > 0).length;
+  const liveDog = isBottomTeam && recentAwayGoals >= 2;
+  
+  return {
+    regressionRisk,
+    motivationClash,
+    liveDog,
+  };
+}
+
+interface TeamMind {
+  efficiencyIndex: number;        // EI = (Avg Points per Game) + (Goal Difference / 10)
+  tier: 1 | 2 | 3 | 4;            // Categorized based on EI
+  last50Matches: Match[];         // Extended match history for baseline
+}
+
+interface TeamMood {
+  tier: 1 | 2 | 3 | 4;            // Tier based on last 10 matches
+  mindMoodGap: number;            // Difference between Mind and Mood tiers
+  isSleepingGiant: boolean;       // Mind Tier 1, Mood Tier 4 (value bet)
+  isOverPerformer: boolean;       // Mind Tier 4, Mood Tier 1 (regression risk)
+}
+
+interface TeamDNA {
+  mostPlayedFormation: string;     // e.g., "4-3-3"
+  formationFrequency: Record<string, number>; // Formation usage percentages
+  under25Percentage: number;       // Season Under 2.5 rate
+  over25Percentage: number;        // Season Over 2.5 rate
+  cleanSheetPercentage: number;    // Season clean sheet rate
+  failedToScorePercentage: number; // Season failed to score rate
+  goalMinuteDistribution: Record<string, number>; // Goals by time windows
+  dangerZones: Array<{window: string, percentage: number}>; // High-concession windows
+  firstHalfGoalPercentage: number; // % of goals in first half
+  earlyGoalPercentage: number;     // % of goals in 0-15 mins
+  lateStarter: boolean;            // <20% goals in first 15 mins
+}
+
+interface SafetyFlags {
+  regressionRisk: boolean;         // Tier 3 team won 5+ in a row
+  motivationClash: boolean;        // TITLE_RACE vs MID_TABLE
+  liveDog: boolean;                // Bottom team scored in 2 of last 3 away
+}
+
 interface TeamData {
   id: number;
   name: string;
@@ -488,6 +987,12 @@ interface TeamData {
   lastMatches: Match[];           // Last 10 all matches
   lastHomeMatches: Match[];       // Last 5 home
   lastAwayMatches: Match[];       // Last 5 away
+  
+  // Three-layer data strategy
+  mind: TeamMind;                 // Baseline quality (50 matches)
+  mood: TeamMood;                 // Recent momentum (10 matches)
+  dna: TeamDNA;                   // Technical trends (season stats)
+  safetyFlags: SafetyFlags;       // Non-mathematical flags
   
   // Calculated stats
   stats: {
@@ -535,6 +1040,7 @@ interface TeamData {
 
 interface H2HData {
   matches: Match[];
+  h2hMatchCount: number;              // Total H2H matches (after filtering)
   
   homeTeamWins: number;
   awayTeamWins: number;
@@ -551,6 +1057,11 @@ interface H2HData {
   avgAwayGoals: number;
   
   firstHalfGoalsPercentage: number;
+  
+  // Recency-weighted stats
+  weightedBttsPercentage: number;      // BTTS % weighted by match recency
+  weightedAvgGoalsPerMatch: number;   // Goals avg weighted by match recency
+  recencyWeights: number[];             // Weight for each match (by index)
 }
 
 // Fetch team data with caching
@@ -567,28 +1078,108 @@ async function getTeamData(
   }
   
   // Fetch from API-Football
-  const [allMatches, homeMatches, awayMatches, standings] = await Promise.all([
-    fetchTeamMatches(teamId, 10),
+  // Fetch 50 matches for Mind layer, 10 for Mood layer
+  let [allMatches50, allMatches10, homeMatches, awayMatches, standings, teamStats] = await Promise.all([
+    fetchTeamMatches(teamId, 50),      // Mind layer (baseline)
+    fetchTeamMatches(teamId, 10),      // Mood layer (recent momentum)
     fetchTeamHomeMatches(teamId, 5),
     fetchTeamAwayMatches(teamId, 5),
     fetchTeamStandings(teamId),
+    fetchTeamStatistics(teamId, c),    // DNA layer (season stats from backend endpoint)
   ]);
+  
+  let allMatches = allMatches10; // Use 10 matches for main calculations
+  
+  // Filter out friendly matches
+  allMatches50 = filterNonFriendlyMatches(allMatches50);
+  allMatches10 = filterNonFriendlyMatches(allMatches10);
+  allMatches = filterNonFriendlyMatches(allMatches);
+  homeMatches = filterNonFriendlyMatches(homeMatches);
+  awayMatches = filterNonFriendlyMatches(awayMatches);
+  
+  // Ensure minimum match count (fallback: use all matches if filtered count is too low)
+  const MIN_MATCHES = 3;
+  if (allMatches.length < MIN_MATCHES) {
+    // Fallback: fetch more matches or use all available
+    const allMatchesUnfiltered = await fetchTeamMatches(teamId, 15);
+    allMatches = filterNonFriendlyMatches(allMatchesUnfiltered);
+    // If still too few, use unfiltered (better than no data)
+    if (allMatches.length < MIN_MATCHES) {
+      allMatches = allMatchesUnfiltered.slice(0, 10);
+    }
+  }
+  
+  // Calculate Mind layer (baseline quality from 50 matches)
+  const mindEI = calculateEfficiencyIndex(allMatches50);
+  const mindTier = categorizeTier(mindEI);
+  
+  // Calculate Mood layer (recent momentum from 10 matches)
+  const moodTier = calculateMoodTier(allMatches10);
+  const mood = detectMoodVsMindGap(mindTier, moodTier);
+  
+  // Calculate DNA layer (season statistics)
+  // Note: Early season adjustments will be applied at match prediction level, not here
+  
+  // Use formation data from teamStats if available, otherwise calculate from matches
+  const formationFrequency = teamStats.formations && teamStats.formations.length > 0
+    ? teamStats.formations.reduce((acc: Record<string, number>, f: {formation: string; count: number}) => {
+        acc[f.formation] = f.count;
+        return acc;
+      }, {})
+    : calculateFormationFrequency(teamStats.matches || allMatches50);
+  
+  const mostPlayedFormation = getMostPlayedFormation(formationFrequency);
+  
+  // Use goal minute data from teamStats if available, otherwise calculate from matches
+  const goalMinuteData = teamStats.goalMinutes && teamStats.goalMinutes.length > 0
+    ? calculateGoalMinuteDistributionFromData(teamStats.goalMinutes)
+    : calculateGoalMinuteDistribution(teamStats.matches || allMatches50);
+  
+  // Use raw DNA percentages (early season adjustments applied at prediction level)
+  const dnaUnder25Pct = teamStats.under25Percentage || 0;
+  const dnaOver25Pct = teamStats.over25Percentage || 0;
+  
+  const dna: TeamDNA = {
+    mostPlayedFormation,
+    formationFrequency,
+    under25Percentage: dnaUnder25Pct,
+    over25Percentage: dnaOver25Pct,
+    cleanSheetPercentage: teamStats.cleanSheetPercentage || 0,
+    failedToScorePercentage: teamStats.failedToScorePercentage || 0,
+    goalMinuteDistribution: goalMinuteData.distribution,
+    dangerZones: goalMinuteData.dangerZones,
+    firstHalfGoalPercentage: goalMinuteData.firstHalfPercentage,
+    earlyGoalPercentage: goalMinuteData.earlyGoalPercentage,
+    lateStarter: goalMinuteData.earlyGoalPercentage < 20,
+  };
   
   // Calculate stats
   const stats = calculateTeamStats(allMatches, standings);
   
   const teamData: TeamData = {
     id: teamId,
-    name: allMatches[0].homeTeam.id === teamId 
+    name: allMatches[0]?.homeTeam?.id === teamId 
       ? allMatches[0].homeTeam.name 
-      : allMatches[0].awayTeam.name,
+      : allMatches[0]?.awayTeam?.name || 'Unknown',
     lastMatches: allMatches,
     lastHomeMatches: homeMatches,
     lastAwayMatches: awayMatches,
+    mind: {
+      efficiencyIndex: mindEI,
+      tier: mindTier,
+      last50Matches: allMatches50,
+    },
+    mood,
+    dna,
+    safetyFlags: {
+      regressionRisk: false,
+      motivationClash: false,
+      liveDog: false,
+    }, // Will be calculated later with opponent context
     stats,
-    lastMatchDate: allMatches[0].date,
+    lastMatchDate: allMatches[0]?.date || new Date(),
     nextMatchDate: await getNextMatch(teamId),
-    daysSinceLastMatch: calculateDaysSince(allMatches[0].date),
+    daysSinceLastMatch: allMatches[0]?.date ? calculateDaysSince(allMatches[0].date) : 0,
     daysUntilNextMatch: 0, // Will be calculated
   };
   
@@ -615,21 +1206,54 @@ async function getH2HData(
   }
   
   // Fetch from API
-  const matches = await fetchH2HMatches(homeTeamId, awayTeamId, 10);
+  let matches = await fetchH2HMatches(homeTeamId, awayTeamId, 10);
+  
+  // Filter out friendly matches
+  matches = filterNonFriendlyMatches(matches);
+  
+  // Calculate recency weights
+  const recencyWeights = calculateH2HRecencyWeights(matches);
+  
+  // Calculate weighted averages
+  const bttsValues = matches.map(m => m.bothTeamsScored ? 100 : 0);
+  const weightedBttsPercentage = calculateWeightedAverage(bttsValues, recencyWeights);
+  
+  const goalsValues = matches.map(m => m.totalGoals || 0);
+  const weightedAvgGoalsPerMatch = calculateWeightedAverage(goalsValues, recencyWeights);
+  
+  // Calculate simple averages (for comparison)
+  const bttsCount = matches.filter(m => m.bothTeamsScored).length;
+  const bttsPercentage = matches.length > 0 
+    ? (bttsCount / matches.length) * 100 
+    : 0;
+  
+  const avgGoalsPerMatch = matches.length > 0
+    ? matches.reduce((sum, m) => sum + (m.totalGoals || 0), 0) / matches.length
+    : 0;
   
   const h2hData: H2HData = {
     matches,
+    h2hMatchCount: matches.length,
     homeTeamWins: matches.filter(m => m.winnerId === homeTeamId).length,
     awayTeamWins: matches.filter(m => m.winnerId === awayTeamId).length,
     draws: matches.filter(m => m.result === 'D').length,
-    bttsCount: matches.filter(m => m.bothTeamsScored).length,
-    bttsPercentage: (matches.filter(m => m.bothTeamsScored).length / matches.length) * 100,
-    over25Count: matches.filter(m => m.totalGoals > 2.5).length,
-    over25Percentage: (matches.filter(m => m.totalGoals > 2.5).length / matches.length) * 100,
-    avgGoalsPerMatch: matches.reduce((sum, m) => sum + m.totalGoals, 0) / matches.length,
-    avgHomeGoals: matches.reduce((sum, m) => sum + m.homeGoals, 0) / matches.length,
-    avgAwayGoals: matches.reduce((sum, m) => sum + m.awayGoals, 0) / matches.length,
+    bttsCount,
+    bttsPercentage,
+    weightedBttsPercentage,
+    over25Count: matches.filter(m => (m.totalGoals || 0) > 2.5).length,
+    over25Percentage: matches.length > 0
+      ? (matches.filter(m => (m.totalGoals || 0) > 2.5).length / matches.length) * 100
+      : 0,
+    avgGoalsPerMatch,
+    weightedAvgGoalsPerMatch,
+    avgHomeGoals: matches.length > 0
+      ? matches.reduce((sum, m) => sum + (m.homeGoals || 0), 0) / matches.length
+      : 0,
+    avgAwayGoals: matches.length > 0
+      ? matches.reduce((sum, m) => sum + (m.awayGoals || 0), 0) / matches.length
+      : 0,
     firstHalfGoalsPercentage: 0, // Calculate if data available
+    recencyWeights,
   };
   
   await c.env.KV.put(cacheKey, JSON.stringify(h2hData), {
@@ -642,8 +1266,129 @@ async function getH2HData(
 
 #### 1.2 Stats Calculation
 
+**Important:** All stats calculations now use filtered matches (friendlies excluded) and account for early season adjustments.
+
+**Backend Endpoint Note:** The `fetchTeamStatistics()` function calls a backend endpoint (`/api/teams/:teamId/statistics`) which will be implemented separately. This backend endpoint will fetch team statistics from api-football's team statistics endpoint and return the data in a standardized format.
+
 ```typescript
 // /api/utils/stats-calculator.ts
+
+// Helper: Fetch team statistics from backend endpoint
+// Backend Implementation: GET /api/teams/:teamId/statistics
+// This endpoint will fetch from api-football and return:
+// - formations: Array<{formation: string; count: number}>
+// - goalMinutes: Array<{minute: number; goals: number}>
+// - under25Percentage, over25Percentage, cleanSheetPercentage, failedToScorePercentage
+// Note: This will call a backend endpoint that fetches from api-football's team statistics endpoint
+// The backend endpoint will be implemented separately and will handle the api-football integration
+async function fetchTeamStatistics(
+  teamId: number,
+  c: Context
+): Promise<{
+  matches: Match[];
+  under25Percentage: number;
+  over25Percentage: number;
+  cleanSheetPercentage: number;
+  failedToScorePercentage: number;
+  formations?: Array<{formation: string; count: number}>;
+  goalMinutes?: Array<{minute: number; goals: number}>;
+}> {
+  // Fetch from backend team statistics endpoint
+  // Backend will handle api-football integration: GET /api/teams/:teamId/statistics
+  const cacheKey = `team-stats:${teamId}`;
+  
+  // Check cache (24 hour TTL for season stats)
+  const cached = await c.env.KV.get(cacheKey, 'json');
+  if (cached && !isStale(cached, 24 * 60 * 60)) {
+    return cached;
+  }
+  
+  // Call backend endpoint (which will fetch from api-football)
+  const response = await fetch(`${c.env.API_BASE_URL}/api/teams/${teamId}/statistics`, {
+    headers: {
+      'Authorization': `Bearer ${c.env.API_KEY}`,
+    },
+  });
+  
+  if (!response.ok) {
+    console.warn(`Failed to fetch team statistics for ${teamId}, using defaults`);
+    return {
+      matches: [],
+      under25Percentage: 0,
+      over25Percentage: 0,
+      cleanSheetPercentage: 0,
+      failedToScorePercentage: 0,
+    };
+  }
+  
+  const data = await response.json();
+  
+  const result = {
+    matches: data.matches || [],
+    under25Percentage: data.under25Percentage || 0,
+    over25Percentage: data.over25Percentage || 0,
+    cleanSheetPercentage: data.cleanSheetPercentage || 0,
+    failedToScorePercentage: data.failedToScorePercentage || 0,
+    formations: data.formations || [],
+    goalMinutes: data.goalMinutes || [],
+  };
+  
+  // Cache for 24 hours
+  await c.env.KV.put(cacheKey, JSON.stringify(result), {
+    expirationTtl: 24 * 60 * 60,
+  });
+  
+  return result;
+}
+
+// Helper: Calculate formation stability with tiered confidence reduction
+// Returns stability score, stability status, and market-specific confidence reduction
+function calculateFormationStability(
+  matchFormation: string,
+  mostPlayedFormation: string,
+  formationFrequency: Record<string, number>,
+  isEarlySeason: boolean = false
+): { 
+  isStable: boolean; 
+  stabilityScore: number;
+  confidenceReduction: number; // Base reduction percentage (will be adjusted per market)
+} {
+  if (!matchFormation || !mostPlayedFormation) {
+    return { isStable: false, stabilityScore: 0, confidenceReduction: 0 };
+  }
+  
+  const usagePercentage = matchFormation === mostPlayedFormation
+    ? formationFrequency[mostPlayedFormation] || 0
+    : formationFrequency[matchFormation] || 0;
+  
+  // Early season: More lenient threshold (30% vs 20%)
+  const stabilityThreshold = isEarlySeason ? 30 : 20;
+  const isStable = usagePercentage >= stabilityThreshold;
+  
+  // Tiered confidence reduction based on usage percentage
+  let baseReduction = 0;
+  if (usagePercentage < 20) {
+    baseReduction = 25; // Very experimental: 20-25% reduction
+  } else if (usagePercentage < 40) {
+    baseReduction = 15; // Experimental: 10-15% reduction
+  } else if (usagePercentage < 60) {
+    baseReduction = 10; // Occasionally used: 5-10% reduction
+  } else if (usagePercentage < 80) {
+    baseReduction = 5; // Secondary formation: 0-5% reduction
+  }
+  // usagePercentage >= 80: No reduction (stable)
+  
+  // Early season: Reduce penalty by 50% (teams experiment more early season)
+  if (isEarlySeason) {
+    baseReduction = baseReduction * 0.5;
+  }
+  
+  return {
+    isStable,
+    stabilityScore: usagePercentage,
+    confidenceReduction: baseReduction,
+  };
+}
 
 function calculateTeamStats(
   matches: Match[],
@@ -726,6 +1471,43 @@ function countConsecutiveMatchesWithoutCleanSheet(matches: Match[]): number {
 
 ---
 
+### Algorithm Improvements Summary
+
+**All five improvements are now integrated:**
+
+1. **H2H Recency Weighting:** Recent matches (2025) get exponentially higher weight than older ones (2023). Uses `weightedBttsPercentage` and `weightedAvgGoalsPerMatch` in predictions.
+
+2. **Friendly Match Filtering:** All matches with "Friendly" in league name are excluded. Fallback logic ensures minimum match count requirements.
+
+3. **Rest Days Adjustment:** When `daysSinceLastMatch > 10`, recent form weight is reduced by 30-50% (more reduction for longer rest), with weight redistributed to H2H and historical factors.
+
+4. **Early Season Detection:** When round < 5, recent form weight reduced by 40% (teams not yet in rhythm), H2H and historical data weights increased accordingly.
+
+5. **Low H2H Count Detection:** When H2H matches < 5, H2H factor weight reduced by 40-60% (less reliable with small sample), redistributed to recent form and home advantage. Warning insight added.
+
+**Example: Combined Impact**
+
+```typescript
+// Scenario: Early season (Round 3), team rested 12 days, only 3 H2H matches
+
+Base BTTS weights:
+- Scoring Rate: 25%
+- H2H: 25%
+- Defensive Form: 20%
+- Recent Form: 35%
+
+After adjustments:
+- Scoring Rate: 25% (unchanged)
+- H2H: 15% (reduced from 25% due to low count: 25% * 0.4 = 10% reduction)
+- Defensive Form: 20% (unchanged)
+- Recent Form: 20% (reduced from 35%: 10% early season + 5% rest days = 15% reduction)
+- Home Advantage: 20% (gained 5% from H2H reduction)
+
+Result: More conservative predictions, less reliance on limited data
+```
+
+---
+
 ### Phase 2: Pattern Detection (Week 1-2)
 
 **Goal:** Detect notable patterns automatically
@@ -751,7 +1533,11 @@ type PatternType =
   | 'BTTS_STREAK'
   | 'FIRST_HALF_WEAKNESS'
   | 'HIGH_SCORING_FORM'
-  | 'DEFENSIVE_WEAKNESS';
+  | 'DEFENSIVE_WEAKNESS'
+  | 'SLEEPING_GIANT'
+  | 'OVER_PERFORMER'
+  | 'FORMATION_INSTABILITY'
+  | 'REGRESSION_RISK';
 
 function detectPatterns(
   teamData: TeamData,
@@ -761,6 +1547,37 @@ function detectPatterns(
   const matches = context === 'home' 
     ? teamData.lastHomeMatches 
     : teamData.lastAwayMatches;
+  
+  // Sleeping Giant pattern (Mind Tier 1, Mood Tier 4)
+  if (teamData.mood.isSleepingGiant) {
+    patterns.push({
+      type: 'SLEEPING_GIANT',
+      severity: 'HIGH',
+      priority: 95,
+      data: {
+        mindTier: teamData.mind.tier,
+        moodTier: teamData.mood.tier,
+        gap: teamData.mood.mindMoodGap,
+      }
+    });
+  }
+  
+  // Over-performer pattern (Mind Tier 4, Mood Tier 1)
+  if (teamData.mood.isOverPerformer) {
+    patterns.push({
+      type: 'OVER_PERFORMER',
+      severity: 'HIGH',
+      priority: 90,
+      data: {
+        mindTier: teamData.mind.tier,
+        moodTier: teamData.mood.tier,
+        gap: teamData.mood.mindMoodGap,
+      }
+    });
+  }
+  
+  // Formation instability pattern
+  // This will be detected in the match context, not here
   
   // 1. Losing streak (5+)
   const losingStreak = countConsecutiveResults(matches, 'L');
@@ -1021,6 +1838,42 @@ const INSIGHT_TEMPLATES: InsightTemplate[] = [
       return `${teamName} won ${data.wins} of last ${data.total} H2H meetings (${data.percentage.toFixed(0)}%)`;
     }
   },
+  
+  {
+    pattern: 'SLEEPING_GIANT',
+    emoji: '💤',
+    priority: 95,
+    template: (data, teamName) => {
+      return `💎 Value Alert: ${teamName} is Tier ${data.mindTier} quality but Tier ${data.moodTier} form (${data.gap}-tier gap)`;
+    }
+  },
+  
+  {
+    pattern: 'OVER_PERFORMER',
+    emoji: '⚠️',
+    priority: 90,
+    template: (data, teamName) => {
+      return `⚠️ Regression Risk: ${teamName} is Tier ${data.mindTier} quality but Tier ${data.moodTier} form - due for correction`;
+    }
+  },
+  
+  {
+    pattern: 'FORMATION_INSTABILITY',
+    emoji: '🔄',
+    priority: 80,
+    template: (data, teamName) => {
+      return `🔄 Experimental formation: ${data.matchFormation} (usually plays ${data.mostPlayedFormation})`;
+    }
+  },
+  
+  {
+    pattern: 'REGRESSION_RISK',
+    emoji: '📉',
+    priority: 85,
+    template: (data, teamName) => {
+      return `📉 Regression Risk: ${teamName} won ${data.streak} in a row (Tier ${data.tier} team)`;
+    }
+  },
 ];
 
 function generateInsights(
@@ -1059,6 +1912,10 @@ function categorizePattern(type: PatternType): Insight['category'] {
     'FIRST_HALF_WEAKNESS': 'TIMING',
     'HIGH_SCORING_FORM': 'SCORING',
     'DEFENSIVE_WEAKNESS': 'DEFENSIVE',
+    'SLEEPING_GIANT': 'FORM',
+    'OVER_PERFORMER': 'FORM',
+    'FORMATION_INSTABILITY': 'FORM',
+    'REGRESSION_RISK': 'FORM',
   };
   return map[type] || 'FORM';
 }
@@ -1072,6 +1929,73 @@ function categorizePattern(type: PatternType): Insight['category'] {
 
 ```typescript
 // /api/analysis/market-predictor.ts
+
+// Helper: Adjust weights based on rest days
+// If daysSinceLastMatch > 10, reduce recent form weight
+function adjustWeightsForRestDays(
+  baseWeights: Record<string, number>,
+  daysSinceLastMatch: number
+): Record<string, number> {
+  const adjusted = { ...baseWeights };
+  
+  if (daysSinceLastMatch > 10) {
+    // Reduce recent form weight by 30-50% (more reduction for longer rest)
+    const reductionFactor = Math.min(0.5, 0.3 + (daysSinceLastMatch - 10) * 0.02);
+    adjusted.recentForm = adjusted.recentForm * (1 - reductionFactor);
+    
+    // Redistribute reduced weight to other factors (H2H, historical data)
+    const weightToRedistribute = adjusted.recentForm * reductionFactor;
+    adjusted.h2h = (adjusted.h2h || 0) + weightToRedistribute * 0.6;
+    adjusted.leaguePosition = (adjusted.leaguePosition || 0) + weightToRedistribute * 0.4;
+  }
+  
+  return adjusted;
+}
+
+// Helper: Adjust weights for early season (< 5 rounds)
+// Reduce recent form weight, increase H2H and historical data weight
+function adjustWeightsForEarlySeason(
+  baseWeights: Record<string, number>,
+  isEarly: boolean
+): Record<string, number> {
+  if (!isEarly) return baseWeights;
+  
+  const adjusted = { ...baseWeights };
+  
+  // Reduce recent form by 40% (teams not yet in rhythm)
+  const formReduction = adjusted.recentForm * 0.4;
+  adjusted.recentForm = adjusted.recentForm * 0.6;
+  
+  // Increase H2H weight (more reliable than early season form)
+  adjusted.h2h = (adjusted.h2h || 0) + formReduction * 0.6;
+  
+  // Increase historical/league position weight
+  adjusted.leaguePosition = (adjusted.leaguePosition || 0) + formReduction * 0.4;
+  
+  return adjusted;
+}
+
+// Helper: Adjust weights for low H2H count
+// If H2H matches < 5, reduce H2H weight by 40-60%
+function adjustWeightsForLowH2H(
+  baseWeights: Record<string, number>,
+  h2hMatchCount: number
+): Record<string, number> {
+  const adjusted = { ...baseWeights };
+  
+  if (h2hMatchCount < 5) {
+    // Reduce H2H weight: 40% reduction for 4 matches, 60% for 1 match
+    const reductionFactor = 0.4 + (5 - h2hMatchCount) * 0.05; // 0.4 to 0.6
+    const h2hReduction = (adjusted.h2h || 0) * reductionFactor;
+    adjusted.h2h = (adjusted.h2h || 0) * (1 - reductionFactor);
+    
+    // Redistribute reduced weight to recent form and other factors
+    adjusted.recentForm = (adjusted.recentForm || 0) + h2hReduction * 0.7;
+    adjusted.homeAdvantage = (adjusted.homeAdvantage || 0) + h2hReduction * 0.3;
+  }
+  
+  return adjusted;
+}
 
 interface MarketPrediction {
   market: 'MATCH_RESULT' | 'BTTS' | 'OVER_25' | 'FIRST_HALF';
@@ -1098,21 +2022,100 @@ interface ConflictingSignal {
 async function generateMarketPredictions(
   homeTeamData: TeamData,
   awayTeamData: TeamData,
-  h2hData: H2HData
+  h2hData: H2HData,
+  matchContext?: { 
+    round?: string; 
+    leagueName?: string;
+    homeFormation?: string;
+    awayFormation?: string;
+  }
 ): Promise<MarketPrediction[]> {
   const predictions: MarketPrediction[] = [];
   
-  // 1. BTTS
-  predictions.push(await predictBTTS(homeTeamData, awayTeamData, h2hData));
+  // Detect early season
+  const isEarlySeason = matchContext?.round 
+    ? isEarlySeason(matchContext.round)
+    : false;
   
-  // 2. Over/Under 2.5
-  predictions.push(await predictOver25(homeTeamData, awayTeamData, h2hData));
+  // Calculate formation stability for both teams (with early season context)
+  const homeFormationStability = matchContext?.homeFormation
+    ? calculateFormationStability(
+        matchContext.homeFormation,
+        homeTeamData.dna.mostPlayedFormation,
+        homeTeamData.dna.formationFrequency,
+        isEarlySeason
+      )
+    : { isStable: true, stabilityScore: 100, confidenceReduction: 0 };
   
-  // 3. Match Result
-  predictions.push(await predictMatchResult(homeTeamData, awayTeamData, h2hData));
+  const awayFormationStability = matchContext?.awayFormation
+    ? calculateFormationStability(
+        matchContext.awayFormation,
+        awayTeamData.dna.mostPlayedFormation,
+        awayTeamData.dna.formationFrequency,
+        isEarlySeason
+      )
+    : { isStable: true, stabilityScore: 100, confidenceReduction: 0 };
   
-  // 4. First Half
-  predictions.push(await predictFirstHalf(homeTeamData, awayTeamData, h2hData));
+  // Calculate combined formation impact (capped at 30% total reduction)
+  const totalFormationReduction = Math.min(30, 
+    homeFormationStability.confidenceReduction + awayFormationStability.confidenceReduction
+  );
+  
+  // Calculate safety flags (no manager context needed)
+  homeTeamData.safetyFlags = detectSafetyFlags(homeTeamData, awayTeamData);
+  awayTeamData.safetyFlags = detectSafetyFlags(awayTeamData, homeTeamData);
+  
+  // 1. BTTS (40% less impact from formations)
+  predictions.push(await predictBTTS(
+    homeTeamData, 
+    awayTeamData, 
+    h2hData,
+    isEarlySeason,
+    { 
+      homeFormationStability, 
+      awayFormationStability,
+      totalFormationReduction: totalFormationReduction * 0.6 // 40% less impact
+    }
+  ));
+  
+  // 2. Over/Under 2.5 (40% less impact from formations)
+  predictions.push(await predictOver25(
+    homeTeamData, 
+    awayTeamData, 
+    h2hData,
+    isEarlySeason,
+    { 
+      homeFormationStability, 
+      awayFormationStability,
+      totalFormationReduction: totalFormationReduction * 0.6 // 40% less impact
+    }
+  ));
+  
+  // 3. Match Result (Full impact from formations)
+  predictions.push(await predictMatchResult(
+    homeTeamData, 
+    awayTeamData, 
+    h2hData,
+    isEarlySeason,
+    { 
+      homeFormationStability, 
+      awayFormationStability,
+      totalFormationReduction // Full impact
+    }
+  ));
+  
+  // 4. First Half (20% less impact from formations)
+  predictions.push(await predictFirstHalf(
+    homeTeamData, 
+    awayTeamData, 
+    h2hData,
+    isEarlySeason,
+    { 
+      homeFormationStability, 
+      awayFormationStability,
+      totalFormationReduction: totalFormationReduction * 0.8 // 20% less impact
+    }
+  ));
   
   return predictions;
 }
@@ -1120,14 +2123,36 @@ async function generateMarketPredictions(
 async function predictBTTS(
   homeTeam: TeamData,
   awayTeam: TeamData,
-  h2h: H2HData
+  h2h: H2HData,
+  isEarlySeason: boolean = false,
+  formationStability?: {
+    homeFormationStability: { isStable: boolean; stabilityScore: number; confidenceReduction: number };
+    awayFormationStability: { isStable: boolean; stabilityScore: number; confidenceReduction: number };
+    totalFormationReduction: number; // Market-adjusted reduction
+  }
 ): Promise<MarketPrediction> {
   const insights: Insight[] = [];
   const conflicts: ConflictingSignal[] = [];
   
-  // Factor 1: Home team scoring rate (25% weight)
+  // Base weights for BTTS market
+  let weights = {
+    scoringRate: 0.25,
+    h2h: 0.25,
+    defensiveForm: 0.20,
+    recentForm: 0.35,
+  };
+  
+  // Adjust weights based on context
+  weights = adjustWeightsForRestDays(weights, homeTeam.daysSinceLastMatch);
+  weights = adjustWeightsForRestDays(weights, awayTeam.daysSinceLastMatch);
+  weights = adjustWeightsForEarlySeason(weights, isEarlySeason);
+  weights = adjustWeightsForLowH2H(weights, h2h.h2hMatchCount);
+  
+  // Factor 1: Home team scoring rate
   const homeScored = homeTeam.lastHomeMatches.filter(m => m.goalsScored > 0).length;
-  const homeScoredPct = (homeScored / homeTeam.lastHomeMatches.length) * 100;
+  const homeScoredPct = homeTeam.lastHomeMatches.length > 0
+    ? (homeScored / homeTeam.lastHomeMatches.length) * 100
+    : 0;
   const homeScoreScore = homeScoredPct; // 0-100
   
   insights.push({
@@ -1138,9 +2163,11 @@ async function predictBTTS(
     severity: homeScoredPct >= 80 ? 'HIGH' : 'MEDIUM',
   });
   
-  // Factor 2: Away team scoring rate (25% weight)
+  // Factor 2: Away team scoring rate
   const awayScored = awayTeam.lastAwayMatches.filter(m => m.goalsScored > 0).length;
-  const awayScoredPct = (awayScored / awayTeam.lastAwayMatches.length) * 100;
+  const awayScoredPct = awayTeam.lastAwayMatches.length > 0
+    ? (awayScored / awayTeam.lastAwayMatches.length) * 100
+    : 0;
   const awayScoreScore = awayScoredPct;
   
   insights.push({
@@ -1151,21 +2178,39 @@ async function predictBTTS(
     severity: awayScoredPct >= 80 ? 'HIGH' : 'MEDIUM',
   });
   
-  // Factor 3: H2H BTTS (25% weight)
-  const h2hBTTSScore = h2h.bttsPercentage;
+  // Factor 3: H2H BTTS (use weighted percentage if available, fallback to simple)
+  const h2hBTTSScore = h2h.weightedBttsPercentage > 0 
+    ? h2h.weightedBttsPercentage 
+    : h2h.bttsPercentage;
   
-  if (h2h.bttsPercentage >= 60) {
+  // Add warning if low H2H count
+  if (h2h.h2hMatchCount < 5) {
     insights.push({
-      text: `BTTS in ${h2h.bttsCount} of last ${h2h.matches.length} H2H meetings (${h2h.bttsPercentage.toFixed(0)}%)`,
-      emoji: '📊',
-      priority: 95,
+      text: `⚠️ Limited H2H data: Only ${h2h.h2hMatchCount} previous meetings`,
+      emoji: '⚠️',
+      priority: 60,
       category: 'H2H',
-      severity: h2h.bttsPercentage >= 80 ? 'HIGH' : 'MEDIUM',
+      severity: 'MEDIUM',
     });
   }
   
-  // Factor 4: Home defensive weakness (20% weight)
-  const homeDefenseScore = 100 - (homeTeam.stats.cleanSheets / homeTeam.lastHomeMatches.length * 100);
+  if (h2h.bttsPercentage >= 60 || h2h.weightedBttsPercentage >= 60) {
+    const displayPct = h2h.weightedBttsPercentage > 0 
+      ? h2h.weightedBttsPercentage 
+      : h2h.bttsPercentage;
+    insights.push({
+      text: `BTTS in ${h2h.bttsCount} of last ${h2h.matches.length} H2H meetings (${displayPct.toFixed(0)}%)`,
+      emoji: '📊',
+      priority: 95,
+      category: 'H2H',
+      severity: displayPct >= 80 ? 'HIGH' : 'MEDIUM',
+    });
+  }
+  
+  // Factor 4: Home defensive weakness
+  const homeDefenseScore = homeTeam.lastHomeMatches.length > 0
+    ? 100 - (homeTeam.stats.cleanSheets / homeTeam.lastHomeMatches.length * 100)
+    : 50;
   
   if (homeTeam.stats.cleanSheetDrought >= 8) {
     insights.push({
@@ -1177,17 +2222,41 @@ async function predictBTTS(
     });
   }
   
-  // Factor 5: Away defensive weakness (20% weight)
-  const awayDefenseScore = 100 - (awayTeam.stats.cleanSheets / awayTeam.lastAwayMatches.length * 100);
+  // Factor 5: Away defensive weakness
+  const awayDefenseScore = awayTeam.lastAwayMatches.length > 0
+    ? 100 - (awayTeam.stats.cleanSheets / awayTeam.lastAwayMatches.length * 100)
+    : 50;
   
-  // Calculate weighted score
-  const bttsScore = (
-    homeScoreScore * 0.25 +
-    awayScoreScore * 0.25 +
-    h2hBTTSScore * 0.25 +
-    homeDefenseScore * 0.125 +
-    awayDefenseScore * 0.125
+  // Apply DNA layer: Use season Under/Over distributions
+  // If season DNA shows strong Under tendency, adjust BTTS probability
+  const homeDnaAdjustment = homeTeam.dna.under25Percentage > 70 ? -5 : 0;
+  const awayDnaAdjustment = awayTeam.dna.under25Percentage > 70 ? -5 : 0;
+  
+  // Apply Formation Stability: Use market-adjusted reduction (already reduced by 40% for BTTS)
+  const formationAdjustment = -(formationStability?.totalFormationReduction || 0);
+  
+  // Apply Safety Flags
+  let safetyAdjustment = 0;
+  if (homeTeam.safetyFlags.liveDog || awayTeam.safetyFlags.liveDog) {
+    // Live Dog flag: Switch to BTTS recommendation
+    safetyAdjustment += 10;
+  }
+  
+  // Calculate weighted score using adjusted weights
+  const scoringWeight = weights.scoringRate / 2; // Split between home and away
+  const defensiveWeight = weights.defensiveForm / 2; // Split between home and away
+  
+  let bttsScore = (
+    homeScoreScore * scoringWeight +
+    awayScoreScore * scoringWeight +
+    h2hBTTSScore * weights.h2h +
+    homeDefenseScore * defensiveWeight +
+    awayDefenseScore * defensiveWeight
   );
+  
+  // Apply adjustments
+  bttsScore += homeDnaAdjustment + awayDnaAdjustment + formationAdjustment + safetyAdjustment;
+  bttsScore = Math.max(0, Math.min(100, bttsScore)); // Clamp to 0-100
   
   // Convert to probability
   const yesProbability = bttsScore;
@@ -1195,6 +2264,55 @@ async function predictBTTS(
   
   // Determine rating
   const rating = getRating(yesProbability);
+  
+  // Adjust confidence based on formation stability (market-adjusted)
+  let finalConfidence = confidence;
+  const formationReduction = formationStability?.totalFormationReduction || 0;
+  
+  if (formationReduction > 0) {
+    // Apply tiered confidence reduction based on market-adjusted formation impact
+    if (finalConfidence === 'HIGH' && formationReduction > 12) {
+      finalConfidence = 'MEDIUM';
+    } else if (finalConfidence === 'MEDIUM' && formationReduction > 18) {
+      finalConfidence = 'LOW';
+    }
+    
+    // Add formation instability insights with early season context
+    if (!formationStability?.homeFormationStability.isStable) {
+      const earlySeasonNote = isEarlySeason ? ' (early season - more acceptable)' : '';
+      const formationName = 'Unknown'; // Will be provided from match context in actual implementation
+      insights.push({
+        text: `🔄 ${homeTeam.name}: Experimental formation (${formationStability.homeFormationStability.stabilityScore.toFixed(0)}% usage, usually plays ${homeTeam.dna.mostPlayedFormation})${earlySeasonNote}`,
+        emoji: '🔄',
+        priority: 80,
+        category: 'FORM',
+        severity: formationStability.homeFormationStability.stabilityScore < 20 ? 'HIGH' : 'MEDIUM',
+      });
+    }
+    
+    if (!formationStability?.awayFormationStability.isStable) {
+      const earlySeasonNote = isEarlySeason ? ' (early season - more acceptable)' : '';
+      const formationName = 'Unknown'; // Will be provided from match context in actual implementation
+      insights.push({
+        text: `🔄 ${awayTeam.name}: Experimental formation (${formationStability.awayFormationStability.stabilityScore.toFixed(0)}% usage, usually plays ${awayTeam.dna.mostPlayedFormation})${earlySeasonNote}`,
+        emoji: '🔄',
+        priority: 80,
+        category: 'FORM',
+        severity: formationStability.awayFormationStability.stabilityScore < 20 ? 'HIGH' : 'MEDIUM',
+      });
+    }
+  }
+  
+  // Add DNA insights
+  if (homeTeam.dna.under25Percentage > 70) {
+    insights.push({
+      text: `${homeTeam.name} season DNA: ${homeTeam.dna.under25Percentage.toFixed(0)}% Under 2.5 (vs ${(100 - homeScoredPct).toFixed(0)}% in L5) - Trust the DNA`,
+      emoji: '🧬',
+      priority: 75,
+      category: 'SCORING',
+      severity: 'MEDIUM',
+    });
+  }
   
   // Calculate confidence
   const signals = [
@@ -1253,15 +2371,379 @@ async function predictBTTS(
       no: noProbability,
     },
     rating,
-    confidence,
+    confidence: finalConfidence,
     insights: topInsights,
     conflictingSignals: conflicts.length > 0 ? conflicts : undefined,
     recommendation,
   };
 }
 
-// Similar functions for other markets...
-// predictOver25(), predictMatchResult(), predictFirstHalf()
+// Predict Over/Under 2.5 Goals with Goal Efficiency (DNA layer)
+async function predictOver25(
+  homeTeam: TeamData,
+  awayTeam: TeamData,
+  h2h: H2HData,
+  isEarlySeason: boolean = false,
+  formationStability?: {
+    homeFormationStability: { isStable: boolean; stabilityScore: number; confidenceReduction: number };
+    awayFormationStability: { isStable: boolean; stabilityScore: number; confidenceReduction: number };
+    totalFormationReduction: number; // Market-adjusted reduction (40% less impact)
+  }
+): Promise<MarketPrediction> {
+  const insights: Insight[] = [];
+  
+  // Base weights
+  let weights = {
+    avgGoalsPerGame: 0.30,
+    recentForm: 0.30,
+    h2h: 0.20,
+    defensiveWeakness: 0.25,
+  };
+  
+  // Apply adjustments
+  weights = adjustWeightsForRestDays(weights, homeTeam.daysSinceLastMatch);
+  weights = adjustWeightsForRestDays(weights, awayTeam.daysSinceLastMatch);
+  weights = adjustWeightsForEarlySeason(weights, isEarlySeason);
+  weights = adjustWeightsForLowH2H(weights, h2h.h2hMatchCount);
+  
+  // Calculate average goals
+  const homeAvgGoals = homeTeam.stats.avgGoalsScored;
+  const awayAvgGoals = awayTeam.stats.avgGoalsScored;
+  const combinedAvgGoals = homeAvgGoals + awayAvgGoals;
+  
+  // Apply Goal Efficiency (DNA layer) - Frustration Filter
+  // Trust long-term DNA over recent outliers
+  const homeDnaUnderRate = homeTeam.dna.under25Percentage;
+  const awayDnaUnderRate = awayTeam.dna.under25Percentage;
+  
+  let dnaAdjustment = 0;
+  if (homeDnaUnderRate > 70 || awayDnaUnderRate > 70) {
+    // Strong Under DNA: reduce Over probability even if recent form suggests Over
+    const avgDnaUnderRate = (homeDnaUnderRate + awayDnaUnderRate) / 2;
+    dnaAdjustment = -(avgDnaUnderRate - 50) * 0.3; // -6% to -9% adjustment
+    
+    insights.push({
+      text: `🧬 Season DNA: ${homeTeam.name} ${homeDnaUnderRate.toFixed(0)}% Under 2.5, ${awayTeam.name} ${awayDnaUnderRate.toFixed(0)}% Under 2.5 - Trust the DNA over recent form`,
+      emoji: '🧬',
+      priority: 85,
+      category: 'SCORING',
+      severity: 'HIGH',
+    });
+  }
+  
+  // Calculate score
+  let overScore = combinedAvgGoals * 20; // Scale to 0-100
+  overScore += dnaAdjustment;
+  
+  // Apply formation stability adjustment (market-adjusted: 40% less impact for O/U)
+  const formationAdjustment = -(formationStability?.totalFormationReduction || 0);
+  overScore += formationAdjustment;
+  
+  // Apply safety flags
+  if (homeTeam.safetyFlags.regressionRisk || awayTeam.safetyFlags.regressionRisk) {
+    overScore -= 3; // Regression risk teams may score less
+  }
+  
+  overScore = Math.max(0, Math.min(100, overScore));
+  
+  const yesProbability = overScore;
+  const noProbability = 100 - yesProbability;
+  const rating = getRating(yesProbability);
+  
+  // Calculate confidence
+  let confidence: 'HIGH' | 'MEDIUM' | 'LOW' = 'MEDIUM';
+  if (Math.abs(yesProbability - 50) > 25) confidence = 'HIGH';
+  if (Math.abs(yesProbability - 50) < 10) confidence = 'LOW';
+  
+  // Adjust confidence for formation instability (market-adjusted impact)
+  const formationReduction = formationStability?.totalFormationReduction || 0;
+  if (formationReduction > 0) {
+    if (confidence === 'HIGH' && formationReduction > 12) {
+      confidence = 'MEDIUM';
+    } else if (confidence === 'MEDIUM' && formationReduction > 18) {
+      confidence = 'LOW';
+    }
+  }
+  
+  return {
+    market: 'OVER_25',
+    probabilities: { yes: yesProbability, no: noProbability },
+    rating,
+    confidence,
+    insights: insights.slice(0, 5),
+    recommendation: rating === 'LIKELY' || rating === 'VERY_LIKELY' 
+      ? 'Over 2.5 - Yes ✅' 
+      : rating === 'UNLIKELY' || rating === 'VERY_UNLIKELY'
+      ? 'Under 2.5 - Yes ✅'
+      : 'Over 2.5 - Neutral 🤔',
+  };
+}
+
+// Predict Match Result (1X2) with Mind/Mood/DNA layers
+async function predictMatchResult(
+  homeTeam: TeamData,
+  awayTeam: TeamData,
+  h2h: H2HData,
+  isEarlySeason: boolean = false,
+  formationStability?: {
+    homeFormationStability: { isStable: boolean; stabilityScore: number; confidenceReduction: number };
+    awayFormationStability: { isStable: boolean; stabilityScore: number; confidenceReduction: number };
+    totalFormationReduction: number; // Full impact for match result
+  }
+): Promise<MarketPrediction> {
+  const insights: Insight[] = [];
+  
+  // Base weights
+  let weights = {
+    recentForm: 0.30,
+    h2h: 0.25,
+    homeAdvantage: 0.20,
+    motivation: 0.18,
+    rest: 0.12,
+    leaguePosition: 0.10,
+  };
+  
+  // Apply adjustments
+  weights = adjustWeightsForRestDays(weights, homeTeam.daysSinceLastMatch);
+  weights = adjustWeightsForRestDays(weights, awayTeam.daysSinceLastMatch);
+  weights = adjustWeightsForEarlySeason(weights, isEarlySeason);
+  weights = adjustWeightsForLowH2H(weights, h2h.h2hMatchCount);
+  
+  
+  // Calculate probabilities (simplified - full implementation would use all factors)
+  let homeProb = 40; // Base home advantage
+  let drawProb = 25;
+  let awayProb = 35;
+  
+  // Apply Mind/Mood gap
+  if (homeTeam.mood.isSleepingGiant) {
+    homeProb += 10; // Value bet: Tier 1 quality, Tier 4 form
+    insights.push({
+      text: `💎 Value Alert: ${homeTeam.name} is Tier ${homeTeam.mind.tier} quality but Tier ${homeTeam.mood.tier} form`,
+      emoji: '💤',
+      priority: 95,
+      category: 'FORM',
+      severity: 'HIGH',
+    });
+  }
+  if (awayTeam.mood.isSleepingGiant) {
+    awayProb += 10;
+    insights.push({
+      text: `💎 Value Alert: ${awayTeam.name} is Tier ${awayTeam.mind.tier} quality but Tier ${awayTeam.mood.tier} form`,
+      emoji: '💤',
+      priority: 95,
+      category: 'FORM',
+      severity: 'HIGH',
+    });
+  }
+  
+  if (homeTeam.mood.isOverPerformer) {
+    homeProb -= 8; // Regression risk
+    insights.push({
+      text: `⚠️ Regression Risk: ${homeTeam.name} is Tier ${homeTeam.mind.tier} quality but Tier ${homeTeam.mood.tier} form`,
+      emoji: '📉',
+      priority: 90,
+      category: 'FORM',
+      severity: 'HIGH',
+    });
+  }
+  if (awayTeam.mood.isOverPerformer) {
+    awayProb -= 8;
+    insights.push({
+      text: `⚠️ Regression Risk: ${awayTeam.name} is Tier ${awayTeam.mind.tier} quality but Tier ${awayTeam.mood.tier} form`,
+      emoji: '📉',
+      priority: 90,
+      category: 'FORM',
+      severity: 'HIGH',
+    });
+  }
+  
+  // Apply Motivation Clash: +5% to motivated team
+  if (homeTeam.safetyFlags.motivationClash) {
+    const homeMotivation = calculateMotivation(homeTeam);
+    const awayMotivation = calculateMotivation(awayTeam);
+    if (homeMotivation === 'TITLE_RACE' && awayMotivation === 'MID_TABLE') {
+      homeProb += 5;
+    }
+  }
+  
+  // Apply Regression Risk: -15% confidence
+  let confidence: 'HIGH' | 'MEDIUM' | 'LOW' = 'MEDIUM';
+  if (homeTeam.safetyFlags.regressionRisk || awayTeam.safetyFlags.regressionRisk) {
+    confidence = 'LOW';
+  }
+  
+  // Apply formation stability: reduce confidence (full impact for match result)
+  const formationReduction = formationStability?.totalFormationReduction || 0;
+  if (formationReduction > 0) {
+    if (confidence === 'HIGH' && formationReduction > 15) {
+      confidence = 'MEDIUM';
+    } else if (confidence === 'MEDIUM' && formationReduction > 20) {
+      confidence = 'LOW';
+    }
+    
+    // Add formation insights
+    if (!formationStability?.homeFormationStability.isStable) {
+      const earlySeasonNote = isEarlySeason ? ' (early season - more acceptable)' : '';
+      insights.push({
+        text: `🔄 ${homeTeam.name}: Experimental formation (${formationStability.homeFormationStability.stabilityScore.toFixed(0)}% usage)${earlySeasonNote}`,
+        emoji: '🔄',
+        priority: 85,
+        category: 'FORM',
+        severity: formationStability.homeFormationStability.stabilityScore < 20 ? 'HIGH' : 'MEDIUM',
+      });
+    }
+    
+    if (!formationStability?.awayFormationStability.isStable) {
+      const earlySeasonNote = isEarlySeason ? ' (early season - more acceptable)' : '';
+      insights.push({
+        text: `🔄 ${awayTeam.name}: Experimental formation (${formationStability.awayFormationStability.stabilityScore.toFixed(0)}% usage)${earlySeasonNote}`,
+        emoji: '🔄',
+        priority: 85,
+        category: 'FORM',
+        severity: formationStability.awayFormationStability.stabilityScore < 20 ? 'HIGH' : 'MEDIUM',
+      });
+    }
+  }
+  
+  // Normalize probabilities
+  const total = homeProb + drawProb + awayProb;
+  homeProb = (homeProb / total) * 100;
+  drawProb = (drawProb / total) * 100;
+  awayProb = (awayProb / total) * 100;
+  
+  const maxProb = Math.max(homeProb, drawProb, awayProb);
+  const rating = maxProb >= 50 ? 'LIKELY' : maxProb >= 40 ? 'NEUTRAL' : 'UNLIKELY';
+  
+  return {
+    market: 'MATCH_RESULT',
+    probabilities: { home: homeProb, draw: drawProb, away: awayProb },
+    rating,
+    confidence,
+    insights: insights.slice(0, 5),
+    recommendation: maxProb === homeProb 
+      ? `${homeTeam.name} Win ✅`
+      : maxProb === awayProb
+      ? `${awayTeam.name} Win ✅`
+      : 'Draw ✅',
+  };
+}
+
+// Predict First Half Result using Goal Minute Distribution
+async function predictFirstHalf(
+  homeTeam: TeamData,
+  awayTeam: TeamData,
+  h2h: H2HData,
+  isEarlySeason: boolean = false,
+  formationStability?: {
+    homeFormationStability: { isStable: boolean; stabilityScore: number; confidenceReduction: number };
+    awayFormationStability: { isStable: boolean; stabilityScore: number; confidenceReduction: number };
+    totalFormationReduction: number; // Market-adjusted reduction (20% less impact)
+  }
+): Promise<MarketPrediction> {
+  const insights: Insight[] = [];
+  
+  // Use Goal Minute Distribution from DNA layer
+  const homeFirstHalfPct = homeTeam.dna.firstHalfGoalPercentage;
+  const awayFirstHalfPct = awayTeam.dna.firstHalfGoalPercentage;
+  const homeEarlyGoalPct = homeTeam.dna.earlyGoalPercentage;
+  const awayEarlyGoalPct = awayTeam.dna.earlyGoalPercentage;
+  
+  // Detect late starters
+  if (homeTeam.dna.lateStarter) {
+    insights.push({
+      text: `🐌 ${homeTeam.name}: Late starter - ${homeEarlyGoalPct.toFixed(0)}% goals in first 15 mins`,
+      emoji: '🐌',
+      priority: 80,
+      category: 'TIMING',
+      severity: 'MEDIUM',
+    });
+  }
+  if (awayTeam.dna.lateStarter) {
+    insights.push({
+      text: `🐌 ${awayTeam.name}: Late starter - ${awayEarlyGoalPct.toFixed(0)}% goals in first 15 mins`,
+      emoji: '🐌',
+      priority: 80,
+      category: 'TIMING',
+      severity: 'MEDIUM',
+    });
+  }
+  
+  // Add Danger Zone insights
+  if (homeTeam.dna.dangerZones.length > 0) {
+    const topDangerZone = homeTeam.dna.dangerZones[0];
+    insights.push({
+      text: `⚠️ Danger Zone: ${homeTeam.name} concedes ${topDangerZone.percentage.toFixed(0)}% of goals in ${topDangerZone.window} min window`,
+      emoji: '⚠️',
+      priority: 75,
+      category: 'DEFENSIVE',
+      severity: 'MEDIUM',
+    });
+  }
+  if (awayTeam.dna.dangerZones.length > 0) {
+    const topDangerZone = awayTeam.dna.dangerZones[0];
+    insights.push({
+      text: `⚠️ Danger Zone: ${awayTeam.name} concedes ${topDangerZone.percentage.toFixed(0)}% of goals in ${topDangerZone.window} min window`,
+      emoji: '⚠️',
+      priority: 75,
+      category: 'DEFENSIVE',
+      severity: 'MEDIUM',
+    });
+  }
+  
+  // Calculate first half probability
+  // If both teams are late starters, higher chance of draw at half time
+  const avgFirstHalfPct = (homeFirstHalfPct + awayFirstHalfPct) / 2;
+  let firstHalfScore = avgFirstHalfPct;
+  
+  // Late starters: reduce first half goals probability
+  if (homeTeam.dna.lateStarter && awayTeam.dna.lateStarter) {
+    firstHalfScore -= 15;
+    insights.push({
+      text: `⏰ Both teams are late starters - "Draw at Half Time" is a high-confidence play`,
+      emoji: '⏰',
+      priority: 85,
+      category: 'TIMING',
+      severity: 'HIGH',
+    });
+  }
+  
+  // Apply formation stability adjustment (market-adjusted: 20% less impact for First Half)
+  const formationAdjustment = -(formationStability?.totalFormationReduction || 0);
+  firstHalfScore += formationAdjustment;
+  
+  firstHalfScore = Math.max(0, Math.min(100, firstHalfScore));
+  const yesProbability = firstHalfScore;
+  const noProbability = 100 - yesProbability;
+  const rating = getRating(yesProbability);
+  
+  let confidence: 'HIGH' | 'MEDIUM' | 'LOW' = 'MEDIUM';
+  if (Math.abs(yesProbability - 50) > 20) confidence = 'HIGH';
+  if (Math.abs(yesProbability - 50) < 10) confidence = 'LOW';
+  
+  // Adjust confidence for formation instability (market-adjusted impact)
+  const formationReduction = formationStability?.totalFormationReduction || 0;
+  if (formationReduction > 0) {
+    if (confidence === 'HIGH' && formationReduction > 14) {
+      confidence = 'MEDIUM';
+    } else if (confidence === 'MEDIUM' && formationReduction > 20) {
+      confidence = 'LOW';
+    }
+  }
+  
+  return {
+    market: 'FIRST_HALF',
+    probabilities: { yes: yesProbability, no: noProbability },
+    rating,
+    confidence,
+    insights: insights.slice(0, 5),
+    recommendation: homeTeam.dna.lateStarter && awayTeam.dna.lateStarter
+      ? 'Draw at Half Time ✅'
+      : rating === 'LIKELY' || rating === 'VERY_LIKELY'
+      ? 'Goals in First Half ✅'
+      : 'No Goals in First Half ✅',
+  };
+}
 
 function getRating(probability: number): MarketPrediction['rating'] {
   if (probability >= 80) return 'VERY_LIKELY';
@@ -1321,7 +2803,13 @@ app.get('/api/matches/:matchId/insights', async (c) => {
     const predictions = await generateMarketPredictions(
       homeTeam,
       awayTeam,
-      h2h
+      h2h,
+      {
+        round: match.league?.round,
+        leagueName: match.league?.name,
+        homeFormation: match.homeFormation, // From lineup data
+        awayFormation: match.awayFormation, // From lineup data
+      }
     );
     
     // 7. Build response
@@ -1339,12 +2827,66 @@ app.get('/api/matches/:matchId/insights', async (c) => {
           position: homeTeam.stats.leaguePosition,
           daysSinceLastMatch: homeTeam.daysSinceLastMatch,
           motivation: calculateMotivation(homeTeam),
+          mind: {
+            efficiencyIndex: homeTeam.mind.efficiencyIndex,
+            tier: homeTeam.mind.tier,
+          },
+          mood: {
+            tier: homeTeam.mood.tier,
+            isSleepingGiant: homeTeam.mood.isSleepingGiant,
+            isOverPerformer: homeTeam.mood.isOverPerformer,
+          },
+          dna: {
+            mostPlayedFormation: homeTeam.dna.mostPlayedFormation,
+            under25Percentage: homeTeam.dna.under25Percentage,
+            lateStarter: homeTeam.dna.lateStarter,
+          },
         },
         awayTeam: {
           form: awayTeam.stats.form,
           position: awayTeam.stats.leaguePosition,
           daysSinceLastMatch: awayTeam.daysSinceLastMatch,
           motivation: calculateMotivation(awayTeam),
+          mind: {
+            efficiencyIndex: awayTeam.mind.efficiencyIndex,
+            tier: awayTeam.mind.tier,
+          },
+          mood: {
+            tier: awayTeam.mood.tier,
+            isSleepingGiant: awayTeam.mood.isSleepingGiant,
+            isOverPerformer: awayTeam.mood.isOverPerformer,
+          },
+          dna: {
+            mostPlayedFormation: awayTeam.dna.mostPlayedFormation,
+            under25Percentage: awayTeam.dna.under25Percentage,
+            lateStarter: awayTeam.dna.lateStarter,
+          },
+        },
+        match: {
+          round: match.league?.round,
+          earlySeason: match.league?.round ? isEarlySeason(match.league.round) : false,
+          homeFormation: match.homeFormation,
+          awayFormation: match.awayFormation,
+          formationStability: {
+            home: {
+              isStable: homeFormationStability.isStable,
+              stabilityScore: homeFormationStability.stabilityScore,
+              confidenceReduction: homeFormationStability.confidenceReduction,
+            },
+            away: {
+              isStable: awayFormationStability.isStable,
+              stabilityScore: awayFormationStability.stabilityScore,
+              confidenceReduction: awayFormationStability.confidenceReduction,
+            },
+          },
+        },
+        h2h: {
+          matchCount: h2h.h2hMatchCount,
+          isLimited: h2h.h2hMatchCount < 5,
+        },
+        safetyFlags: {
+          home: homeTeam.safetyFlags,
+          away: awayTeam.safetyFlags,
         },
       },
       predictions,
@@ -1437,6 +2979,14 @@ function calculateOverallConfidence(
       "position": 2,
       "daysSinceLastMatch": 7,
       "motivation": "SECURE"
+    },
+    "match": {
+      "round": "Regular Season - 20",
+      "earlySeason": false
+    },
+    "h2h": {
+      "matchCount": 5,
+      "isLimited": false
     }
   },
   

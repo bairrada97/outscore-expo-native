@@ -136,8 +136,7 @@ export function fixturesByDateQuery({
 
 	if (isSameDay(requestDate, today)) {
 		// TODAY: Cache for 15s to match backend refresh interval
-		// This prevents duplicate requests when switching tabs within the refresh window
-		// Refetch interval is offset by 2s to avoid racing with Edge Cache expiry (15s TTL)
+		// Refetch interval is 17s (15s + 2s buffer) to avoid Edge Cache race
 		staleTime = FIFTEEN_SECONDS_CACHE;
 		refetchInterval = FIFTEEN_SECONDS_CACHE + 2000; // 17s to avoid Edge Cache race
 		gcTime = FIFTEEN_SECONDS_CACHE * 4; // Keep in memory for 1 minute
@@ -174,6 +173,7 @@ export function fixturesByDateQuery({
 		queryFn,
 		staleTime,
 		refetchInterval,
+		refetchIntervalInBackground: false, // Stop polling when component unmounts or app is backgrounded
 		gcTime,
 		refetchOnMount,
 		refetchOnWindowFocus,
