@@ -43,6 +43,7 @@ function FavoriteLeaguesList({ data }: FavoriteLeaguesListProps) {
 export interface FavoritesFixtureListProps {
 	data: FormattedCountry[];
 	groupBy?: boolean;
+	live?: boolean;
 }
 
 /**
@@ -53,6 +54,7 @@ export function FavoritesFixtureList({
 	data,
 	groupBy = true,
 	favoriteLeaguesID,
+	live = false,
 }: FavoritesFixtureListProps & { favoriteLeaguesID?: number[] }) {
 	// TODO: Replace with real user preferences from context/store or API
 	// Favorite league IDs - temporary dev data
@@ -71,7 +73,7 @@ export function FavoritesFixtureList({
 		(league) => league.matches.length > 0,
 	);
 
-	// Check if there are any ongoing matches
+	// Check if there are any ongoing matches (only relevant for live view)
 	const hasOngoingMatches = formatFavoriteData.some((league) =>
 		league.matches.some((match) => match.status?.elapsed !== null),
 	);
@@ -84,11 +86,12 @@ export function FavoritesFixtureList({
 
 	if (!hasMatches) {
 		return (
-			<NoResultsBox text="There are no matches happening today on your favorite competitions." />
+			<NoResultsBox text="There are no matches on your favorite competitions for this date." />
 		);
 	}
 
-	if (!hasOngoingMatches) {
+	// Only check for ongoing matches when viewing live matches
+	if (live && !hasOngoingMatches) {
 		return (
 			<NoResultsBox text="There are no ongoing matches on your favorite competitions." />
 		);

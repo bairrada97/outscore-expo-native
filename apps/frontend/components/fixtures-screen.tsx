@@ -36,7 +36,7 @@ export function FixturesScreen({ date, live }: FixturesScreenProps) {
 			<View>
 				{/* Favorite competitions section */}
 				<TitleSection>Favorite competitions</TitleSection>
-				<FavoritesFixtureList data={data ?? []} />
+				<FavoritesFixtureList data={data ?? []} live={live} />
 
 				{/* All competitions section */}
 				<TitleSection>All competitions</TitleSection>
@@ -49,7 +49,7 @@ export function FixturesScreen({ date, live }: FixturesScreenProps) {
 			<View className="pt-16 bg-neu-02 dark:bg-neu-13">
 				{/* Favorite competitions section */}
 				<TitleSection>Favorite competitions</TitleSection>
-				<FavoritesFixtureList data={data ?? []} />
+				<FavoritesFixtureList data={data ?? []} live={live} />
 
 				{/* All competitions section */}
 				<TitleSection>All competitions</TitleSection>

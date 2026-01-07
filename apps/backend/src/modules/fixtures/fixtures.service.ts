@@ -1,18 +1,18 @@
 import type { Fixture, FixturesResponse, FormattedFixturesResponse } from '@outscore/shared-types';
 import { getFootballApiFixtureDetail, getFootballApiFixtures } from '../../pkg/util/football-api';
 import {
-    type CacheEnv,
-    cacheGet,
-    cacheSet,
-    cacheSetEdgeOnly,
-    checkFixturesDateTransition,
-    getCacheKey,
-    getCurrentUtcDate,
-    getTomorrowUtcDate,
-    getYesterdayUtcDate,
-    isStale,
-    LIVE_STATUSES,
-    withDeduplication,
+  type CacheEnv,
+  cacheGet,
+  cacheSet,
+  cacheSetEdgeOnly,
+  checkFixturesDateTransition,
+  getCacheKey,
+  getCurrentUtcDate,
+  getTomorrowUtcDate,
+  getYesterdayUtcDate,
+  isStale,
+  LIVE_STATUSES,
+  withDeduplication,
 } from '../cache';
 import { getUtcDateInfo, normalizeToUtcDate } from './date.utils';
 import { getCurrentHourInTimezone, getDatesToFetch } from './timezone.utils';
@@ -446,7 +446,15 @@ export const fixturesService = {
           console.log(`⏳ [FixtureDetail] R2 has LIVE match data for ${fixtureId}, fetching fresh from API`);
         } else {
           // For non-LIVE matches, check if R2 data is stale
-          if (!isStale(edgeResult.meta, 'fixtureDetail', params)) {
+          // Extract timestamp from cached data for proper TTL calculation
+          const cachedTimestamp = cachedFixture?.fixture?.timestamp?.toString();
+          const staleCheckParams = {
+            ...params,
+            status: cachedStatus || '',
+            timestamp: cachedTimestamp || '',
+          };
+          
+          if (!isStale(edgeResult.meta, 'fixtureDetail', staleCheckParams)) {
             console.log(`✅ [FixtureDetail] R2 Cache hit for fixture ${fixtureId}`);
             return {
               data: edgeResult.data,
