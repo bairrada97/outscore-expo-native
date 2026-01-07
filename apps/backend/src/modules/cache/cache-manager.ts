@@ -1,13 +1,13 @@
 import {
-  getCacheKey,
-  getStrategy,
-  getTTLForResource
+    getCacheKey,
+    getStrategy,
+    getTTLForResource
 } from './cache-strategies';
 import { createEdgeCacheProvider, generateEdgeCacheKey } from './edge-cache';
 import {
-  checkFixturesDateTransition,
-  getFixturesCacheLocation,
-  getFixturesR2Key,
+    checkFixturesDateTransition,
+    getFixturesCacheLocation,
+    getFixturesR2Key,
 } from './fixtures-strategy';
 import { createKVCacheProvider } from './kv-provider';
 import { createR2CacheProvider } from './r2-provider';
@@ -30,6 +30,10 @@ const toEdgeCacheUrl = (cacheKey: string, params: Record<string, string>): strin
       timezone: params.timezone || 'UTC',
       live: params.live === 'true',
     });
+  }
+  // For fixture details, use fixture ID
+  if (cacheKey.startsWith('fixture-details/')) {
+    return `https://api.outscore.live/fixtures?id=${params.fixtureId}`;
   }
   // For other resources, create a generic URL
   return `https://api.outscore.live/cache/${encodeURIComponent(cacheKey)}`;
@@ -94,11 +98,14 @@ export const cacheGet = async <T>(
   if (strategy.useR2) {
     const r2Cache = createR2CacheProvider<T>(env.FOOTBALL_CACHE);
 
-    // For fixtures, use folder structure
+    // Determine R2 key based on resource type
     let r2Key = cacheKey;
     if (resourceType === 'fixtures') {
       const location = getFixturesCacheLocation(params.date);
       r2Key = getFixturesR2Key(location, params.date, params.live === 'true');
+    } else if (resourceType === 'fixtureDetail') {
+      // Fixture details use the key generator directly (fixture-details/fixture-{id}.json)
+      r2Key = cacheKey;
     }
 
     const r2Result = await r2Cache.get(r2Key);
@@ -165,11 +172,14 @@ export const cacheSet = async <T>(
   if (strategy.useR2) {
     const r2Cache = createR2CacheProvider<T>(env.FOOTBALL_CACHE);
 
-    // For fixtures, use folder structure
+    // Determine R2 key based on resource type
     let r2Key = cacheKey;
     if (resourceType === 'fixtures') {
       const location = getFixturesCacheLocation(params.date);
       r2Key = getFixturesR2Key(location, params.date, params.live === 'true');
+    } else if (resourceType === 'fixtureDetail') {
+      // Fixture details use the key generator directly (fixture-details/fixture-{id}.json)
+      r2Key = cacheKey;
     }
 
     const r2Success = await r2Cache.set(r2Key, data, config);
@@ -266,14 +276,14 @@ export { checkFixturesDateTransition };
 
 // Re-export strategy helpers
   export {
-    getCurrentUtcDate,
-    getFixturesTTL,
-    getTomorrowUtcDate,
-    getYesterdayUtcDate
-  } from './cache-strategies';
+        getCurrentUtcDate,
+        getFixturesTTL,
+        getTomorrowUtcDate,
+        getYesterdayUtcDate
+    } from './cache-strategies';
 
 export {
-  getFixturesCacheLocation,
-  handleFixturesDateTransition
+    getFixturesCacheLocation,
+    handleFixturesDateTransition
 } from './fixtures-strategy';
 

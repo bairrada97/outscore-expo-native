@@ -331,6 +331,89 @@ export const cleanupOldCacheData = async (
   return { deleted, errors };
 };
 
+/**
+ * Clean up old fixture detail cache data
+ * - Deletes fixture details older than retentionDays (default: 7 days)
+ * 
+ * Fixture details are stored in R2 with metadata including the match timestamp.
+ * This function reads each file's metadata to determine if it should be deleted.
+ */
+export const cleanupOldFixtureDetails = async (
+  env: FixturesCacheEnv,
+  retentionDays: number = 7
+): Promise<{ deleted: number; errors: number }> => {
+  const r2Provider = createR2CacheProvider(env.FOOTBALL_CACHE);
+  let deleted = 0;
+  let errors = 0;
+
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const cutoffSeconds = nowSeconds - (retentionDays * 24 * 60 * 60);
+
+  console.log(`🧹 [FixtureDetails Cleanup] Starting cleanup: deleting fixtures older than ${retentionDays} days`);
+
+  try {
+    // List all fixture detail files
+    const fixtureDetailKeys = await r2Provider.list('fixture-details/');
+    
+    console.log(`🔍 [FixtureDetails Cleanup] Found ${fixtureDetailKeys.length} fixture detail files`);
+
+    for (const key of fixtureDetailKeys) {
+      try {
+        // Get the file to read its metadata and content
+        const result = await r2Provider.get(key);
+        
+        if (!result.data) continue;
+
+        // Try to extract match timestamp from the cached data
+        // The data structure is FixturesResponse with response array containing fixture
+        const fixtureData = result.data as { response?: Array<{ fixture?: { timestamp?: number; status?: { short?: string } } }> };
+        const fixture = fixtureData?.response?.[0];
+        const matchTimestamp = fixture?.fixture?.timestamp;
+        const status = fixture?.fixture?.status?.short;
+
+        // If we can't determine timestamp, check metadata
+        if (!matchTimestamp) {
+          // Use updatedAt from metadata as fallback
+          const updatedAt = result.meta?.updatedAt;
+          if (updatedAt) {
+            const updatedAtSeconds = Math.floor(new Date(updatedAt).getTime() / 1000);
+            // If file was updated more than retentionDays ago, delete it
+            if (updatedAtSeconds < cutoffSeconds) {
+              await r2Provider.delete(key);
+              console.log(`🗑️ [FixtureDetails Cleanup] Deleted old file (by updatedAt): ${key}`);
+              deleted++;
+            }
+          }
+          continue;
+        }
+
+        // Only delete finished matches that are older than retention period
+        const finishedStatuses = ['FT', 'AET', 'PEN', 'PST', 'CANC', 'ABD', 'AWD', 'WO'];
+        const isFinished = status && finishedStatuses.includes(status);
+        
+        // Delete if:
+        // 1. Match is finished AND older than retention period
+        // 2. Match timestamp is before cutoff (safety check for very old unfinished matches)
+        if ((isFinished && matchTimestamp < cutoffSeconds) || 
+            (matchTimestamp < cutoffSeconds - (24 * 60 * 60))) { // Extra day buffer for unfinished
+          await r2Provider.delete(key);
+          console.log(`🗑️ [FixtureDetails Cleanup] Deleted old fixture: ${key} (timestamp: ${matchTimestamp}, status: ${status})`);
+          deleted++;
+        }
+      } catch (error) {
+        console.error(`❌ [FixtureDetails Cleanup] Failed to process ${key}:`, error);
+        errors++;
+      }
+    }
+  } catch (error) {
+    console.error(`❌ [FixtureDetails Cleanup] Error listing fixture details:`, error);
+    errors++;
+  }
+
+  console.log(`✅ [FixtureDetails Cleanup] Completed: deleted ${deleted} files, ${errors} errors`);
+  return { deleted, errors };
+};
+
 // Re-export helpers from cache-strategies for backwards compatibility
 export { getCurrentUtcDate, getTomorrowUtcDate, getYesterdayUtcDate, isHotDate };
 

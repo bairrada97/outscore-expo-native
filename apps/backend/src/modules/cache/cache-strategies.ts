@@ -3,11 +3,11 @@ import type { CacheStrategyConfig, ResourceType } from './types';
 import { SWR, TTL } from './types';
 
 // Live match statuses
-const LIVE_STATUSES = ['LIVE', '1H', '2H', 'HT', 'ET', 'BT', 'P'];
+export const LIVE_STATUSES = ['LIVE', '1H', '2H', 'HT', 'ET', 'BT', 'P'];
 // Not started status
-const NOT_STARTED_STATUSES = ['NS', 'TBD'];
+export const NOT_STARTED_STATUSES = ['NS', 'TBD'];
 // Finished statuses
-const FINISHED_STATUSES = ['FT', 'AET', 'PEN', 'PST', 'CANC', 'ABD', 'AWD', 'WO'];
+export const FINISHED_STATUSES = ['FT', 'AET', 'PEN', 'PST', 'CANC', 'ABD', 'AWD', 'WO'];
 
 /**
  * Get current UTC date string
@@ -65,30 +65,93 @@ export const getFixturesTTL = (date: string, isLive: boolean): number => {
 };
 
 /**
- * Dynamic TTL for fixture detail based on match status
+ * Dynamic TTL for fixture detail based on match status and time until match
+ * 
+ * TTL Strategy:
+ * - LIVE matches: 15 seconds (real-time updates)
+ * - FINISHED matches: Indefinite (7 days, cleanup handles removal)
+ * - NOT_STARTED:
+ *   - <= 45 min before: 15s (lineups appear)
+ *   - <= 1 hour before: 15s (active pre-match)
+ *   - <= 8 hours before: 1 hour (fetch until 1h before match)
+ *   - <= 24 hours before: 1 hour
+ *   - <= 7 days before: 6 hours
+ *   - > 7 days before: 24 hours
  */
 export const getFixtureDetailTTL = (
   params: Record<string, string>,
   data?: unknown
 ): number => {
-  // Extract status from data if it has the expected structure
-  const fixtureData = data as { fixture?: { status?: { short?: string } } } | undefined;
+  // Extract status and timestamp from data if it has the expected structure
+  const fixtureData = data as { 
+    fixture?: { 
+      status?: { short?: string }; 
+      timestamp?: number;
+    } 
+  } | undefined;
+  
   const status = fixtureData?.fixture?.status?.short || params.status;
+  const matchTimestamp = fixtureData?.fixture?.timestamp 
+    ? fixtureData.fixture.timestamp 
+    : params.timestamp 
+      ? parseInt(params.timestamp, 10) 
+      : undefined;
 
   if (!status) {
     return TTL.SHORT; // Default to short if unknown
   }
 
+  // LIVE matches: 15 seconds for real-time updates
   if (LIVE_STATUSES.includes(status)) {
-    return TTL.SHORT; // Live: 15 seconds
+    return TTL.LIVE;
   }
 
-  if (NOT_STARTED_STATUSES.includes(status)) {
-    return TTL.MEDIUM; // Not started: 5 minutes
-  }
-
+  // FINISHED matches: cache indefinitely (7 days, cleanup handles removal)
   if (FINISHED_STATUSES.includes(status)) {
-    return TTL.LONG; // Finished: 24 hours
+    return TTL.INDEFINITE;
+  }
+
+  // NOT_STARTED: Dynamic TTL based on time until match
+  if (NOT_STARTED_STATUSES.includes(status)) {
+    if (!matchTimestamp) {
+      return TTL.MEDIUM; // Default to 5 minutes if no timestamp
+    }
+
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const timeUntilMatch = matchTimestamp - nowSeconds;
+
+    // Match has passed but status not updated yet
+    if (timeUntilMatch <= 0) {
+      return TTL.SHORT;
+    }
+
+    // 45 minutes before: lineups appear
+    if (timeUntilMatch <= 45 * 60) {
+      return TTL.SHORT;
+    }
+
+    // 1 hour before: active pre-match period
+    if (timeUntilMatch <= 60 * 60) {
+      return TTL.SHORT;
+    }
+
+    // 8 hours before: fetch every hour until 1h before match
+    if (timeUntilMatch <= 8 * 60 * 60) {
+      return TTL.STANDARD; // 1 hour
+    }
+
+    // 24 hours before: fetch every hour
+    if (timeUntilMatch <= 24 * 60 * 60) {
+      return TTL.STANDARD; // 1 hour
+    }
+
+    // 7 days before: fetch every 6 hours
+    if (timeUntilMatch <= 7 * 24 * 60 * 60) {
+      return TTL.SIX_HOURS;
+    }
+
+    // More than 7 days away: fetch every 24 hours
+    return TTL.LONG;
   }
 
   return TTL.SHORT; // Default: 15 seconds (safe for unknown statuses)
@@ -133,7 +196,7 @@ export const CACHE_STRATEGIES: Record<ResourceType, CacheStrategyConfig> = {
     useKV: false, // Disabled: KV requires 60s min TTL, but live matches need 15s
     useR2: true,
     useEdge: true,
-    keyGenerator: (params) => `fixture:${params.fixtureId}`,
+    keyGenerator: (params) => `fixture-details/fixture-${params.fixtureId}.json`,
   },
 
   teams: {

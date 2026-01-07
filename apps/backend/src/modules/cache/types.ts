@@ -25,10 +25,13 @@ export enum CacheLocation {
 }
 
 export const TTL = {
+  LIVE: 15, // 15 seconds for live matches - matches frontend refresh interval
   SHORT: 20, // 20 seconds for Edge Cache (slightly longer than 15s scheduler for buffer)
-  MEDIUM: 300,
-  STANDARD: 3600,
-  LONG: 86400,
+  MEDIUM: 300, // 5 minutes
+  STANDARD: 3600, // 1 hour
+  SIX_HOURS: 21600, // 6 hours - for future fixtures (1-7 days away)
+  LONG: 86400, // 24 hours
+  INDEFINITE: 604800, // 7 days - for finished matches (cleanup handles removal)
   KV_MIN: 60, // Cloudflare KV minimum (for resources that use KV)
   R2_TODAY: 300, // 5 minutes for R2 staleness window - allows eventual consistency tolerance despite 15s refresh interval (R2 serves as fallback when Edge Cache expires, providing buffer for network delays and scheduler backoff)
 } as const;

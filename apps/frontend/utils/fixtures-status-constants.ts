@@ -22,8 +22,12 @@ export const FIXTURE_SHORT_NAMES_STATUS = [
 	'P',
 ]
 
-export const FIXTURE_IS_LIVE_STATUS = ['1H', '2H', 'HT', 'ET', 'INT', 'BT', 'P']
-export const FIXTURE_IS_FINISHED_STATUS = ['FT', 'AET', 'PEN']
+// Live match statuses (for polling/refetch logic)
+export const FIXTURE_IS_LIVE_STATUS = ['LIVE', '1H', '2H', 'HT', 'ET', 'INT', 'BT', 'P']
+
+// Finished match statuses (for stopping polling)
+export const FIXTURE_IS_FINISHED_STATUS = ['FT', 'AET', 'PEN', 'PST', 'CANC', 'ABD', 'AWD', 'WO']
+
 export const FIXTURE_HAVE_NOT_STARTED = 'NS'
 export const FIXTURE_FINISHED = 'FT'
 export const FIXTURE_HALF_TIME = 'HT'

@@ -26,15 +26,25 @@ export {
 // Cache Strategies
 export {
   CACHE_STRATEGIES,
-  getCacheKey, getCurrentUtcDate, getFixtureDetailTTL,
+  FINISHED_STATUSES,
+  getCacheKey,
+  getCurrentUtcDate,
+  getFixtureDetailTTL,
   getFixturesTTL,
-  getStrategy, getTomorrowUtcDate, getTTLForResource, getYesterdayUtcDate, isHotDate
+  getStrategy,
+  getTomorrowUtcDate,
+  getTTLForResource,
+  getYesterdayUtcDate,
+  isHotDate,
+  LIVE_STATUSES,
+  NOT_STARTED_STATUSES
 } from './cache-strategies';
 
 // Fixtures-specific strategy
 export {
   checkFixturesDateTransition,
   cleanupOldCacheData,
+  cleanupOldFixtureDetails,
   getFixturesCacheLocation,
   getFixturesR2Key,
   handleFixturesDateTransition,

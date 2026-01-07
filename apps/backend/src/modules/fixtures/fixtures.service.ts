@@ -1,14 +1,18 @@
-import type { Fixture, FormattedFixturesResponse } from '@outscore/shared-types';
-import { getFootballApiFixtures } from '../../pkg/util/football-api';
+import type { Fixture, FixturesResponse, FormattedFixturesResponse } from '@outscore/shared-types';
+import { getFootballApiFixtureDetail, getFootballApiFixtures } from '../../pkg/util/football-api';
 import {
-  type CacheEnv,
-  cacheGet,
-  cacheSet,
-  cacheSetEdgeOnly,
-  checkFixturesDateTransition,
-  getCacheKey,
-  isStale,
-  withDeduplication,
+    type CacheEnv,
+    cacheGet,
+    cacheSet,
+    cacheSetEdgeOnly,
+    checkFixturesDateTransition,
+    getCacheKey,
+    getCurrentUtcDate,
+    getTomorrowUtcDate,
+    getYesterdayUtcDate,
+    isStale,
+    LIVE_STATUSES,
+    withDeduplication,
 } from '../cache';
 import { getUtcDateInfo, normalizeToUtcDate } from './date.utils';
 import { getCurrentHourInTimezone, getDatesToFetch } from './timezone.utils';
@@ -23,6 +27,11 @@ export interface FixturesServiceResult {
   data: FormattedFixturesResponse;
   source: string;
   originalMatchCount: number;
+}
+
+export interface FixtureDetailServiceResult {
+  data: FixturesResponse;
+  source: string;
 }
 
 export const fixturesService = {
@@ -281,22 +290,50 @@ export const fixturesService = {
     let staleFixtures: Fixture[] | null = null;
 
     if (cacheResult.data && cacheResult.source !== 'none' && cacheResult.source !== 'edge') {
-      // For R2 (cold storage), use a longer staleness window
-      // Edge Cache has short TTL (30s) but R2 should serve data for longer
-      // The scheduler refreshes R2 every 15s anyway, so 5 min staleness is safe
       const isR2 = cacheResult.source === 'r2';
       const staleCheckParams = isR2 ? { ...params, _r2Staleness: 'true' } : params;
       
-      if (!isStale(cacheResult.meta, 'fixtures', staleCheckParams)) {
+      // For R2 on hot dates (today/yesterday/tomorrow), check actual age
+      // Scheduler refreshes every 15s, so R2 should be fresh
+      // If older than 2 minutes, scheduler likely failed - fetch from API
+      if (isR2 && cacheResult.meta) {
+        const updatedAt = new Date(cacheResult.meta.updatedAt).getTime();
+        const now = Date.now();
+        const ageSeconds = (now - updatedAt) / 1000;
+        
+        // Check if it's a hot date (today/yesterday/tomorrow)
+        const today = getCurrentUtcDate();
+        const yesterday = getYesterdayUtcDate();
+        const tomorrow = getTomorrowUtcDate();
+        const isHotDate = date === today || date === yesterday || date === tomorrow;
+        
+        // For hot dates, R2 should be fresh (within 2 minutes max)
+        // If older, scheduler likely failed - fetch fresh from API
+        if (isHotDate && ageSeconds > 120) {
+          console.log(`⏳ [Fixtures] R2 data for ${date} is too old (${ageSeconds.toFixed(0)}s), fetching fresh from API`);
+          staleFixtures = cacheResult.data; // Keep as fallback if API fails
+        } else if (!isStale(cacheResult.meta, 'fixtures', staleCheckParams)) {
+          console.log(`✅ [Fixtures] Cache hit from ${cacheResult.source} for ${date} (age: ${ageSeconds.toFixed(0)}s)`);
+          return {
+            fixtures: cacheResult.data,
+            source: cacheResult.source === 'kv' ? 'KV' : 'R2',
+          };
+        } else {
+          // Stale but acceptable for non-hot dates
+          staleFixtures = cacheResult.data;
+          console.log(`⏳ [Fixtures] R2 data for ${date} is stale (age: ${ageSeconds.toFixed(0)}s), keeping as fallback`);
+        }
+      } else if (!isStale(cacheResult.meta, 'fixtures', staleCheckParams)) {
+        // Non-R2 cache (KV)
         console.log(`✅ [Fixtures] Cache hit from ${cacheResult.source} for ${date}`);
         return {
           fixtures: cacheResult.data,
           source: cacheResult.source === 'kv' ? 'KV' : 'R2',
         };
+      } else {
+        staleFixtures = cacheResult.data;
+        console.log(`⏳ [Fixtures] Cache data for ${date} is stale`);
       }
-      // Keep stale data as fallback
-      staleFixtures = cacheResult.data;
-      console.log(`⏳ [Fixtures] Cache data for ${date} is stale`);
     }
 
     // Fetch from API
@@ -356,5 +393,119 @@ export const fixturesService = {
       });
     });
     return count;
+  },
+
+  /**
+   * Get fixture detail by ID
+   * Caching strategy:
+   * - LIVE: 15s TTL
+   * - FINISHED: Indefinite (7 days, cleanup handles removal)
+   * - NOT_STARTED: Dynamic based on time until match
+   */
+  async getFixtureDetail({
+    fixtureId,
+    env,
+    ctx,
+  }: {
+    fixtureId: number;
+    env: FixturesEnv;
+    ctx: ExecutionContext;
+  }): Promise<FixtureDetailServiceResult> {
+    console.log(`🔍 [FixtureDetail] Request: fixtureId=${fixtureId}`);
+
+    // Generate cache key for deduplication
+    const dedupKey = getCacheKey('fixtureDetail', { fixtureId: fixtureId.toString() });
+
+    return withDeduplication(dedupKey, async () => {
+      const params = { fixtureId: fixtureId.toString() };
+
+      // 1. Check Edge Cache for cached response
+      const edgeResult = await cacheGet<FixturesResponse>(env, 'fixtureDetail', params);
+
+      if (edgeResult.source === 'edge' && edgeResult.data) {
+        console.log(`✅ [FixtureDetail] Edge Cache hit for fixture ${fixtureId}`);
+        return {
+          data: edgeResult.data,
+          source: 'Edge Cache',
+        };
+      }
+
+      // 2. Check R2 for cached response
+      let staleData: FixturesResponse | null = null;
+      
+      if (edgeResult.data && edgeResult.source === 'r2') {
+        // Extract status from cached data to determine if it's LIVE
+        const cachedFixture = edgeResult.data.response?.[0];
+        const cachedStatus = cachedFixture?.fixture?.status?.short;
+        const isLiveMatch = cachedStatus && LIVE_STATUSES.includes(cachedStatus);
+        
+        if (isLiveMatch) {
+          // For LIVE matches, skip R2 - we need fresh data from API
+          // Keep R2 data only as fallback if API fails
+          staleData = edgeResult.data;
+          console.log(`⏳ [FixtureDetail] R2 has LIVE match data for ${fixtureId}, fetching fresh from API`);
+        } else {
+          // For non-LIVE matches, check if R2 data is stale
+          if (!isStale(edgeResult.meta, 'fixtureDetail', params)) {
+            console.log(`✅ [FixtureDetail] R2 Cache hit for fixture ${fixtureId}`);
+            return {
+              data: edgeResult.data,
+              source: 'R2',
+            };
+          }
+          // Keep stale data as fallback
+          staleData = edgeResult.data;
+          console.log(`⏳ [FixtureDetail] R2 data is stale for fixture ${fixtureId}`);
+        }
+      }
+
+      // 3. Fetch from API
+      console.log(`🌐 [FixtureDetail] Fetching fixture ${fixtureId} from API`);
+      try {
+        const response = await getFootballApiFixtureDetail(
+          fixtureId,
+          env.FOOTBALL_API_URL,
+          env.RAPIDAPI_KEY
+        );
+
+        // Extract status and timestamp for TTL calculation
+        const fixture = response.response[0];
+        const status = fixture?.fixture?.status?.short || '';
+        const timestamp = fixture?.fixture?.timestamp?.toString() || '';
+
+        // Cache response (non-blocking)
+        ctx.waitUntil(
+          cacheSet(env, 'fixtureDetail', { ...params, status, timestamp }, response)
+            .then((success) => {
+              if (success) {
+                console.log(`✅ [FixtureDetail] Successfully cached fixture ${fixtureId}`);
+              } else {
+                console.warn(`⚠️ [FixtureDetail] Some cache layers failed for fixture ${fixtureId}`);
+              }
+            })
+            .catch((err) => {
+              console.error(`❌ [FixtureDetail] Failed to cache fixture ${fixtureId}:`, err);
+            })
+        );
+
+        return {
+          data: response,
+          source: 'API',
+        };
+      } catch (error) {
+        console.error(`❌ [FixtureDetail] API fetch failed for fixture ${fixtureId}:`, error);
+
+        // Fall back to stale data if available
+        if (staleData) {
+          console.log(`⚠️ [FixtureDetail] Using stale data as fallback for fixture ${fixtureId}`);
+          return {
+            data: staleData,
+            source: 'Stale Cache',
+          };
+        }
+
+        throw error;
+      }
+    });
   },
 };

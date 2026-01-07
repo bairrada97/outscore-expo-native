@@ -32,7 +32,7 @@ export function generateFixtureSlug(fixture: FormattedMatch): string {
  * Extracts the fixture ID from a slug
  * The ID is always the last segment after the final hyphen
  */
-export function parseFixtureSlug(slug: string): string {
+export function parseFixtureSlug(slug: string): number {
 	const parts = slug.split("-");
-	return parts[parts.length - 1];
+	return parseInt(parts[parts.length - 1], 10);
 }

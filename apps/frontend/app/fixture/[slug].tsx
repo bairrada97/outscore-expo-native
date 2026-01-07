@@ -1,18 +1,78 @@
-import { fixtureByIdQuery } from "@/queries/fixture-by-id";
-import { parseFixtureSlug } from "@/utils/fixture-slug";
-import { isWeb } from "@/utils/platform";
-import { useQuery } from "@tanstack/react-query";
-import { Stack, useLocalSearchParams } from "expo-router";
-import { ActivityIndicator, View } from "react-native";
 import { Text } from "@/components/ui/text";
+import {
+	fixtureByIdQuery,
+	getFixtureRefetchInterval,
+} from "@/queries/fixture-by-id";
+import { FIFTEEN_SECONDS_CACHE } from "@/utils/constants";
+import { parseFixtureSlug } from "@/utils/fixture-slug";
+import {
+	FIXTURE_IS_FINISHED_STATUS,
+	FIXTURE_IS_LIVE_STATUS,
+} from "@/utils/fixtures-status-constants";
+import { isWeb } from "@/utils/platform";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Stack, useLocalSearchParams } from "expo-router";
+import { useCallback, useRef } from "react";
+import { ActivityIndicator, View } from "react-native";
 
 export default function FixtureDetailScreen() {
 	const { slug } = useLocalSearchParams<{ slug: string }>();
 	const fixtureId = parseFixtureSlug(slug);
+	const queryClient = useQueryClient();
+	const previousStatusRef = useRef<string | null>(null);
 
-	const { data, isLoading, error } = useQuery(
-		fixtureByIdQuery({ fixtureId }),
+	// Callback to detect significant status changes and invalidate query
+	const handleStatusChange = useCallback(
+		(currentStatus: string | undefined) => {
+			if (!currentStatus) return;
+
+			const previousStatus = previousStatusRef.current;
+			previousStatusRef.current = currentStatus;
+
+			// Detect significant status changes
+			if (previousStatus && currentStatus !== previousStatus) {
+				const wasNotStarted =
+					previousStatus === "NS" || previousStatus === "TBD";
+				const isNowLive = FIXTURE_IS_LIVE_STATUS.includes(currentStatus);
+				const wasLive = FIXTURE_IS_LIVE_STATUS.includes(previousStatus);
+				const isNowFinished =
+					FIXTURE_IS_FINISHED_STATUS.includes(currentStatus);
+
+				// NS/TBD -> LIVE or LIVE -> FINISHED
+				if ((wasNotStarted && isNowLive) || (wasLive && isNowFinished)) {
+					// Invalidate to force immediate refetch with new config
+					queryClient.invalidateQueries({
+						queryKey: ["fixture", String(fixtureId)],
+					});
+				}
+			}
+		},
+		[fixtureId, queryClient],
 	);
+
+	const { data, isLoading, error } = useQuery({
+		...fixtureByIdQuery({ fixtureId }),
+		// Dynamic refetchInterval based on current fixture data
+		refetchInterval: (query) => {
+			const fixtureData = query.state.data;
+
+			// If data is not yet loaded, use default polling interval
+			// This ensures polling continues until data loads
+			if (!fixtureData) {
+				return FIFTEEN_SECONDS_CACHE + 2000; // 17s default for live matches
+			}
+
+			const interval = getFixtureRefetchInterval(fixtureData);
+
+			// Track status changes for status transitions
+			const fixture = fixtureData?.response?.[0];
+			if (fixture) {
+				handleStatusChange(fixture.fixture.status.short);
+			}
+
+			return interval;
+		},
+	});
 
 	if (isLoading) {
 		return (
@@ -36,7 +96,7 @@ export default function FixtureDetailScreen() {
 		);
 	}
 
-	const fixture = data?.data?.response?.[0];
+	const fixture = data?.response?.[0];
 
 	if (!fixture) {
 		return (

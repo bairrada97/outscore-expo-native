@@ -5,6 +5,7 @@ import {
   cacheSetEdgeOnly,
   checkFixturesDateTransition,
   cleanupOldCacheData,
+  cleanupOldFixtureDetails,
   getCurrentUtcDate,
   getTomorrowUtcDate,
 } from '../cache';
@@ -161,11 +162,21 @@ export const handleScheduledEvent = async (
   const minute = scheduledTime.getUTCMinutes();
   if (hour === 2 && minute < 5) {
     console.log(`🧹 [Scheduler] Running daily cleanup`);
+    
+    // Clean up old fixtures cache data (30 days historical, 14 days future)
     try {
-      const result = await cleanupOldCacheData(env, 30, 14);
-      console.log(`✅ [Scheduler] Cleanup completed: deleted ${result.deleted} files, ${result.errors} errors`);
+      const fixturesResult = await cleanupOldCacheData(env, 30, 14);
+      console.log(`✅ [Scheduler] Fixtures cleanup completed: deleted ${fixturesResult.deleted} files, ${fixturesResult.errors} errors`);
     } catch (error) {
-      console.error(`❌ [Scheduler] Cleanup failed:`, error);
+      console.error(`❌ [Scheduler] Fixtures cleanup failed:`, error);
+    }
+
+    // Clean up old fixture details (7 days retention)
+    try {
+      const detailsResult = await cleanupOldFixtureDetails(env, 7);
+      console.log(`✅ [Scheduler] Fixture details cleanup completed: deleted ${detailsResult.deleted} files, ${detailsResult.errors} errors`);
+    } catch (error) {
+      console.error(`❌ [Scheduler] Fixture details cleanup failed:`, error);
     }
   }
 
