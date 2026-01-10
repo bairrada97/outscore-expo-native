@@ -3,6 +3,8 @@ import {
 	botProtection,
 	createCors,
 	createFixturesRoutes,
+	createStandingsRoutes,
+	createTeamsRoutes,
 	type FixturesEnv,
 	handleScheduledEvent,
 	rateLimiter,
@@ -77,6 +79,22 @@ app.use(
 	}),
 );
 
+app.use(
+	"/teams*",
+  rateLimiter({
+    limit: 60,
+    windowSec: 60,
+	}),
+);
+
+app.use(
+	"/standings*",
+  rateLimiter({
+    limit: 60,
+    windowSec: 60,
+	}),
+);
+
 /**
  * Health check endpoint
  */
@@ -99,9 +117,19 @@ app.get("/metrics", (context) => {
 });
 
 /**
- * Fixtures routes
+ * Fixtures routes (includes /fixtures/injuries)
  */
 app.route("/fixtures", createFixturesRoutes());
+
+/**
+ * Teams routes
+ */
+app.route("/teams", createTeamsRoutes());
+
+/**
+ * Standings routes
+ */
+app.route("/standings", createStandingsRoutes());
 
 /**
  * 404 handler

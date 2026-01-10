@@ -222,11 +222,55 @@ export const CACHE_STRATEGIES: Record<ResourceType, CacheStrategyConfig> = {
   standings: {
     resourceType: 'standings',
     ttlMode: 'static',
+    staticTTL: TTL.STANDARD, // 1 hour - matches API update frequency
+    useKV: false,
+    useR2: true,
+    useEdge: true,
+    keyGenerator: (params) => `leagues/${params.leagueId}/standings-season-${params.season}.json`,
+  },
+
+  teamFixtures: {
+    resourceType: 'teamFixtures',
+    ttlMode: 'static',
+    staticTTL: TTL.STANDARD, // 1 hour - invalidation handled in service layer
+    useKV: false,
+    useR2: true,
+    useEdge: true,
+    keyGenerator: (params) => `teams/${params.teamId}/fixtures-last-${params.last}.json`,
+  },
+
+  teamStatistics: {
+    resourceType: 'teamStatistics',
+    ttlMode: 'static',
     staticTTL: TTL.STANDARD, // 1 hour
     useKV: false,
     useR2: true,
     useEdge: true,
-    keyGenerator: (params) => `standings:${params.leagueId}:${params.season}`,
+    keyGenerator: (params) => `teams/${params.team}/statistics-league-${params.league}-season-${params.season}.json`,
+  },
+
+  h2hFixtures: {
+    resourceType: 'h2hFixtures',
+    ttlMode: 'static',
+    staticTTL: TTL.STANDARD, // 1 hour - invalidation handled in service layer
+    useKV: false,
+    useR2: true,
+    useEdge: true,
+    keyGenerator: (params) => `h2h/${params.team1}-${params.team2}/fixtures-last-${params.last}.json`,
+  },
+
+  injuries: {
+    resourceType: 'injuries',
+    ttlMode: 'static',
+    staticTTL: TTL.STANDARD, // 1 hour - invalidation handled in service layer
+    useKV: false,
+    useR2: true,
+    useEdge: true,
+    keyGenerator: (params) => {
+      // Use date from params if available, otherwise fallback to today (similar to fixtureDetail)
+      const date = params.date || getCurrentUtcDate();
+      return `fixture-details/${date}/fixture-${params.fixtureId}-season-${params.season}-injuries.json`;
+    },
   },
 };
 

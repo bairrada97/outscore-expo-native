@@ -1,15 +1,20 @@
 // Cache module
-export * from './cache';
+export * from "./cache";
 
 // Fixtures module
-export * from './fixtures';
-
-// Security module
-export * from './security';
-
-// Timezones module
-export { commonTimezones, getValidTimezones, isValidTimezone } from './timezones';
-
+export * from "./fixtures";
 // Scheduler module
-export * from './scheduler';
+export * from "./scheduler";
+// Security module
+export * from "./security";
+// Standings module
+export * from "./standings";
+// Teams module
+export * from "./teams";
+// Timezones module
+export {
+  commonTimezones,
+  getValidTimezones,
+  isValidTimezone
+} from "./timezones";
 

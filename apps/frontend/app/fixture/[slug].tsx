@@ -1,4 +1,5 @@
 import { Text } from "@/components/ui/text";
+import { useFixtureRelatedData } from "@/hooks/useFixtureRelatedData";
 import {
 	fixtureByIdQuery,
 	getFixtureRefetchInterval,
@@ -74,6 +75,12 @@ export default function FixtureDetailScreen() {
 		},
 	});
 
+	const fixture = data?.response?.[0];
+
+	// Prefetch all related data for the fixture (team stats, H2H, injuries, standings)
+	// This hook triggers parallel queries for all related data once fixture is loaded
+	useFixtureRelatedData(fixture);
+
 	if (isLoading) {
 		return (
 			<>
@@ -95,8 +102,6 @@ export default function FixtureDetailScreen() {
 			</>
 		);
 	}
-
-	const fixture = data?.response?.[0];
 
 	if (!fixture) {
 		return (
