@@ -1,6 +1,6 @@
 # Phase 2: Pattern Detection (Week 1-2)
 
-**Reference:** Lines 7640-7851 in `betting-insights-algorithm.md`
+**Reference:** See "Phase 2: Pattern Detection" section in `betting-insights-algorithm.md`
 
 ## Overview
 
@@ -14,7 +14,7 @@ Phase 2 implements automatic pattern detection for teams and head-to-head matchu
 
 ### 2.1 Team Pattern Detection
 
-**Reference:** Lines 7671-7796
+**Reference:** See "2.1 Team Pattern Detection" in `betting-insights-algorithm.md`
 
 **Goal:** Detect patterns in team performance data (form streaks, scoring patterns, defensive issues, etc.)
 
@@ -81,7 +81,7 @@ Phase 2 implements automatic pattern detection for teams and head-to-head matchu
 
 ### 2.2 H2H Pattern Detection
 
-**Reference:** Lines 7798-7847
+**Reference:** See "2.2 H2H Pattern Detection" in `betting-insights-algorithm.md`
 
 **Goal:** Detect patterns in head-to-head matchups between teams
 

@@ -1,6 +1,6 @@
 # ML Phase 1: Historical Data Integration & Feature Engineering
 
-**Reference:** Lines 13-3330 in `betting-insights-algorithm.md`
+**Reference:** See "ML Phase 1" sections (1.1-1.6) in `betting-insights-algorithm.md`
 
 ## Overview
 
@@ -14,7 +14,7 @@ ML Phase 1 focuses on acquiring, cleaning, and engineering features from histori
 
 ### ML 1.1 Data Acquisition & Cleaning
 
-**Reference:** Lines 15-24
+**Reference:** See "1.1 Data Acquisition & Cleaning" in `betting-insights-algorithm.md`
 
 **Goal:** Download and clean historical dataset for ML training
 
@@ -53,7 +53,7 @@ ML Phase 1 focuses on acquiring, cleaning, and engineering features from histori
 
 ### ML 1.1.1 Team Name Standardization & Mapping
 
-**Reference:** Lines 25-487
+**Reference:** See "1.1.1 Team Name Standardization" in `betting-insights-algorithm.md`
 
 **Goal:** Create automated team name mapping system for combining historical and API-Football data
 
@@ -91,7 +91,7 @@ ML Phase 1 focuses on acquiring, cleaning, and engineering features from histori
 
 ### ML 1.2 Feature Engineering - Form Calculations
 
-**Reference:** Lines 582-1067
+**Reference:** See "1.2 Feature Engineering - Form" in `betting-insights-algorithm.md`
 
 **Goal:** Engineer form-related features for ML training
 
@@ -128,7 +128,7 @@ ML Phase 1 focuses on acquiring, cleaning, and engineering features from histori
 
 ### ML 1.2.5 Opponent-Adjusted Rate Stats
 
-**Reference:** Lines 608-1067
+**Reference:** See "1.2.5 Opponent-Adjusted Rate Stats" in `betting-insights-algorithm.md`
 
 **Goal:** Calculate opponent-adjusted scoring/defensive rates
 
@@ -157,7 +157,7 @@ ML Phase 1 focuses on acquiring, cleaning, and engineering features from histori
 
 ### ML 1.3 Feature Engineering - Mind/Mood/DNA Layers
 
-**Reference:** Lines 1067-1106
+**Reference:** See "1.3 Mind/Mood/DNA Layers" in `betting-insights-algorithm.md`
 
 **Goal:** Engineer Mind, Mood, and DNA layer features for ML training
 
@@ -217,7 +217,7 @@ These features are INPUT to the ML models. The ML models learn:
 
 ### ML 1.4 Feature Engineering - Match Context Features
 
-**Reference:** Lines 1106-1166
+**Reference:** See "1.4 Match Context Features" in `betting-insights-algorithm.md`
 
 **Goal:** Engineer match context features
 
@@ -260,7 +260,7 @@ These features are INPUT to the ML models. The ML models learn:
 
 ### ML 1.4.5 Probabilistic Safety Flags
 
-**Reference:** Lines 1166-1401
+**Reference:** See "1.4.5 Probabilistic Safety Flags" in `betting-insights-algorithm.md`
 
 **Goal:** Engineer safety flag features
 
@@ -292,7 +292,7 @@ These features are INPUT to the ML models. The ML models learn:
 
 ### ML 1.5 Data Quality Assessment & Handling
 
-**Reference:** Lines 1401-1463
+**Reference:** See "1.5 Data Quality Assessment" in `betting-insights-algorithm.md`
 
 **Goal:** Assess data quality and handle edge cases
 
@@ -328,7 +328,7 @@ These features are INPUT to the ML models. The ML models learn:
 
 ### ML 1.6 Centralized Configuration Architecture
 
-**Reference:** Lines 2974-3330
+**Reference:** See "1.6 Centralized Configuration" in `betting-insights-algorithm.md`
 
 **Goal:** Create centralized configuration for all tunable parameters
 

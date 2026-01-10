@@ -1,6 +1,6 @@
 # Phase 5: API Endpoint (Week 3)
 
-**Reference:** Lines 13241-13794 in `betting-insights-algorithm.md`
+**Reference:** See "Phase 5: API Endpoint" section in `betting-insights-algorithm.md`
 
 ## Overview
 
@@ -20,7 +20,7 @@ Phase 5 implements the main API endpoint that exposes betting insights predictio
 
 ### 5.1 API Route Implementation
 
-**Reference:** Lines 13241-13427
+**Reference:** See "5.1 API Route Implementation" in `betting-insights-algorithm.md`
 
 **Goal:** Create main API endpoint for betting insights
 
@@ -92,50 +92,57 @@ Phase 5 implements the main API endpoint that exposes betting insights predictio
 
 ### 5.2 Caching Strategy
 
-**Reference:** Lines 13259-13420
+**Reference:** See "API Endpoint & Caching" section in `betting-insights-algorithm.md`
 
-**Goal:** Implement caching for insights endpoint
+**Goal:** Implement caching for insights endpoint, reusing the existing fixtures TTL/invalidation behavior
 
 #### Sub-tasks:
 
 1. **Cache Key Generation**
    - Generate cache key: `insights:${fixtureId}`
-   - Include match state (live vs scheduled)
+   - Namespace for insights but follow fixtures conventions
 
 2. **Cache Check**
    - Check Edge Cache first
    - Check R2 storage if Edge Cache miss
    - Return cached response if valid
 
-3. **Cache Storage**
-   - Store response in Edge Cache (1 hour TTL)
-   - Store response in R2 (24 hour TTL)
+3. **Cache Storage & TTL (Reuse Fixtures Behavior)**
+   - **Reuse the same TTL strategy already implemented for fixture detail endpoints** (see `fixtures.routes.ts`)
+   - TTL varies by fixture status:
+     - **Live matches:** short cache (15s max-age, 30s SWR)
+     - **Finished matches:** long cache (7 days)
+     - **45 min before kickoff:** short cache (15s) for lineups
+     - **8 hours before:** 1 hour cache
+     - **7 days before:** 6 hour cache
+     - **Further future:** 24 hour cache
    - Use stale-while-revalidate pattern
 
-4. **Cache Invalidation**
-   - Invalidate on match start (live matches)
-   - Invalidate on match end (final results)
-   - Invalidate on significant updates
+4. **Cache Invalidation (Reuse Fixtures Behavior)**
+   - Invalidation follows the same triggers as fixtures:
+     - Match state transitions (scheduled → live → finished)
+     - Significant updates (lineups, events)
+   - No custom invalidation logic needed—rely on TTL expiry
 
 #### Files to Create:
 
-- `apps/backend/src/modules/betting-insights/cache/insights-cache.ts` - Caching logic
-- Extend `apps/backend/src/modules/cache/cache-strategies.ts` - Add insights strategy
+- `apps/backend/src/modules/betting-insights/cache/insights-cache.ts` - Caching logic (wraps existing patterns)
+- Extend `apps/backend/src/modules/cache/cache-strategies.ts` - Add insights strategy (if needed)
 
 #### Validation Criteria:
 
-- ✅ Cache keys generated correctly
+- ✅ Cache keys generated correctly with `insights:` namespace
 - ✅ Cache check works correctly
 - ✅ Cache storage works correctly
-- ✅ Cache invalidation works correctly
-- ✅ TTLs are appropriate (1 hour Edge, 24 hour R2)
+- ✅ **TTLs match existing fixtures behavior** (no custom TTL scheme)
 - ✅ Stale-while-revalidate works
+- ✅ Cache headers follow same pattern as fixtures routes
 
 ---
 
 ### 5.3 Response Structure
 
-**Reference:** Lines 13324-13410
+**Reference:** See "5.3 Response Structure" in `betting-insights-algorithm.md`
 
 **Goal:** Define and implement response structure
 
@@ -203,7 +210,7 @@ Phase 5 implements the main API endpoint that exposes betting insights predictio
    - Log warnings
 
 4. **Validation Errors**
-   - Validate matchId format
+   - Validate fixtureId format
    - Return 400 for invalid input
    - Provide helpful error messages
 
@@ -264,7 +271,7 @@ Phase 5 implements the main API endpoint that exposes betting insights predictio
 ```typescript
 interface InsightsResponse {
   match: {
-    id: string;
+    fixtureId: string;
     homeTeam: string;
     awayTeam: string;
     date: string;
@@ -325,6 +332,10 @@ interface InsightsResponse {
     generatedAt: string;
     confidence: 'HIGH' | 'MEDIUM' | 'LOW';
     source: 'Edge Cache' | 'R2' | 'API';
+    // Versioning for traceability (see Acceptance Gates section)
+    algorithmVersion: string;
+    weightsVersion: string;
+    configHash: string;
   };
 }
 ```
@@ -386,42 +397,83 @@ interface InsightsResponse {
 - [ ] Test with international matches
 - [ ] Performance tests
 
+## Acceptance Gates (Launch Readiness)
+
+Before launching the insights endpoint, the following criteria must be met:
+
+### Versioning & Traceability
+
+The API response `meta` object must include:
+
+```typescript
+meta: {
+  generatedAt: string;
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  source: 'Edge Cache' | 'R2' | 'API';
+  // NEW: Versioning fields for traceability
+  algorithmVersion: string;    // e.g., "1.0.0" - bump on logic changes
+  weightsVersion: string;      // e.g., "2024-01-10" - bump on ML weight updates
+  configHash: string;          // Short hash of algorithm config for debugging
+}
+```
+
+### Performance Gates
+- [ ] **Cached response < 100ms (p95)**
+- [ ] **Uncached response < 500ms (p95)**
+- [ ] **Cache hit rate > 80%** (after warm-up period)
+- [ ] **Error rate < 1%**
+
+### Calibration Gates (Per-Market)
+- [ ] **Brier Score meets Phase 4 baseline** - No degradation from capping/adjustments
+- [ ] **ECE < 0.10** - Well-calibrated probabilities
+- [ ] **League-stratified validation** - Top 5 leagues must pass individually (prevent "global average looks fine" while one league is broken)
+
+### Data Quality Gates
+- [ ] **Missing data handling tested** - Endpoint returns partial response or appropriate error
+- [ ] **API-Football failure handling tested** - Graceful degradation on upstream errors
+- [ ] **Rate limit handling tested** - 429 returned appropriately
+
+### Monitoring & Kill-Switch
+- [ ] **Logging enabled** - All predictions logged with fixtureId, predictions, adjustments
+- [ ] **Metrics endpoint available** - Brier score, ECE, cap-hit rate, error rate
+- [ ] **Kill-switch documented** - Procedure to disable insights endpoint without affecting fixtures
+
 ## Notes
 
 - Follow existing backend architecture patterns (similar to fixtures module)
 - Use existing cache infrastructure (Edge Cache, R2)
 - Use existing error handling patterns
 - Response structure should be comprehensive but not overwhelming
-- Caching is critical for performance (1 hour Edge Cache, 24 hour R2)
-- Cache invalidation on match start/end is important
+- **Caching reuses the existing fixtures TTL/invalidation behavior** (see `fixtures.routes.ts` for reference)
+- No custom TTL scheme—insights inherits the same status-aware caching as fixture detail
 - Error handling should be graceful and informative
-- Response headers should follow existing patterns
+- Response headers should follow existing patterns (X-Source, Cache-Control, etc.)
 - Integration with existing Hono app should be seamless
 - Performance target: <100ms for cached responses, <500ms for uncached
 
 ## API Endpoint Specification
 
-### GET /api/matches/:matchId/insights
+### GET /api/fixtures/:fixtureId/insights
 
 **Parameters:**
-- `matchId` (path): Match ID from API-Football
+- `fixtureId` (path): Fixture ID from API-Football (consistent with existing fixtures endpoint vocabulary)
 
 **Response:**
 - 200: InsightsResponse
-- 404: Match not found
-- 400: Invalid matchId
+- 404: Fixture not found
+- 400: Invalid fixtureId
 - 502: API error
 
 **Example Request:**
 ```
-GET /api/matches/1234567/insights
+GET /api/fixtures/1234567/insights
 ```
 
 **Example Response:**
 ```json
 {
   "match": {
-    "id": "1234567",
+    "fixtureId": "1234567",
     "homeTeam": "Manchester United",
     "awayTeam": "Liverpool",
     "date": "2026-01-03",
@@ -437,7 +489,10 @@ GET /api/matches/1234567/insights
   "meta": {
     "generatedAt": "2026-01-03T12:00:00.000Z",
     "confidence": "HIGH",
-    "source": "Edge Cache"
+    "source": "Edge Cache",
+    "algorithmVersion": "1.0.0",
+    "weightsVersion": "2026-01-01",
+    "configHash": "a1b2c3d4"
   }
 }
 ```

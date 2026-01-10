@@ -1,6 +1,6 @@
 # Phase 4.5: Probability Swing Caps & Asymmetric Weighting
 
-**Reference:** Lines 10318-11547 in `betting-insights-algorithm.md`
+**Reference:** See "Phase 4.5: Probability Swing Caps" section in `betting-insights-algorithm.md`
 
 ## Overview
 
@@ -14,7 +14,7 @@ Phase 4.5 implements probability swing caps and asymmetric weighting to prevent 
 
 ### 4.5.1 Hard Probability Swing Cap
 
-**Reference:** Lines 10346-10389
+**Reference:** See "4.5.1 Hard Probability Swing Cap" in `betting-insights-algorithm.md`
 
 **Goal:** Prevent wild probability swings from base probability
 
@@ -46,7 +46,7 @@ Phase 4.5 implements probability swing caps and asymmetric weighting to prevent 
 
 ### 4.5.2 Confidence Downgrade on Large Swings
 
-**Reference:** Lines 10390-10443
+**Reference:** See "4.5.2 Confidence Downgrade" in `betting-insights-algorithm.md`
 
 **Goal:** Downgrade confidence when large swings occur
 
@@ -77,7 +77,7 @@ Phase 4.5 implements probability swing caps and asymmetric weighting to prevent 
 
 ### 4.5.3 Asymmetric Weighting System
 
-**Reference:** Lines 10444-10594
+**Reference:** See "4.5.3 Asymmetric Weighting System" in `betting-insights-algorithm.md`
 
 **Goal:** Apply different caps for upward vs downward moves based on market odds and risk/reward
 
@@ -113,7 +113,7 @@ Phase 4.5 implements probability swing caps and asymmetric weighting to prevent 
 
 ### 4.5.4 Kelly-Aware Confidence
 
-**Reference:** Lines 10594-10670
+**Reference:** See "4.5.4 Kelly-Aware Confidence" in `betting-insights-algorithm.md`
 
 **Goal:** Adjust confidence based on Kelly Criterion for optimal bet sizing
 
@@ -141,7 +141,7 @@ Phase 4.5 implements probability swing caps and asymmetric weighting to prevent 
 
 ### 4.5.5 Cumulative Caps & Overcorrection Detection
 
-**Reference:** Lines 10756-10888 (new functions added)
+**Reference:** See "4.5.5 Cumulative Caps" in `betting-insights-algorithm.md`
 
 **Goal:** Prevent same-type adjustment stacking and detect overcorrection
 
@@ -181,7 +181,7 @@ Phase 4.5 implements probability swing caps and asymmetric weighting to prevent 
 
 ### 4.5.6 Unified Helper Function
 
-**Reference:** Lines 10688-10888 (updated function)
+**Reference:** See "4.5.6 Unified Helper Function" in `betting-insights-algorithm.md`
 
 **Goal:** Create single helper function for all caps, asymmetry, and overcorrection protection
 
@@ -215,7 +215,7 @@ Phase 4.5 implements probability swing caps and asymmetric weighting to prevent 
 
 ### 4.5.7 Production Monitoring & Auto-Correction
 
-**Reference:** Lines 11157-11547
+**Reference:** See "4.5.7 Production Monitoring" in `betting-insights-algorithm.md`
 
 **Goal:** Monitor production predictions and auto-correct issues
 
@@ -331,6 +331,37 @@ interface AsymmetricConfig {
 - [ ] Test same-type adjustment stacking prevention
 - [ ] Integration tests with prediction functions
 - [ ] Test configuration changes
+
+## Acceptance Gates (Before Phase 5)
+
+Before proceeding to Phase 5, the following acceptance criteria must be met:
+
+### Calibration Validation
+- [ ] **Post-cap Brier score ≤ pre-cap Brier score** - Caps should not degrade calibration
+- [ ] **Per-market ECE < 0.10** - After caps, probabilities still well-calibrated
+- [ ] **Swing distribution documented** - Know how often caps are hit
+
+### Cap Effectiveness
+- [ ] **Cap-hit rate < 15%** - Caps should not be triggered too often (indicates base predictions need tuning)
+- [ ] **Overcorrection rate < 5%** - Very few predictions should trigger overcorrection detection
+- [ ] **Confidence distribution reasonable** - Not all HIGH or all LOW
+
+### Kill-Switch Criteria (Production)
+
+The following thresholds should trigger investigation or auto-disable:
+
+| Metric | Warning | Critical (Auto-Disable) |
+|--------|---------|------------------------|
+| Brier Score Increase | +0.02 vs baseline | +0.05 vs baseline |
+| ECE Increase | +0.03 vs baseline | +0.08 vs baseline |
+| Cap-Hit Rate | >20% | >35% |
+| Overcorrection Rate | >10% | >20% |
+| Swing >20% Rate | >5% | >15% |
+
+### Feature Flags
+- [ ] **Per-adjustment-type disable flags** - Ability to disable formation, injury, match-type, etc. independently
+- [ ] **Global cap disable flag** - Fallback to uncapped predictions if caps cause issues
+- [ ] **Monitoring dashboard** - Real-time visibility into cap/swing metrics
 
 ## Notes
 

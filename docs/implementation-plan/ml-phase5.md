@@ -1,6 +1,6 @@
 # ML Phase 5: Advanced Features (Future Enhancements)
 
-**Reference:** Lines 5366-5417 in `betting-insights-algorithm.md`
+**Reference:** See "ML Phase 5" sections (5.1-5.3) in `betting-insights-algorithm.md`
 
 ## Overview
 
@@ -15,7 +15,7 @@ ML Phase 5 covers advanced features and enhancements that can be added after the
 
 ### ML 5.1 Additional Features to Consider
 
-**Reference:** Lines 5368-5395
+**Reference:** See "5.1 Additional Features" in `betting-insights-algorithm.md`
 
 **Goal:** Add additional features that may improve model accuracy
 
@@ -66,7 +66,7 @@ ML Phase 5 covers advanced features and enhancements that can be added after the
 
 ### ML 5.2 Market-Specific Models
 
-**Reference:** Lines 5396-5406
+**Reference:** See "5.2 Market-Specific Models" in `betting-insights-algorithm.md`
 
 **Goal:** Train separate models per league for improved accuracy
 
@@ -103,7 +103,7 @@ ML Phase 5 covers advanced features and enhancements that can be added after the
 
 ### ML 5.3 Real-Time Model Updates
 
-**Reference:** Lines 5407-5416
+**Reference:** See "5.3 Real-Time Model Updates" in `betting-insights-algorithm.md`
 
 **Goal:** Update predictions based on live match events
 

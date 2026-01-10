@@ -1,6 +1,6 @@
 # Phase 4.6: Algorithm Refinements
 
-**Reference:** Lines 11547-12242 in `betting-insights-algorithm.md`
+**Reference:** See "Phase 4.6: Algorithm Refinements" section in `betting-insights-algorithm.md`
 
 ## Overview
 
@@ -15,7 +15,7 @@ Phase 4.6 implements critical refinements to improve prediction accuracy. This p
 
 ### 4.6.1 Match Result Prediction Refinement (Critical)
 
-**Reference:** Lines 11551-11911
+**Reference:** See "4.6.1 Match Result Prediction Refinement" in `betting-insights-algorithm.md`
 
 **Goal:** Replace simplified Match Result prediction with full implementation using all factors
 
@@ -80,7 +80,7 @@ Phase 4.6 implements critical refinements to improve prediction accuracy. This p
 
 ### 4.6.2 Rest Advantage Integration (High Priority)
 
-**Reference:** Lines 11911-11963
+**Reference:** See "4.6.2 Rest Advantage Integration" in `betting-insights-algorithm.md`
 
 **Goal:** Integrate rest advantage into all prediction functions
 
@@ -118,7 +118,7 @@ Phase 4.6 implements critical refinements to improve prediction accuracy. This p
 
 ### 4.6.3 Opponent Quality Weighting (High Priority)
 
-**Reference:** Lines 11963-12033
+**Reference:** See "4.6.3 Opponent Quality Weighting" in `betting-insights-algorithm.md`
 
 **Goal:** Weight scoring rates by opponent quality
 
@@ -154,7 +154,7 @@ Phase 4.6 implements critical refinements to improve prediction accuracy. This p
 
 ### 4.6.4 Weighted Scoring Rate (Medium Priority)
 
-**Reference:** Lines 12033-12084
+**Reference:** See "4.6.4 Weighted Scoring Rate" in `betting-insights-algorithm.md`
 
 **Goal:** Replace simple percentage calculations with weighted scoring rates
 
@@ -191,7 +191,7 @@ Phase 4.6 implements critical refinements to improve prediction accuracy. This p
 
 ### 4.6.5 Fixture Congestion (Medium Priority)
 
-**Reference:** Lines 12084-12202
+**Reference:** See "4.6.5 Fixture Congestion" in `betting-insights-algorithm.md`
 
 **Goal:** Account for fixture congestion in predictions
 

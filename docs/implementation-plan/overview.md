@@ -24,20 +24,28 @@ This checkpoint ensures that the implementation can proceed smoothly without mis
 
 ### Week-by-Week Implementation Phases
 
-1. **Phase 1: Core Data Layer (Week 1)** - Lines 6092-7640
+1. **Phase 1: Core Data Layer (Week 1)**
+   - See: `phase1.md` for detailed implementation plan
+   - Reference: "Phase 1: Core Data Layer" section in `betting-insights-algorithm.md`
    - Data fetching and caching
    - Stats calculation
    - Foundation for all subsequent phases
 
-2. **Phase 2: Pattern Detection (Week 1-2)** - Lines 7640-7851
+2. **Phase 2: Pattern Detection (Week 1-2)**
+   - See: `phase2.md` for detailed implementation plan
+   - Reference: "Phase 2: Pattern Detection" section in `betting-insights-algorithm.md`
    - Automatic pattern detection
    - Team and H2H pattern analysis
 
-3. **Phase 3: Insight Generation (Week 2)** - Lines 7851-8055
+3. **Phase 3: Insight Generation (Week 2)**
+   - See: `phase3.md` for detailed implementation plan
+   - Reference: "Phase 3: Insight Generation" section in `betting-insights-algorithm.md`
    - Convert patterns to human-readable insights
    - Template-based insight generation
 
-4. **Phase 3.5: Match Type Detection & Cup/League Adjustments** - Lines 8055-9445
+4. **Phase 3.5: Match Type Detection & Cup/League Adjustments**
+   - See: `phase3.5.md` for detailed implementation plan
+   - Reference: "Phase 3.5: Match Type Detection" section in `betting-insights-algorithm.md`
    - Match type detection (league, cup, international, friendly)
    - Match type-specific weight adjustments
    - Neutral venue detection
@@ -47,44 +55,63 @@ This checkpoint ensures that the implementation can proceed smoothly without mis
    - League-specific characteristics
    - International match handling
 
-5. **Phase 4: Market Predictions (Week 2-3)** - Lines 9445-10318
+5. **Phase 4: Market Predictions (Week 2-3)**
+   - See: `phase4.md` for detailed implementation plan
+   - Reference: "Phase 4: Market Predictions" section in `betting-insights-algorithm.md`
    - BTTS prediction
    - Over/Under 2.5 prediction
    - Match Result prediction
    - First Half prediction
    - Alternative bet suggestions
 
-6. **Phase 4.5: Probability Swing Caps & Asymmetric Weighting** - Lines 10318-11547
+6. **Phase 4.5: Probability Swing Caps & Asymmetric Weighting**
+   - See: `phase4.5.md` for detailed implementation plan
+   - Reference: "Phase 4.5: Probability Swing Caps" section in `betting-insights-algorithm.md`
    - Hard probability swing caps
    - Confidence downgrade on large swings
    - Asymmetric weighting system
    - Kelly-aware confidence
    - Production monitoring
 
-7. **Phase 4.6: Algorithm Refinements** - Lines 11547-13241
+7. **Phase 4.6: Algorithm Refinements**
+   - See: `phase4.6.md` for detailed implementation plan
+   - Reference: "Phase 4.6: Algorithm Refinements" section in `betting-insights-algorithm.md`
    - Match Result prediction refinement
    - Rest advantage integration
    - Opponent quality weighting
    - Weighted scoring rate
    - Fixture congestion
 
-8. **Phase 4.7: Team News & Injuries Integration** - Lines 13241-13743
+8. **Phase 4.7: Team News & Injuries Integration**
+   - See: `phase4.7.md` for detailed implementation plan
    - Injury data processing from pre-implemented endpoints
    - Player importance calculation using statistics
    - Market-specific injury adjustments
    - Integration into prediction functions
 
-9. **Phase 5: API Endpoint (Week 3)** - Lines 13745-14347
+9. **Phase 5: API Endpoint (Week 3)**
+   - See: `phase5.md` for detailed implementation plan
    - Main API endpoint implementation
    - Response structure
-   - Caching strategy
+   - Caching strategy (reuses existing fixtures TTL behavior)
+
+### Future Phases (Post-MVP)
+
+10. **Phase 6: Odds Integration & Pricing (Deferred)**
+    - See: `phase6-odds-pricing.md` for detailed roadmap
+    - **Status:** DEFERRED - not blocking MVP
+    - Odds ingestion and normalization
+    - Value/edge computation vs market odds
+    - Market coherence constraints
+    - Kelly Criterion integration with real odds
 
 ## ML Model Training Phases (Separate Implementation)
 
 These phases focus specifically on ML model training and are implemented separately from the week-by-week phases:
 
-- **ML Phase 1: Historical Data Integration & Feature Engineering** - Lines 13-3330
+- **ML Phase 1: Historical Data Integration & Feature Engineering**
   - See: `ml-phase1.md` for detailed implementation plan
+  - Reference: "ML Phase 1" sections (1.1-1.6) in `betting-insights-algorithm.md`
   - Data acquisition & cleaning (1.1)
   - Team name standardization (1.1.1)
   - Feature engineering - form calculations (1.2)
@@ -95,8 +122,9 @@ These phases focus specifically on ML model training and are implemented separat
   - Data quality assessment (1.5)
   - Centralized configuration (1.6)
 
-- **ML Phase 2: Machine Learning Model Development** - Lines 3330-4005
+- **ML Phase 2: Machine Learning Model Development**
   - See: `ml-phase2.md` for detailed implementation plan
+  - Reference: "ML Phase 2" sections (2.1-2.4) in `betting-insights-algorithm.md`
   - Target variables (2.1)
   - Model selection & training (2.2)
   - Optuna hyperparameter tuning (2.2.5)
@@ -104,29 +132,33 @@ These phases focus specifically on ML model training and are implemented separat
   - Class imbalance handling (2.3.5)
   - Model calibration (2.4)
 
-- **ML Phase 3: ML Integration Architecture** - Lines 4005-4495
+- **ML Phase 3: ML Integration Architecture**
   - See: `ml-phase3.md` for detailed implementation plan
+  - Reference: "ML Phase 3" sections (3.1-3.3.5) in `betting-insights-algorithm.md`
   - ML integration strategy (3.1)
   - Feature importance analysis (3.2)
   - Model retraining schedule (3.3)
   - Concept drift detection (3.3.5)
 
-- **ML Phase 4: Backtesting & Validation** - Lines 4495-5366
+- **ML Phase 4: Backtesting & Validation**
   - See: `ml-phase4.md` for detailed implementation plan
+  - Reference: "ML Phase 4" sections (4.1-4.3) in `betting-insights-algorithm.md`
   - Validation framework (4.1)
   - Enforcement & monitoring (4.1.4)
   - Adjustment interaction analysis (4.1.5)
   - Backtesting framework (4.2)
   - Edge case testing (4.3)
 
-- **ML Phase 5: Advanced Features** - Lines 5366-5417
+- **ML Phase 5: Advanced Features**
   - See: `ml-phase5.md` for detailed implementation plan
+  - Reference: "ML Phase 5" sections (5.1-5.3) in `betting-insights-algorithm.md`
   - Additional features (5.1)
   - Market-specific models (5.2)
   - Real-time model updates (5.3)
 
-- **ML Phase 6: Risk Management & Confidence Intervals** - Lines 5417-6092
+- **ML Phase 6: Risk Management & Confidence Intervals**
   - See: `ml-phase6.md` for detailed implementation plan
+  - Reference: "ML Phase 6" sections (6.1-6.3) in `betting-insights-algorithm.md`
   - Prediction confidence intervals (6.1)
   - Risk-adjusted predictions (6.2)
   - Model monitoring & alerting (6.3)

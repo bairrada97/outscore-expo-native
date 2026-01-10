@@ -1,6 +1,6 @@
 # Phase 1: Core Data Layer (Week 1)
 
-**Reference:** Lines 6092-7640 in `betting-insights-algorithm.md`
+**Reference:** See "Phase 1: Core Data Layer" section in `betting-insights-algorithm.md`
 
 ## ⚠️ PRE-IMPLEMENTATION CHECKPOINT
 
@@ -29,7 +29,7 @@ Phase 1 establishes the foundation for all subsequent phases by implementing dat
 
 ### 1.1 Data Fetching Functions
 
-**Reference:** Lines 6096-7042
+**Reference:** See "1.1 Data Fetching Functions" in `betting-insights-algorithm.md`
 
 **Goal:** Implement data fetching functions with proper filtering, caching, and helper utilities.
 
@@ -112,7 +112,7 @@ Phase 1 establishes the foundation for all subsequent phases by implementing dat
 
 ### 1.2 Stats Calculation
 
-**Reference:** Lines 7042-7640
+**Reference:** See "1.2 Stats Calculation" in `betting-insights-algorithm.md`
 
 **Goal:** Implement comprehensive statistics calculation with formation normalization and similarity detection.
 

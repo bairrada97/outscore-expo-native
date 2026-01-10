@@ -1,6 +1,6 @@
 # ML Phase 3: ML Integration Architecture
 
-**Reference:** Lines 4005-4495 in `betting-insights-algorithm.md`
+**Reference:** See "ML Phase 3" sections (3.1-3.3.5) in `betting-insights-algorithm.md`
 
 ## Overview
 
@@ -14,7 +14,7 @@ ML Phase 3 focuses on extracting weights from trained ML models and integrating 
 
 ### ML 3.1 ML Integration Strategy: Option A
 
-**Reference:** Lines 4007-4086
+**Reference:** See "3.1 ML Integration Strategy" in `betting-insights-algorithm.md`
 
 **Goal:** Implement hybrid ML + rule-based approach
 
@@ -73,7 +73,7 @@ ML Phase 3 focuses on extracting weights from trained ML models and integrating 
 
 ### ML 3.2 Feature Importance Analysis
 
-**Reference:** Lines 4087-4093
+**Reference:** See "3.2 Feature Importance Analysis" in `betting-insights-algorithm.md`
 
 **Goal:** Analyze which features ML models find most predictive
 
@@ -111,7 +111,7 @@ ML Phase 3 focuses on extracting weights from trained ML models and integrating 
 
 ### ML 3.3 Model Retraining Schedule
 
-**Reference:** Lines 4094-4125
+**Reference:** See "3.3 Model Retraining Schedule" in `betting-insights-algorithm.md`
 
 **Goal:** Implement retraining schedule for models
 
@@ -154,7 +154,7 @@ ML Phase 3 focuses on extracting weights from trained ML models and integrating 
 
 ### ML 3.3.5 Concept Drift Detection
 
-**Reference:** Lines 4125-4205
+**Reference:** See "3.3.5 Concept Drift Detection" in `betting-insights-algorithm.md`
 
 **Goal:** Detect when model performance degrades due to concept drift
 

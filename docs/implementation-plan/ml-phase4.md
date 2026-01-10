@@ -1,6 +1,6 @@
 # ML Phase 4: Backtesting & Validation
 
-**Reference:** Lines 4495-5366 in `betting-insights-algorithm.md`
+**Reference:** See "ML Phase 4" sections (4.1-4.3) in `betting-insights-algorithm.md`
 
 ## Overview
 
@@ -15,7 +15,7 @@ ML Phase 4 focuses on validating ML models and rule-based adjustments through ba
 
 ### ML 4.1 Validation Framework for Rule-Based Adjustments
 
-**Reference:** Lines 4497-4557
+**Reference:** See "4.1 Validation Framework" in `betting-insights-algorithm.md`
 
 **Goal:** Validate all rule-based adjustments before deployment
 
@@ -69,7 +69,7 @@ class ValidationResult:
 
 ### ML 4.1.4 Enforcement & Ongoing Monitoring
 
-**Reference:** Lines 4558-5038
+**Reference:** See "4.1.4 Enforcement & Monitoring" in `betting-insights-algorithm.md`
 
 **Goal:** Enforce validation criteria and monitor deployed adjustments
 
@@ -107,7 +107,7 @@ class ValidationResult:
 
 ### ML 4.1.5 Adjustment Interaction Analysis
 
-**Reference:** Lines 5038-5342
+**Reference:** See "4.1.5 Adjustment Interaction Analysis" in `betting-insights-algorithm.md`
 
 **Goal:** Analyze how adjustments interact with each other
 
@@ -137,7 +137,7 @@ class ValidationResult:
 
 ### ML 4.2 Backtesting Framework
 
-**Reference:** Lines 5342-5357
+**Reference:** See "4.2 Backtesting Framework" in `betting-insights-algorithm.md`
 
 **Goal:** Backtest models and adjustments on historical data
 
@@ -178,7 +178,7 @@ class ValidationResult:
 
 ### ML 4.3 Edge Case Testing
 
-**Reference:** Lines 5357-5366
+**Reference:** See "4.3 Edge Case Testing" in `betting-insights-algorithm.md`
 
 **Goal:** Test models and adjustments on edge cases
 

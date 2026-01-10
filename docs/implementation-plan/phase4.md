@@ -1,6 +1,6 @@
 # Phase 4: Market Predictions (Week 2-3)
 
-**Reference:** Lines 9445-10318 in `betting-insights-algorithm.md`
+**Reference:** See "Phase 4: Market Predictions" section in `betting-insights-algorithm.md`
 
 ## Overview
 
@@ -17,7 +17,7 @@ Phase 4 implements probability calculations for all betting markets (BTTS, Over/
 
 ### 4.1 BTTS Prediction
 
-**Reference:** Lines 5797-5893
+**Reference:** See "4.1 BTTS Prediction" in `betting-insights-algorithm.md`
 
 **Goal:** Predict probability of Both Teams to Score
 
@@ -68,7 +68,7 @@ Phase 4 implements probability calculations for all betting markets (BTTS, Over/
 
 ### 4.2 Over/Under 2.5 Goals Prediction
 
-**Reference:** Lines 5896-5994
+**Reference:** See "4.2 Over/Under 2.5 Prediction" in `betting-insights-algorithm.md`
 
 **Goal:** Predict probability of Over 2.5 goals
 
@@ -110,7 +110,7 @@ Phase 4 implements probability calculations for all betting markets (BTTS, Over/
 
 ### 4.3 Match Result Prediction
 
-**Reference:** Lines 5997-6014, 11551-12242
+**Reference:** See "4.3 Match Result Prediction" in `betting-insights-algorithm.md`
 
 **Goal:** Predict probability of Home Win, Draw, Away Win
 
@@ -162,7 +162,7 @@ Phase 4 implements probability calculations for all betting markets (BTTS, Over/
 
 ### 4.4 First Half Prediction
 
-**Reference:** Lines 6017-6046
+**Reference:** See "4.4 First Half Prediction" in `betting-insights-algorithm.md`
 
 **Goal:** Predict probability of goals in first half
 
@@ -200,7 +200,7 @@ Phase 4 implements probability calculations for all betting markets (BTTS, Over/
 
 ### 4.5 Alternative Bet Suggestions
 
-**Reference:** Lines 12244-13241
+**Reference:** See "Alternative Bet Suggestions" in `betting-insights-algorithm.md`
 
 **Goal:** Suggest safer alternative bets for every prediction
 
@@ -240,7 +240,7 @@ Phase 4 implements probability calculations for all betting markets (BTTS, Over/
 
 ```typescript
 interface MarketPrediction {
-  market: 'MATCH_RESULT' | 'BTTS' | 'OVER_25' | 'FIRST_HALF' | string;
+  market: 'MATCH_RESULT' | 'BTTS' | 'OVER_2_5' | 'FIRST_HALF' | string;
   probabilities: {
     home?: number;
     draw?: number;
@@ -325,6 +325,24 @@ interface AlternativeBet {
 - [ ] Test weight adjustments
 - [ ] Test formation stability impacts
 - [ ] Test alternative bet suggestions
+
+## Acceptance Gates (Before Phase 4.5)
+
+Before proceeding to Phase 4.5, the following acceptance criteria must be met:
+
+### Calibration Check
+- [ ] **Per-market Brier score baseline established** - Calculate Brier score on validation set for each market
+- [ ] **Reliability curve generated** - Plot predicted probability vs actual outcomes for each market
+- [ ] **ECE (Expected Calibration Error) < 0.10** - Probabilities should be well-calibrated
+
+### Probability Bounds
+- [ ] **All probabilities in 20-80% range** (before caps)
+- [ ] **Match Result probabilities sum to 100%** (±0.1% tolerance)
+- [ ] **No extreme predictions without supporting evidence**
+
+### Data Quality
+- [ ] **Graceful handling of missing data** - Predictions should not crash on partial data
+- [ ] **Edge case behavior documented** - Early season, low H2H, new teams
 
 ## Notes
 

@@ -17,7 +17,9 @@
 | Phase 4: Market Predictions | 🔴 Not Started | 0% | Depends on Phase 3.5 |
 | Phase 4.5: Probability Caps | 🔴 Not Started | 0% | Depends on Phase 4 |
 | Phase 4.6: Algorithm Refinements | 🔴 Not Started | 0% | Depends on Phase 4.5 |
-| Phase 5: API Endpoint | 🔴 Not Started | 0% | Depends on Phase 4.6 |
+| Phase 4.7: Team News & Injuries | 🔴 Not Started | 0% | Depends on Phase 4.6 |
+| Phase 5: API Endpoint | 🔴 Not Started | 0% | Depends on Phase 4.7 |
+| Phase 6: Odds & Pricing | ⏸️ Deferred | - | Post-MVP, see phase6-odds-pricing.md |
 
 ## Status Legend
 
@@ -25,6 +27,7 @@
 - 🟡 In Progress
 - 🟢 Completed
 - ⚠️ Blocked
+- ⏸️ Deferred (Post-MVP)
 
 ## Phase 1: Core Data Layer - Detailed Progress
 

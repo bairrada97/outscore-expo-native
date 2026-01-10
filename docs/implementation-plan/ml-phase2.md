@@ -1,6 +1,6 @@
 # ML Phase 2: Machine Learning Model Development
 
-**Reference:** Lines 3330-4005 in `betting-insights-algorithm.md`
+**Reference:** See "ML Phase 2" sections (2.1-2.4) in `betting-insights-algorithm.md`
 
 ## Overview
 
@@ -14,7 +14,7 @@ ML Phase 2 focuses on training ML models (LightGBM) for each betting market. **I
 
 ### ML 2.1 Target Variables for ML Training
 
-**Reference:** Lines 3332-3356
+**Reference:** See "2.1 Target Variables" in `betting-insights-algorithm.md`
 
 **Goal:** Create target variables for each betting market
 
@@ -61,7 +61,7 @@ ML Phase 2 focuses on training ML models (LightGBM) for each betting market. **I
 
 ### ML 2.2 Model Selection & Training
 
-**Reference:** Lines 3357-3384
+**Reference:** See "2.2 Model Selection & Training" in `betting-insights-algorithm.md`
 
 **Goal:** Select and train LightGBM models for each market
 
@@ -105,7 +105,7 @@ ML Phase 2 focuses on training ML models (LightGBM) for each betting market. **I
 
 ### ML 2.2.5 Optuna Hyperparameter Tuning
 
-**Reference:** Lines 3385-3701
+**Reference:** See "2.2.5 Optuna Hyperparameter Tuning" in `betting-insights-algorithm.md`
 
 **Goal:** Optimize hyperparameters using Optuna
 
@@ -156,7 +156,7 @@ ML Phase 2 focuses on training ML models (LightGBM) for each betting market. **I
 
 ### ML 2.3 Model Evaluation Metrics
 
-**Reference:** Lines 3701-3724
+**Reference:** See "2.3 Model Evaluation Metrics" in `betting-insights-algorithm.md`
 
 **Goal:** Evaluate models using appropriate metrics
 
@@ -201,7 +201,7 @@ ML Phase 2 focuses on training ML models (LightGBM) for each betting market. **I
 
 ### ML 2.3.5 Class Imbalance Handling
 
-**Reference:** Lines 3724-3994
+**Reference:** See "2.3.5 Class Imbalance Handling" in `betting-insights-algorithm.md`
 
 **Goal:** Handle class imbalance in Match Result predictions
 
@@ -235,7 +235,7 @@ ML Phase 2 focuses on training ML models (LightGBM) for each betting market. **I
 
 ### ML 2.4 Model Calibration
 
-**Reference:** Lines 3994-4004
+**Reference:** See "2.4 Model Calibration" in `betting-insights-algorithm.md`
 
 **Goal:** Calibrate model probabilities
 

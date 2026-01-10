@@ -2157,7 +2157,7 @@ async function predictBTTS(
 }
 
 // Similar integration for predictOver25, predictMatchResult, predictFirstHalf
-// Use appropriate market type: 'OVER_25', 'MATCH_RESULT', 'FIRST_HALF'
+// Use appropriate market type: 'OVER_2_5', 'MATCH_RESULT', 'FIRST_HALF'
 ```
 
 **Add Congestion Data to TeamData Interface (Optional):**
@@ -5763,7 +5763,7 @@ const MARKET_WEIGHTS = {
     scoringRate: 25,       // ⬆️ NEW: Goals per game critical
   },
   
-  OVER_25: {
+  OVER_2_5: {
     recentForm: 30,        // Scoring trends
     h2h: 20,               // ⬇️ Less weight (historical goals)
     homeAdvantage: 12,     // ⬇️ Less relevant
@@ -9191,7 +9191,7 @@ function getLeagueCharacteristics(leagueId: number): LeagueCharacteristics {
  */
 function applyLeagueSpecificAdjustments(
   baseProbability: number,
-  market: 'BTTS' | 'OVER_25' | 'OVER_15' | 'MATCH_RESULT' | 'FIRST_HALF',
+  market: 'BTTS' | 'OVER_2_5' | 'OVER_1_5' | 'MATCH_RESULT' | 'FIRST_HALF',
   leagueId: number,
   config: AlgorithmConfig
 ): number {
@@ -9209,7 +9209,7 @@ function applyLeagueSpecificAdjustments(
       adjustmentFactor = leagueChars.bttsRate / globalBaseline.bttsRate;
       break;
       
-    case 'OVER_25':
+    case 'OVER_2_5':
       // Compare league Over 2.5 rate to global baseline
       adjustmentFactor = leagueChars.over25Baseline / globalBaseline.over25Baseline;
       break;
@@ -9528,7 +9528,7 @@ interface AlternativeBet {
 }
 
 interface MarketPrediction {
-  market: 'MATCH_RESULT' | 'BTTS' | 'OVER_25' | 'FIRST_HALF' | string; // Allow any market string
+  market: 'MATCH_RESULT' | 'BTTS' | 'OVER_2_5' | 'FIRST_HALF' | string; // Allow any market string
   probabilities: {
     home?: number;
     draw?: number;
@@ -10056,7 +10056,7 @@ async function predictOver25(
   const adjustmentResult = applyCappedAsymmetricAdjustments(
     baseProbability,
     allAdjustments,
-    'OVER_25',
+    'OVER_2_5',
     config
   );
   
@@ -10090,7 +10090,7 @@ async function predictOver25(
   }
   
   return {
-    market: 'OVER_25',
+    market: 'OVER_2_5',
     probabilities: { yes: yesProbability, no: noProbability },
     rating,
     confidence,
@@ -10569,9 +10569,9 @@ const ASYMMETRIC_WEIGHTS: Record<string, AsymmetricConfig[]> = {
       falseNegativePenalty: 1.2, // Slight penalty for missing BTTS
     },
   ],
-  OVER_25: [
+  OVER_2_5: [
     {
-      market: 'OVER_25',
+      market: 'OVER_2_5',
       direction: 'UP',    // Predicting Over more
       maxAdjustment: 18,   // Allow bigger upward moves (higher odds = more acceptable)
       riskMultiplier: 0.9, // Less penalty for false positives
@@ -10579,7 +10579,7 @@ const ASYMMETRIC_WEIGHTS: Record<string, AsymmetricConfig[]> = {
       falseNegativePenalty: 1.3, // More penalty (missed value)
     },
     {
-      market: 'OVER_25',
+      market: 'OVER_2_5',
       direction: 'DOWN',  // Predicting Under more
       maxAdjustment: 15,   // Cap downward moves
       riskMultiplier: 1.1,
@@ -10660,8 +10660,8 @@ const MARKET_ASYMMETRY: Record<string, MarketAsymmetry> = {
     falsePositivePenalty: 1.5,   // Heavy penalty for predicting Yes when No
     falseNegativePenalty: 1.0,   // Normal penalty for predicting No when Yes
   },
-  OVER_25: {
-    market: 'OVER_25',
+  OVER_2_5: {
+    market: 'OVER_2_5',
     favorUpward: 1.2,           // Increase upward moves (Over has higher odds)
     favorDownward: 0.9,         // Reduce downward moves
     falsePositivePenalty: 0.8,   // Less penalty (higher payout compensates)
@@ -10782,7 +10782,7 @@ interface CappedAdjustmentResult {
 function applyCappedAsymmetricAdjustments(
   baseProbability: number,
   adjustments: Adjustment[],
-  market: 'BTTS' | 'OVER_25' | 'MATCH_RESULT' | 'FIRST_HALF',
+  market: 'BTTS' | 'OVER_2_5' | 'MATCH_RESULT' | 'FIRST_HALF',
   config: AlgorithmConfig
 ): CappedAdjustmentResult {
   const { maxSwing, minProb, maxProb } = config.probabilityCaps;
@@ -11169,7 +11169,7 @@ const SAFE_LAUNCH_CONFIG = {
 
 ```typescript
 function generateFinalPrediction(
-  market: 'BTTS' | 'OVER_25' | 'MATCH_RESULT' | 'FIRST_HALF',
+  market: 'BTTS' | 'OVER_2_5' | 'MATCH_RESULT' | 'FIRST_HALF',
   baseProbability: number,
   adjustments: Adjustment[],
   config: AlgorithmConfig,
@@ -12409,7 +12409,7 @@ function applyFixtureCongestionAdjustment(
   // Market-specific impact
   const marketImpact: Record<string, number> = {
     'BTTS': 0.3,      // Less impact (both teams affected)
-    'OVER_25': 0.4,   // Moderate impact (fatigue affects scoring)
+    'OVER_2_5': 0.4,   // Moderate impact (fatigue affects scoring)
     'MATCH_RESULT': 0.5, // Higher impact (fatigue affects performance)
     'FIRST_HALF': 0.2, // Low impact (fatigue affects second half more)
   };
@@ -14106,24 +14106,28 @@ async function predictBTTS(
 **Goal:** Expose predictions via clean API
 
 ```typescript
-// /api/matches/[matchId]/insights.ts
+// /api/fixtures/[fixtureId]/insights.ts
 
-app.get('/api/matches/:matchId/insights', async (c) => {
-  const matchId = c.req.param('matchId');
+app.get('/api/fixtures/:fixtureId/insights', async (c) => {
+  const fixtureId = c.req.param('fixtureId');
   
   try {
     // 1. Get match details
-    const match = await getMatchDetails(matchId, c);
+    const match = await getMatchDetails(fixtureId, c);
     
     if (!match) {
-      return c.json({ error: 'Match not found' }, 404);
+      return c.json({ error: 'Fixture not found' }, 404);
     }
     
-    // 2. Check cache (1 hour TTL)
-    const cacheKey = `insights:${matchId}`;
+    // 2. Check cache (reuse fixtures TTL / invalidation behavior)
+    // IMPORTANT: TTLs/headers should follow the same status-aware policy used by the existing fixtures endpoints.
+    // Implement this by reusing the same logic as the fixture detail route (live/finished/pre-kickoff tiers).
+    const cachePolicy = getFixtureCachePolicy(match); // { ttlSeconds, cacheControl, cdnCacheControl }
+    const cacheKey = `insights:${fixtureId}`;
     const cached = await c.env.KV.get(cacheKey, 'json');
     
-    if (cached && !isStale(cached, 60 * 60)) {
+    // If cached and still fresh under the same TTL rules as fixtures, return it
+    if (cached && !isStale(cached, cachePolicy.ttlSeconds)) {
       return c.json(cached);
     }
     
@@ -14186,7 +14190,7 @@ app.get('/api/matches/:matchId/insights', async (c) => {
     // 7. Build response
     const response = {
       match: {
-        id: matchId,
+        fixtureId: fixtureId,
         homeTeam: homeTeam.name,
         awayTeam: awayTeam.name,
         date: match.date,
@@ -14272,14 +14276,14 @@ app.get('/api/matches/:matchId/insights', async (c) => {
       },
     };
     
-    // 8. Cache response (1 hour)
+    // 8. Cache response (TTL matches fixtures policy)
     await c.env.KV.put(cacheKey, JSON.stringify(response), {
-      expirationTtl: 60 * 60,
+      expirationTtl: cachePolicy.ttlSeconds,
     });
     
-    // 9. Set cache headers for edge
-    c.header('Cache-Control', 'public, max-age=3600');
-    c.header('CDN-Cache-Control', 'max-age=3600');
+    // 9. Set cache headers for edge (reuse the same Cache-Control logic as fixtures)
+    c.header('Cache-Control', cachePolicy.cacheControl);
+    c.header('CDN-Cache-Control', cachePolicy.cdnCacheControl);
     
     return c.json(response);
     
@@ -14288,6 +14292,70 @@ app.get('/api/matches/:matchId/insights', async (c) => {
     return c.json({ error: 'Failed to generate insights' }, 500);
   }
 });
+
+function getFixtureCachePolicy(match: any): {
+  ttlSeconds: number;
+  cacheControl: string;
+  cdnCacheControl: string;
+} {
+  // Use the same status-aware policy as the existing fixtures endpoints.
+  // NOTE: This is shown as pseudo-code; the real implementation should reuse the same logic
+  // used by the fixture detail route (live/finished/pre-kickoff tiers).
+
+  const status = match.fixture?.status?.short; // e.g., 'LIVE', 'FT', 'NS'
+  const timestamp = match.fixture?.timestamp; // seconds
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const timeUntilMatch = typeof timestamp === 'number' ? (timestamp - nowSeconds) : undefined;
+
+  const liveStatuses = ['LIVE', '1H', '2H', 'HT', 'ET', 'BT', 'P'];
+  const finishedStatuses = ['FT', 'AET', 'PEN', 'PST', 'CANC', 'ABD', 'AWD', 'WO'];
+
+  if (status && liveStatuses.includes(status)) {
+    return {
+      ttlSeconds: 15,
+      cacheControl: 'public, max-age=15, stale-while-revalidate=30',
+      cdnCacheControl: 'max-age=15',
+    };
+  }
+
+  if (status && finishedStatuses.includes(status)) {
+    return {
+      ttlSeconds: 604800,
+      cacheControl: 'public, max-age=604800',
+      cdnCacheControl: 'max-age=604800',
+    };
+  }
+
+  if (typeof timeUntilMatch === 'number' && timeUntilMatch <= 45 * 60) {
+    return {
+      ttlSeconds: 15,
+      cacheControl: 'public, max-age=15, stale-while-revalidate=30',
+      cdnCacheControl: 'max-age=15',
+    };
+  }
+
+  if (typeof timeUntilMatch === 'number' && timeUntilMatch <= 8 * 60 * 60) {
+    return {
+      ttlSeconds: 3600,
+      cacheControl: 'public, max-age=3600, stale-while-revalidate=7200',
+      cdnCacheControl: 'max-age=3600',
+    };
+  }
+
+  if (typeof timeUntilMatch === 'number' && timeUntilMatch <= 7 * 24 * 60 * 60) {
+    return {
+      ttlSeconds: 21600,
+      cacheControl: 'public, max-age=21600, stale-while-revalidate=43200',
+      cdnCacheControl: 'max-age=21600',
+    };
+  }
+
+  return {
+    ttlSeconds: 86400,
+    cacheControl: 'public, max-age=86400, stale-while-revalidate=172800',
+    cdnCacheControl: 'max-age=86400',
+  };
+}
 
 function calculateMotivation(team: TeamData): string {
   const pos = team.stats.leaguePosition;
@@ -14331,7 +14399,7 @@ function calculateOverallConfidence(
 ```json
 {
   "match": {
-    "id": "12345",
+    "fixtureId": "12345",
     "homeTeam": "Manchester United",
     "awayTeam": "Chelsea",
     "date": "2024-01-20T15:00:00Z",
@@ -14404,7 +14472,7 @@ function calculateOverallConfidence(
     },
     
     {
-      "market": "OVER_25",
+      "market": "OVER_2_5",
       "probabilities": {
         "yes": 71,
         "no": 29

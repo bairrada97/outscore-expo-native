@@ -1,6 +1,6 @@
 # ML Phase 6: Risk Management & Confidence Intervals
 
-**Reference:** Lines 5417-6092 in `betting-insights-algorithm.md`
+**Reference:** See "ML Phase 6" sections (6.1-6.3) in `betting-insights-algorithm.md`
 
 ## Overview
 
@@ -15,7 +15,7 @@ ML Phase 6 focuses on risk management features including prediction confidence i
 
 ### ML 6.1 Prediction Confidence Intervals
 
-**Reference:** Lines 5419-5424
+**Reference:** See "6.1 Prediction Confidence Intervals" in `betting-insights-algorithm.md`
 
 **Goal:** Add uncertainty quantification to predictions
 
@@ -53,7 +53,7 @@ ML Phase 6 focuses on risk management features including prediction confidence i
 
 ### ML 6.2 Risk-Adjusted Predictions
 
-**Reference:** Lines 5425-5430
+**Reference:** See "6.2 Risk-Adjusted Predictions" in `betting-insights-algorithm.md`
 
 **Goal:** Calculate optimal bet sizes using Kelly Criterion
 
@@ -95,7 +95,7 @@ ML Phase 6 focuses on risk management features including prediction confidence i
 
 ### ML 6.3 Model Monitoring & Alerting
 
-**Reference:** Lines 5431-5437
+**Reference:** See "6.3 Model Monitoring & Alerting" in `betting-insights-algorithm.md`
 
 **Goal:** Monitor model performance and alert on degradation
 

@@ -1,6 +1,6 @@
 # Phase 3: Insight Generation (Week 2)
 
-**Reference:** Lines 7851-8055 in `betting-insights-algorithm.md`
+**Reference:** See "Phase 3: Insight Generation" section in `betting-insights-algorithm.md`
 
 ## Overview
 
@@ -15,7 +15,7 @@ Phase 3 converts detected patterns into human-readable insights using template-b
 
 ### 3.1 Insight Template System
 
-**Reference:** Lines 7873-8006
+**Reference:** See "3.1 Insight Template System" in `betting-insights-algorithm.md`
 
 **Goal:** Create template system for converting patterns to human-readable text
 
@@ -69,7 +69,7 @@ Phase 3 converts detected patterns into human-readable insights using template-b
 
 ### 3.2 Insight Generation & Categorization
 
-**Reference:** Lines 8008-8050
+**Reference:** See "3.2 Insight Generation & Categorization" in `betting-insights-algorithm.md`
 
 **Goal:** Generate insights from patterns and categorize them
 

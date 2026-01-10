@@ -1,6 +1,6 @@
 # Phase 3.5: Match Type Detection & Cup/League Adjustments
 
-**Reference:** Lines 8055-9445 in `betting-insights-algorithm.md`
+**Reference:** See "Phase 3.5: Match Type Detection" section in `betting-insights-algorithm.md`
 
 ## Overview
 
@@ -16,7 +16,7 @@ Phase 3.5 implements match type detection (league, cup, international, friendly)
 
 ### 3.5.1 Match Type Detection
 
-**Reference:** Lines 8059-8143
+**Reference:** See "3.5.1 Match Type Detection" in `betting-insights-algorithm.md`
 
 **Goal:** Detect match type from league name and round information
 
@@ -67,7 +67,7 @@ Phase 3.5 implements match type detection (league, cup, international, friendly)
 
 ### 3.5.2 Match Type Weight Adjustments
 
-**Reference:** Lines 8145-8227
+**Reference:** See "3.5.2 Match Type Weight Adjustments" in `betting-insights-algorithm.md`
 
 **Goal:** Apply weight adjustments based on match type
 
@@ -105,7 +105,7 @@ Phase 3.5 implements match type detection (league, cup, international, friendly)
 
 ### 3.5.3 International Match Handling
 
-**Reference:** Lines 9297-9445
+**Reference:** See "3.5.3 International Match Handling" in `betting-insights-algorithm.md`
 
 **Goal:** Handle international matches with domestic league context
 
@@ -135,7 +135,7 @@ Phase 3.5 implements match type detection (league, cup, international, friendly)
 
 ### 3.5.4 Neutral Venue Detection
 
-**Reference:** Lines 8235-8485
+**Reference:** See "3.5.4 Neutral Venue Detection" in `betting-insights-algorithm.md`
 
 **Goal:** Detect neutral venues for domestic cup finals, playoffs, and super cups
 
@@ -170,7 +170,7 @@ Phase 3.5 implements match type detection (league, cup, international, friendly)
 
 ### 3.5.5 Derby/Rivalry Matches Detection
 
-**Reference:** Lines 8486-8658
+**Reference:** See "3.5.5 Derby/Rivalry Detection" in `betting-insights-algorithm.md`
 
 **Goal:** Detect derby and rivalry matches
 
@@ -202,7 +202,7 @@ Phase 3.5 implements match type detection (league, cup, international, friendly)
 
 ### 3.5.6 Post-International Break Effects
 
-**Reference:** Lines 8659-8847
+**Reference:** See "3.5.6 Post-International Break Effects" in `betting-insights-algorithm.md`
 
 **Goal:** Detect matches after international breaks and apply adjustments
 
@@ -233,7 +233,7 @@ Phase 3.5 implements match type detection (league, cup, international, friendly)
 
 ### 3.5.7 End-of-Season Specific Dynamics
 
-**Reference:** Lines 8848-9068
+**Reference:** See "3.5.7 End-of-Season Dynamics" in `betting-insights-algorithm.md`
 
 **Goal:** Detect end-of-season matches and apply specific adjustments
 
@@ -264,7 +264,7 @@ Phase 3.5 implements match type detection (league, cup, international, friendly)
 
 ### 3.5.8 League-Specific Characteristics
 
-**Reference:** Lines 9069-9296
+**Reference:** See "3.5.8 League-Specific Characteristics" in `betting-insights-algorithm.md`
 
 **Goal:** Apply league-specific adjustments based on playing style
 
