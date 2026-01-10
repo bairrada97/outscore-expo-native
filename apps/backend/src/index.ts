@@ -137,7 +137,8 @@ app.onError((error, context) => {
 		"exp://localhost:8081", // Expo development server (alternative)
 		"http://10.0.2.2:3000", // Android emulator
 		"http://10.0.2.2:8081", // Android emulator (alternative)
-		"https://outscore-native-expo--di8o2dv5ph.expo.app"
+		"https://outscore-native-expo--di8o2dv5ph.expo.app",
+		"https://outscore.vercel.app"
 	];
 
 	// Check if origin is allowed (also check env variable)

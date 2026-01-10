@@ -2,6 +2,32 @@
  * API Response Types
  */
 
+/**
+ * Fixture Event types (goals, cards, substitutions, VAR decisions)
+ */
+export interface FixtureEvent {
+  time: {
+    elapsed: number;
+    extra: number | null;
+  };
+  team: {
+    id: number;
+    name: string;
+    logo: string;
+  };
+  player: {
+    id: number | null;
+    name: string | null;
+  };
+  assist: {
+    id: number | null;
+    name: string | null;
+  };
+  type: 'Goal' | 'Card' | 'subst' | 'Var';
+  detail: string;
+  comments: string | null;
+}
+
 export interface Fixture {
   fixture: {
     id: number;
@@ -69,6 +95,7 @@ export interface Fixture {
       away: number | null;
     };
   };
+  events?: FixtureEvent[];
 }
 
 export interface FixturesResponse {
