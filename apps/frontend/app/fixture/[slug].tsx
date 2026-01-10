@@ -1,3 +1,4 @@
+import { FixtureInfoHeader } from "@/components/fixture-info-header";
 import { Text } from "@/components/ui/text";
 import { useFixtureRelatedData } from "@/hooks/useFixtureRelatedData";
 import {
@@ -84,8 +85,8 @@ export default function FixtureDetailScreen() {
 	if (isLoading) {
 		return (
 			<>
-				<Stack.Screen options={{ title: "Loading..." }} />
-				<View className="flex-1 items-center justify-center bg-neu-02">
+				<Stack.Screen options={{ headerShown: false }} />
+				<View className="flex-1 items-center justify-center bg-neu-02 dark:bg-neu-13">
 					<ActivityIndicator size="large" />
 				</View>
 			</>
@@ -95,9 +96,9 @@ export default function FixtureDetailScreen() {
 	if (error) {
 		return (
 			<>
-				<Stack.Screen options={{ title: "Error" }} />
-				<View className="flex-1 items-center justify-center bg-neu-02 px-16">
-					<Text className="text-red-500">Error: {error.message}</Text>
+				<Stack.Screen options={{ headerShown: false }} />
+				<View className="flex-1 items-center justify-center bg-neu-02 dark:bg-neu-13 px-16">
+					<Text className="text-red">Error: {error.message}</Text>
 				</View>
 			</>
 		);
@@ -106,62 +107,54 @@ export default function FixtureDetailScreen() {
 	if (!fixture) {
 		return (
 			<>
-				<Stack.Screen options={{ title: "Not Found" }} />
-				<View className="flex-1 items-center justify-center bg-neu-02">
+				<Stack.Screen options={{ headerShown: false }} />
+				<View className="flex-1 items-center justify-center bg-neu-02 dark:bg-neu-13">
 					<Text className="text-neu-07">Fixture not found</Text>
 				</View>
 			</>
 		);
 	}
 
-	// Format match title for header
-	const headerTitle = `${fixture.teams.home.name} vs ${fixture.teams.away.name}`;
-
 	return (
 		<>
 			<Stack.Screen
 				options={{
-					title: headerTitle,
-					headerBackTitle: "Back",
+					title: "FIXTURE DETAILS",
+					headerShown: true,
 				}}
 			/>
-			<View className={isWeb ? "bg-neu-02 p-16" : "flex-1 bg-neu-02 p-16"}>
-				{/* League info */}
-				<Text className="text-neu-07 mb-8">
-					{fixture.league.name} - {fixture.league.round}
-				</Text>
+			<View
+				className={
+					isWeb ? "bg-neu-02 dark:bg-neu-13" : "flex-1 bg-neu-02 dark:bg-neu-13"
+				}
+			>
+				<FixtureInfoHeader fixture={fixture} />
 
-				{/* Teams and Score */}
-				<View className="flex-row items-center justify-between mb-16">
-					<Text variant="body-01--bold" className="flex-1 text-neu-10">
-						{fixture.teams.home.name}
+				{/* Additional content area */}
+				<View className="p-4">
+					{/* League info */}
+					<Text className="text-neu-07 dark:text-neu-06 mb-4">
+						{fixture.league.name} - {fixture.league.round}
 					</Text>
-					<Text variant="heading-03" className="mx-16 text-neu-10">
-						{fixture.goals.home ?? "-"} - {fixture.goals.away ?? "-"}
+
+					{/* Fixture status */}
+					<Text className="text-neu-07 dark:text-neu-06">
+						{fixture.fixture.status.long}
 					</Text>
-					<Text
-						variant="body-01--bold"
-						className="flex-1 text-right text-neu-10"
-					>
-						{fixture.teams.away.name}
+
+					{/* Fixture date/time */}
+					<Text className="text-neu-06 dark:text-neu-07 mt-2">
+						{new Date(fixture.fixture.date).toLocaleString()}
 					</Text>
+
+					{/* Venue */}
+					{fixture.fixture.venue?.name && (
+						<Text className="text-neu-06 dark:text-neu-07 mt-4">
+							{fixture.fixture.venue.name}
+							{fixture.fixture.venue.city && `, ${fixture.fixture.venue.city}`}
+						</Text>
+					)}
 				</View>
-
-				{/* Match status and time */}
-				<Text className="text-center text-neu-07">
-					{fixture.fixture.status.long}
-				</Text>
-				<Text className="text-center text-neu-06 mt-4">
-					{new Date(fixture.fixture.date).toLocaleString()}
-				</Text>
-
-				{/* Venue */}
-				{fixture.fixture.venue?.name && (
-					<Text className="text-center text-neu-06 mt-8">
-						{fixture.fixture.venue.name}
-						{fixture.fixture.venue.city && `, ${fixture.fixture.venue.city}`}
-					</Text>
-				)}
 			</View>
 		</>
 	);

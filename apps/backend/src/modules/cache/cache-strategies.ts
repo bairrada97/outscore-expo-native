@@ -196,7 +196,11 @@ export const CACHE_STRATEGIES: Record<ResourceType, CacheStrategyConfig> = {
     useKV: false, // Disabled: KV requires 60s min TTL, but live matches need 15s
     useR2: true,
     useEdge: true,
-    keyGenerator: (params) => `fixture-details/fixture-${params.fixtureId}.json`,
+    keyGenerator: (params) => {
+      // Date is required for fixture details to organize by date folder
+      const date = params.date || getCurrentUtcDate(); // Fallback to today if date not provided
+      return `fixture-details/${date}/fixture-${params.fixtureId}.json`;
+    },
   },
 
   teams: {

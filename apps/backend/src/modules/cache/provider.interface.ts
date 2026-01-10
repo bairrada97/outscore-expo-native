@@ -17,5 +17,11 @@ export interface R2CacheProvider<T = unknown> extends CacheProvider<T> {
    * List all keys with a given prefix
    */
   list: (prefix: string) => Promise<string[]>;
+
+  /**
+   * List folder names (common prefixes) with a given prefix using delimiter
+   * More efficient than listing all individual files when you only need folder names
+   */
+  listFolders: (prefix: string, delimiter?: string) => Promise<string[]>;
 }
 

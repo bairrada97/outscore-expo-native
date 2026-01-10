@@ -14,8 +14,10 @@ export default function TabsLayout() {
           fontWeight: 'bold',
         },
         headerTitleAlign: 'left',
+        headerBackVisible: false,
+        headerLeft: () => null,
       }}
-    />
+    />   
   );
 }
 
