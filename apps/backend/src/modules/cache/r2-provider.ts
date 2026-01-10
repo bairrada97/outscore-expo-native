@@ -200,6 +200,20 @@ export const createR2CacheProvider = <T = unknown>(
     }
   };
 
+  /**
+   * List folder names (common prefixes) with a given prefix using delimiter
+   * More efficient than listing all individual files when you only need folder names
+   */
+  const listFolders = async (prefix: string, delimiter: string = '/'): Promise<string[]> => {
+    try {
+      const objects = await r2Bucket.list({ prefix, delimiter });
+      return objects.commonPrefixes?.map(prefix => prefix.prefix) || [];
+    } catch (error) {
+      console.error(`❌ [R2] Error listing folders with prefix ${prefix}:`, error);
+      return [];
+    }
+  };
+
   return {
     set,
     get,
@@ -207,6 +221,7 @@ export const createR2CacheProvider = <T = unknown>(
     delete: deleteItem,
     move,
     list,
+    listFolders,
   };
 };
 

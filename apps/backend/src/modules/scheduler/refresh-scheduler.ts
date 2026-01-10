@@ -5,7 +5,6 @@ import {
   cacheSetEdgeOnly,
   checkFixturesDateTransition,
   cleanupOldCacheData,
-  cleanupOldFixtureDetails,
   getCurrentUtcDate,
   getTomorrowUtcDate,
 } from '../cache';
@@ -171,13 +170,8 @@ export const handleScheduledEvent = async (
       console.error(`❌ [Scheduler] Fixtures cleanup failed:`, error);
     }
 
-    // Clean up old fixture details (7 days retention)
-    try {
-      const detailsResult = await cleanupOldFixtureDetails(env, 7);
-      console.log(`✅ [Scheduler] Fixture details cleanup completed: deleted ${detailsResult.deleted} files, ${detailsResult.errors} errors`);
-    } catch (error) {
-      console.error(`❌ [Scheduler] Fixture details cleanup failed:`, error);
-    }
+    // Note: Fixture details cleanup is now handled by Cloudflare Object Lifecycle Rules
+    // configured in the Cloudflare Dashboard. No code-based cleanup needed.
   }
 
   if (!env.REFRESH_SCHEDULER_DO) {

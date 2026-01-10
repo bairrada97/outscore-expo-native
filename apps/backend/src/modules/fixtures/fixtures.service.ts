@@ -2,10 +2,12 @@ import type { Fixture, FixturesResponse, FormattedFixturesResponse } from '@outs
 import { getFootballApiFixtureDetail, getFootballApiFixtures } from '../../pkg/util/football-api';
 import {
   type CacheEnv,
+  type CacheResult,
   cacheGet,
   cacheSet,
   cacheSetEdgeOnly,
   checkFixturesDateTransition,
+  createR2CacheProvider,
   getCacheKey,
   getCurrentUtcDate,
   getTomorrowUtcDate,
@@ -419,8 +421,57 @@ export const fixturesService = {
     return withDeduplication(dedupKey, async () => {
       const params = { fixtureId: fixtureId.toString() };
 
-      // 1. Check Edge Cache for cached response
-      const edgeResult = await cacheGet<FixturesResponse>(env, 'fixtureDetail', params);
+      // Hybrid lookup strategy:
+      // Step 1 - Fast Path: Try common dates (today, yesterday, tomorrow) first
+      // This covers 80-90% of requests with minimal overhead
+      const today = getCurrentUtcDate();
+      const yesterday = getYesterdayUtcDate();
+      const tomorrow = getTomorrowUtcDate();
+      const commonDates = [today, yesterday, tomorrow];
+
+      let edgeResult: CacheResult<FixturesResponse> = { data: null, source: 'none' };
+      
+      // Fast path: Try common dates first
+      for (const date of commonDates) {
+        const paramsWithDate = { ...params, date };
+        const result = await cacheGet<FixturesResponse>(env, 'fixtureDetail', paramsWithDate);
+        if (result.data) {
+          edgeResult = result;
+          break; // Found cached data, stop searching
+        }
+      }
+
+      // Step 2 - Slow Path: If not found in common dates, use delimiter to list all date folders
+      // This handles edge cases (historical/future fixtures) efficiently
+      if (!edgeResult.data) {
+        try {
+          const r2Provider = createR2CacheProvider(env.FOOTBALL_CACHE);
+          const dateFolders = await r2Provider.listFolders('fixture-details/');
+          
+          // Extract dates from folder names (e.g., "fixture-details/2025-01-15/" -> "2025-01-15")
+          const datesToTry = dateFolders
+            .map(folder => folder.match(/fixture-details\/(\d{4}-\d{2}-\d{2})\//)?.[1])
+            .filter((date): date is string => Boolean(date))
+            .sort()
+            .reverse(); // Most recent first for better cache hit probability
+          
+          // Try each date until we find a cache hit
+          for (const date of datesToTry) {
+            // Skip dates we already tried in fast path
+            if (commonDates.includes(date)) continue;
+            
+            const paramsWithDate = { ...params, date };
+            const result = await cacheGet<FixturesResponse>(env, 'fixtureDetail', paramsWithDate);
+            if (result.data) {
+              edgeResult = result;
+              break; // Found cached data, stop searching
+            }
+          }
+        } catch (error) {
+          console.error(`❌ [FixtureDetail] Error listing date folders for fixture ${fixtureId}:`, error);
+          // Continue to API fetch if folder listing fails
+        }
+      }
 
       if (edgeResult.source === 'edge' && edgeResult.data) {
         console.log(`✅ [FixtureDetail] Edge Cache hit for fixture ${fixtureId}`);
@@ -480,10 +531,26 @@ export const fixturesService = {
         const fixture = response.response[0];
         const status = fixture?.fixture?.status?.short || '';
         const timestamp = fixture?.fixture?.timestamp?.toString() || '';
+        
+        // Extract date from fixture (UTC date in YYYY-MM-DD format)
+        let fixtureDate: string;
+        if (fixture?.fixture?.date) {
+          // Parse ISO date string and extract UTC date (YYYY-MM-DD)
+          const dateObj = new Date(fixture.fixture.date);
+          const year = dateObj.getUTCFullYear();
+          const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+          const day = String(dateObj.getUTCDate()).padStart(2, '0');
+          fixtureDate = `${year}-${month}-${day}`;
+        } else {
+          // Fallback: use current UTC date if date is missing
+          const now = new Date();
+          const utcNow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+          fixtureDate = utcNow.toISOString().split('T')[0];
+        }
 
         // Cache response (non-blocking)
         ctx.waitUntil(
-          cacheSet(env, 'fixtureDetail', { ...params, status, timestamp }, response)
+          cacheSet(env, 'fixtureDetail', { ...params, date: fixtureDate, status, timestamp }, response)
             .then((success) => {
               if (success) {
                 console.log(`✅ [FixtureDetail] Successfully cached fixture ${fixtureId}`);

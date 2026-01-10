@@ -104,7 +104,7 @@ export const cacheGet = async <T>(
       const location = getFixturesCacheLocation(params.date);
       r2Key = getFixturesR2Key(location, params.date, params.live === 'true');
     } else if (resourceType === 'fixtureDetail') {
-      // Fixture details use the key generator directly (fixture-details/fixture-{id}.json)
+      // Fixture details use the key generator directly (fixture-details/{date}/fixture-{id}.json)
       r2Key = cacheKey;
     }
 
@@ -178,7 +178,7 @@ export const cacheSet = async <T>(
       const location = getFixturesCacheLocation(params.date);
       r2Key = getFixturesR2Key(location, params.date, params.live === 'true');
     } else if (resourceType === 'fixtureDetail') {
-      // Fixture details use the key generator directly (fixture-details/fixture-{id}.json)
+      // Fixture details use the key generator directly (fixture-details/{date}/fixture-{id}.json)
       r2Key = cacheKey;
     }
 
