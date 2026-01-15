@@ -3,11 +3,31 @@
  *
  * Provides 15-second interval scheduling for fixture refreshes.
  * Uses Durable Object alarms since Cloudflare cron minimum is 1 minute.
+ *
+ * Also handles standings refresh:
+ * - Active leagues (with live fixtures): refresh hourly
+ * - Recently finished leagues: refresh with backoff (+10m, +30m, hourly cap)
  */
 
-import { refreshTodayFixtures, type SchedulerEnv } from '../modules/scheduler';
+import {
+  refreshTodayFixturesWithAnalysis,
+  type SchedulerEnv,
+} from '../modules/scheduler';
+import {
+  analyzeFixtures,
+  checkAndRegenerateForLeague,
+  createInitialState,
+  deserializeState,
+  fetchStandingsForLeague,
+  getLeaguesToRefresh,
+  recordStandingsRefresh,
+  serializeState,
+  type StandingsRefreshState,
+  updateStateFromAnalysis,
+} from '../modules/scheduler/standings-refresh';
 
 const REFRESH_INTERVAL_MS = 15_000; // 15 seconds
+const STANDINGS_STATE_KEY = 'standings_refresh_state';
 
 /**
  * Refresh Scheduler Durable Object class
@@ -18,10 +38,38 @@ const REFRESH_INTERVAL_MS = 15_000; // 15 seconds
 export class RefreshSchedulerDurableObject {
   private state: DurableObjectState;
   private env: SchedulerEnv;
+  private standingsState: StandingsRefreshState | null = null;
 
   constructor(state: DurableObjectState, env: SchedulerEnv) {
     this.state = state;
     this.env = env;
+  }
+
+  /**
+   * Load standings refresh state from storage
+   */
+  private async loadStandingsState(): Promise<StandingsRefreshState> {
+    if (this.standingsState) {
+      return this.standingsState;
+    }
+
+    const stored = await this.state.storage.get<string>(STANDINGS_STATE_KEY);
+    this.standingsState = stored
+      ? deserializeState(stored)
+      : createInitialState();
+    return this.standingsState;
+  }
+
+  /**
+   * Save standings refresh state to storage
+   */
+  private async saveStandingsState(): Promise<void> {
+    if (this.standingsState) {
+      await this.state.storage.put(
+        STANDINGS_STATE_KEY,
+        serializeState(this.standingsState),
+      );
+    }
   }
 
   /**
@@ -30,11 +78,92 @@ export class RefreshSchedulerDurableObject {
    */
   async alarm(): Promise<void> {
     const startTime = performance.now();
+    const now = Date.now();
     console.log(`⏰ [RefreshScheduler] Alarm triggered at ${new Date().toISOString()}`);
 
     try {
-      // Refresh today's fixtures
-      await refreshTodayFixtures(this.env);
+      // Load standings state
+      const standingsState = await this.loadStandingsState();
+
+      // Refresh today's fixtures and get the fixtures data for analysis
+      const fixtures = await refreshTodayFixturesWithAnalysis(this.env);
+
+      if (fixtures && fixtures.length > 0) {
+        // Analyze fixtures for active leagues and FT transitions
+        const analysis = analyzeFixtures(
+          fixtures,
+          standingsState.previousFixtureStatuses,
+        );
+
+        // Update state based on analysis
+        updateStateFromAnalysis(standingsState, analysis, now);
+
+        // Check which leagues need standings refresh
+        const leaguesToRefresh = getLeaguesToRefresh(standingsState, now);
+
+        // Log active leagues status
+        if (standingsState.activeLeagues.size > 0) {
+          console.log(
+            `📊 [RefreshScheduler] ${standingsState.activeLeagues.size} active leagues, ` +
+            `${standingsState.recentlyFinishedLeagues.size} recently finished`,
+          );
+        }
+
+        // Refresh standings for leagues that need it (non-blocking)
+        const allLeaguesToRefresh = [
+          ...leaguesToRefresh.fromActive,
+          ...leaguesToRefresh.fromRecentlyFinished,
+        ];
+
+        if (allLeaguesToRefresh.length > 0) {
+          console.log(
+            `🔄 [RefreshScheduler] Refreshing standings for ${allLeaguesToRefresh.length} leagues`,
+          );
+
+          // Process standings refresh and signature-driven regeneration
+          await Promise.all(
+            allLeaguesToRefresh.map(async (league) => {
+              const success = await fetchStandingsForLeague(
+                league.leagueId,
+                league.season,
+                this.env,
+              );
+              if (success) {
+                recordStandingsRefresh(
+                  standingsState,
+                  league.leagueId,
+                  league.season,
+                  now,
+                );
+
+                // Check for NS fixtures that need insights regeneration
+                // (due to standings signature changes)
+                try {
+                  const regenerated = await checkAndRegenerateForLeague(
+                    fixtures,
+                    league.leagueId,
+                    league.season,
+                    this.env,
+                  );
+                  if (regenerated > 0) {
+                    console.log(
+                      `✅ [RefreshScheduler] Regenerated ${regenerated} insights for league ${league.leagueId}`,
+                    );
+                  }
+                } catch (regenError) {
+                  console.warn(
+                    `⚠️ [RefreshScheduler] Regeneration check failed for league ${league.leagueId}:`,
+                    regenError,
+                  );
+                }
+              }
+            }),
+          );
+        }
+
+        // Save updated state
+        await this.saveStandingsState();
+      }
 
       const duration = (performance.now() - startTime).toFixed(2);
       console.log(`✅ [RefreshScheduler] Refresh completed in ${duration}ms`);

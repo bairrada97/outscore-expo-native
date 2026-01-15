@@ -101,7 +101,9 @@ export interface Fixture {
 export interface FixturesResponse {
   get: string;
   parameters: Record<string, string>;
-  errors: any[];
+  // API-Football returns an array of error strings/objects depending on endpoint.
+  // Keep it permissive but avoid `any`.
+  errors: unknown[];
   results: number;
   paging: {
     current: number;
@@ -174,8 +176,12 @@ export type FormattedFixturesResponse = FormattedCountry[];
  * Fixture status constants for classification
  */
 export const FIXTURE_STATUS = {
-  LIVE: ['1H', '2H', 'HT', 'ET', 'INT', 'BT', 'P'],
-  FINISHED: ['FT', 'AET', 'PEN'],
+  // API-Football status.short values
+  // Notes:
+  // - 'SUSP' (suspended) and 'INT' (interrupted) are treated as "live-ish" for polling/classification.
+  // - 'AWD' (awarded) is treated as finished.
+  LIVE: ['1H', '2H', 'HT', 'ET', 'INT', 'BT', 'P', 'SUSP'],
+  FINISHED: ['FT', 'AET', 'PEN', 'AWD'],
   NOT_STARTED: ['NS'],
   CANCELLED: ['CANC', 'PST', 'ABD', 'WO', 'TBD'],
 } as const;
@@ -212,4 +218,87 @@ export function isFinishedStatus(status: FixtureStatusShort): status is Finished
  */
 export function isNotStartedStatus(status: FixtureStatusShort): status is NotStartedStatus {
   return (FIXTURE_STATUS.NOT_STARTED as readonly string[]).includes(status);
+}
+
+// ============================================================================
+// STANDINGS RESPONSE TYPES
+// ============================================================================
+
+/**
+ * API-Football /standings endpoint response
+ */
+export interface StandingsResponse {
+  get: "standings";
+  parameters: {
+    league: string;
+    season: string;
+  };
+  errors: unknown[];
+  results: number;
+  paging: {
+    current: number;
+    total: number;
+  };
+  response: Array<{
+    league: StandingsLeague;
+  }>;
+}
+
+/**
+ * League data within standings response
+ */
+export interface StandingsLeague {
+  id: number;
+  name: string;
+  country: string;
+  logo: string;
+  flag: string | null;
+  season: number;
+  /**
+   * 2D array structure:
+   * - Outer array: different tables/groups (e.g., overall table, group stages)
+   * - Inner array: rows within that table/group
+   */
+  standings: StandingsRow[][];
+}
+
+/**
+ * Single row in a standings table
+ */
+export interface StandingsRow {
+  rank: number;
+  team: StandingsTeamRef;
+  points: number;
+  goalsDiff: number;
+  group: string | null;
+  form: string | null;
+  status: string | null;
+  description: string | null;
+  all: StandingsRecord;
+  home: StandingsRecord;
+  away: StandingsRecord;
+  update: string;
+}
+
+/**
+ * Team reference in standings
+ */
+export interface StandingsTeamRef {
+  id: number;
+  name: string;
+  logo: string;
+}
+
+/**
+ * Record statistics (all/home/away)
+ */
+export interface StandingsRecord {
+  played: number;
+  win: number;
+  draw: number;
+  lose: number;
+  goals: {
+    for: number;
+    against: number;
+  };
 }

@@ -55,6 +55,71 @@ export const getFootballApiFixtureDetail = async (
 };
 
 /**
+ * Fetch multiple fixture details by IDs from the third-party Football API
+ *
+ * API-Football supports: GET /fixtures?ids=ID1-ID2-ID3
+ * This is a quota optimization for batch workloads (e.g., 3am prefetch).
+ */
+export const getFootballApiFixturesByIds = async (
+  fixtureIds: number[],
+  apiUrl?: string,
+  apiKey?: string
+): Promise<FixturesResponse> => {
+  if (!apiUrl || !apiKey) {
+    throw new Error('API URL or API Key not provided');
+  }
+
+  if (fixtureIds.length === 0) {
+    return {
+      get: 'fixtures',
+      parameters: {},
+      errors: [],
+      results: 0,
+      paging: { current: 1, total: 1 },
+      response: [],
+    } satisfies FixturesResponse;
+  }
+
+  const idsParam = fixtureIds.join('-');
+  console.log(`🌐 [API] Request: fixtures by ids (${fixtureIds.length})`);
+
+  const url = new URL(`${apiUrl}/fixtures`);
+  url.searchParams.append('ids', idsParam);
+  console.log(`🌐 [API] URL: ${url.toString()}`);
+
+  const startTime = performance.now();
+
+  const response = await fetch(url.toString(), {
+    method: 'GET',
+    headers: {
+      'x-rapidapi-host': 'api-football-v1.p.rapidapi.com',
+      'x-rapidapi-key': apiKey,
+    },
+  });
+
+  const duration = (performance.now() - startTime).toFixed(2);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`❌ [API] Error (${duration}ms): ${response.statusText}`);
+    throw new Error(`API request failed: ${response.statusText} - ${errorText}`);
+  }
+
+  const data = await response.json();
+
+  // Check for API errors
+  if (data.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+    throw new Error(`API returned errors: ${JSON.stringify(data.errors)}`);
+  }
+
+  console.log(
+    `✅ [API] Success (${duration}ms): fixtures by ids -> ${data.response?.length || 0} fixtures`,
+  );
+
+  return data as FixturesResponse;
+};
+
+/**
  * Fetch fixtures from the third-party Football API
  */
 export const getFootballApiFixtures = async (

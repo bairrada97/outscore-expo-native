@@ -3,8 +3,12 @@ import {
 	botProtection,
 	createCors,
 	createFixturesRoutes,
+	createCacheAdminRoutes,
+	createInsightsRoutes,
 	type FixturesEnv,
 	handleScheduledEvent,
+	type InsightsEnv,
+	prefetchDailyInsights,
 	rateLimiter,
 	type SchedulerEnv,
 	secureHeaders,
@@ -16,11 +20,12 @@ import RefreshSchedulerDurableObject from "./utils/refresh-scheduler-do";
 /**
  * Environment bindings
  */
-interface Env extends FixturesEnv, SchedulerEnv {
-  APPROVED_ORIGINS?: string;
-  OUTSCORE_RATE_LIMITER?: unknown; // Cloudflare Rate Limiter binding (not currently used)
-  QUOTA_DO: DurableObjectNamespace;
-  REFRESH_SCHEDULER_DO: DurableObjectNamespace;
+interface Env extends FixturesEnv, InsightsEnv, SchedulerEnv {
+	APPROVED_ORIGINS?: string;
+	ADMIN_CACHE_TOKEN?: string;
+	OUTSCORE_RATE_LIMITER?: unknown; // Cloudflare Rate Limiter binding (not currently used)
+	QUOTA_DO: DurableObjectNamespace;
+	REFRESH_SCHEDULER_DO: DurableObjectNamespace;
 }
 
 /**
@@ -33,12 +38,12 @@ const app = new Hono<{ Bindings: Env }>();
  */
 app.use(
 	"*",
-  secureHeaders({
+	secureHeaders({
 		hsts: "max-age=63072000; includeSubDomains; preload",
 		contentTypeOptions: "nosniff",
 		frameOptions: "DENY",
-    // API doesn't need CSP
-    contentSecurityPolicy: false,
+		// API doesn't need CSP
+		contentSecurityPolicy: false,
 	}),
 );
 
@@ -46,8 +51,8 @@ app.use(
  * Middleware: CORS (dynamic based on environment)
  */
 app.use("*", async (context, next) => {
-  const corsMiddleware = createCors(context.env.APPROVED_ORIGINS);
-  return corsMiddleware(context, next);
+	const corsMiddleware = createCors(context.env.APPROVED_ORIGINS);
+	return corsMiddleware(context, next);
 });
 
 /**
@@ -56,13 +61,13 @@ app.use("*", async (context, next) => {
 app.use("*", async (context, next) => {
 	// Skip bot protection for health checks and metrics
 	if (context.req.path === "/health" || context.req.path === "/metrics") {
-    return next();
-  }
-  return botProtection({
+		return next();
+	}
+	return botProtection({
 		blockEmptyUserAgent: false, // Allow browser requests (browsers always send User-Agent)
-    blockKnownBots: true,
+		blockKnownBots: true,
 		checkCloudflareIp: false, // Disable strict IP check to prevent hanging
-  })(context, next);
+	})(context, next);
 });
 
 /**
@@ -70,9 +75,9 @@ app.use("*", async (context, next) => {
  */
 app.use(
 	"/fixtures*",
-  rateLimiter({
-    limit: 60,
-    windowSec: 60,
+	rateLimiter({
+		limit: 60,
+		windowSec: 60,
 		skip: (context) => context.req.path === "/health",
 	}),
 );
@@ -81,21 +86,21 @@ app.use(
  * Health check endpoint
  */
 app.get("/health", (context) => {
-  return context.json({
+	return context.json({
 		status: "ok",
-    timestamp: new Date().toISOString(),
-  });
+		timestamp: new Date().toISOString(),
+	});
 });
 
 /**
  * Metrics endpoint (for monitoring)
  */
 app.get("/metrics", (context) => {
-  const metrics = getMetrics();
-  return context.json({
+	const metrics = getMetrics();
+	return context.json({
 		status: "ok",
-    metrics,
-  });
+		metrics,
+	});
 });
 
 /**
@@ -104,16 +109,27 @@ app.get("/metrics", (context) => {
 app.route("/fixtures", createFixturesRoutes());
 
 /**
+ * Betting Insights routes
+ * Endpoint: GET /fixtures/:fixtureId/insights
+ */
+app.route("/fixtures", createInsightsRoutes());
+
+/**
+ * Admin cache routes (protected)
+ */
+app.route("/admin/cache", createCacheAdminRoutes());
+
+/**
  * 404 handler
  */
 app.notFound((context) => {
-  return context.json(
-    {
+	return context.json(
+		{
 			status: "error",
 			message: "Not found",
-    },
+		},
 		404,
-  );
+	);
 });
 
 /**
@@ -138,7 +154,7 @@ app.onError((error, context) => {
 		"http://10.0.2.2:3000", // Android emulator
 		"http://10.0.2.2:8081", // Android emulator (alternative)
 		"https://outscore-native-expo--di8o2dv5ph.expo.app",
-		"https://outscore.vercel.app"
+		"https://outscore.vercel.app",
 	];
 
 	// Check if origin is allowed (also check env variable)
@@ -220,16 +236,16 @@ async function withTimeout<T>(
  * Cloudflare Workers export
  */
 export default {
-  /**
-   * Handle HTTP requests
-   */
+	/**
+	 * Handle HTTP requests
+	 */
 	async fetch(
 		request: Request,
 		env: Env,
 		ctx: ExecutionContext,
 	): Promise<Response> {
-    const requestStartTime = performance.now();
-    const url = new URL(request.url);
+		const requestStartTime = performance.now();
+		const url = new URL(request.url);
 
 		try {
 			// Process request with 30 second timeout
@@ -240,25 +256,25 @@ export default {
 				"Request timeout after 30 seconds",
 			);
 
-    // Add response time header
-    const durationMs = performance.now() - requestStartTime;
-    const responseTime = durationMs.toFixed(2);
+			// Add response time header
+			const durationMs = performance.now() - requestStartTime;
+			const responseTime = durationMs.toFixed(2);
 			response.headers.set("X-Response-Time", `${responseTime}ms`);
 
-    // Log request (non-blocking)
-    ctx.waitUntil(
-      Promise.resolve().then(() => {
-        logRequest(
-          url.pathname,
-          request.method,
-          response.status,
-          durationMs,
+			// Log request (non-blocking)
+			ctx.waitUntil(
+				Promise.resolve().then(() => {
+					logRequest(
+						url.pathname,
+						request.method,
+						response.status,
+						durationMs,
 						response.headers.get("X-Source") || undefined,
-        );
+					);
 				}),
-    );
+			);
 
-    return response;
+			return response;
 		} catch (error) {
 			console.error("❌ [Fetch] Error:", error);
 			const durationMs = performance.now() - requestStartTime;
@@ -289,18 +305,32 @@ export default {
 
 			return errorResponse;
 		}
-  },
+	},
 
-  /**
-   * Handle scheduled events (Cron Triggers)
-   */
+	/**
+	 * Handle scheduled events (Cron Triggers)
+	 * - Every minute (* * * * *): Failsafe for DO alarm chain
+	 * - Daily 3 AM UTC (0 3 * * *): Prefetch insights for today's fixtures
+	 */
 	async scheduled(
 		event: ScheduledEvent,
 		env: Env,
 		ctx: ExecutionContext,
 	): Promise<void> {
-    ctx.waitUntil(handleScheduledEvent(event, env));
-  },
+		const scheduledTime = new Date(event.scheduledTime);
+		const hour = scheduledTime.getUTCHours();
+		const minute = scheduledTime.getUTCMinutes();
+
+		// 3 AM UTC cron: Prefetch insights for today's fixtures
+		if (hour === 3 && minute === 0) {
+			console.log(`📊 [Cron] 3 AM - Starting daily insights prefetch`);
+			ctx.waitUntil(prefetchDailyInsights(env));
+			return;
+		}
+
+		// All other times: Handle standard scheduled event (DO alarm chain failsafe)
+		ctx.waitUntil(handleScheduledEvent(event, env));
+	},
 };
 
 /**
