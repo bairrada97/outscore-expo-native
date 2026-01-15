@@ -1,24 +1,43 @@
 import { FixtureInfoHeader } from "@/components/fixture-info-header";
+import { Tabs } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/text";
 import {
-	fixtureByIdQuery,
-	getFixtureRefetchInterval,
+    fixtureByIdQuery,
+    getFixtureRefetchInterval,
 } from "@/queries/fixture-by-id";
 import { insightsByFixtureIdQuery } from "@/queries/insights-by-fixture-id";
 import { FIFTEEN_SECONDS_CACHE } from "@/utils/constants";
 import { parseFixtureSlug } from "@/utils/fixture-slug";
 import {
-	FIXTURE_IS_FINISHED_STATUS,
-	FIXTURE_IS_LIVE_STATUS,
+    FIXTURE_IS_FINISHED_STATUS,
+    FIXTURE_IS_LIVE_STATUS,
 } from "@/utils/fixtures-status-constants";
 import { isWeb } from "@/utils/platform";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useRef } from "react";
 import { ActivityIndicator, View } from "react-native";
 
+const FIXTURE_TABS = [
+	{ key: "overview", title: "OVERVIEW" },
+	{ key: "insights", title: "INSIGHTS" },
+	{ key: "lineups", title: "LINEUPS" },
+	{ key: "statistics", title: "STATISTICS" },
+	{ key: "h2h", title: "H2H" },
+	{ key: "standings", title: "STANDINGS" },
+] as const;
+
+type FixtureTabKey = (typeof FIXTURE_TABS)[number]["key"];
+
+function normalizeFixtureTab(tabParam: unknown): FixtureTabKey {
+	const raw = typeof tabParam === "string" ? tabParam : undefined;
+	const match = FIXTURE_TABS.find((t) => t.key === raw)?.key;
+	return (match ?? "overview") as FixtureTabKey;
+}
+
 export default function FixtureDetailScreen() {
-	const { slug } = useLocalSearchParams<{ slug: string }>();
+	const router = useRouter();
+	const { slug, tab } = useLocalSearchParams<{ slug: string; tab?: string }>();
 	const fixtureId = parseFixtureSlug(slug);
 	const queryClient = useQueryClient();
 	const previousStatusRef = useRef<string | null>(null);
@@ -143,74 +162,134 @@ export default function FixtureDetailScreen() {
 			>
 				<FixtureInfoHeader fixture={data.response?.[0]} />
 
-				{/* Additional content area */}
-				<View className="p-4">
-					{/* League info */}
-					<Text className="text-neu-07 dark:text-neu-06 mb-4">
-						{data.response?.[0].league.name} - {data.response?.[0].league.round}
-					</Text>
-
-					{/* Fixture status */}
-					<Text className="text-neu-07 dark:text-neu-06">
-						{data.response?.[0].fixture.status.long}
-					</Text>
-
-					{/* Fixture date/time */}
-					<Text className="text-neu-06 dark:text-neu-07 mt-2">
-						{new Date(data.response?.[0].fixture.date).toLocaleString()}
-					</Text>
-
-					{/* Venue */}
-					{data.response?.[0].fixture.venue?.name && (
-						<Text className="text-neu-06 dark:text-neu-07 mt-4">
-							{data.response?.[0].fixture.venue.name}
-							{data.response?.[0].fixture.venue.city &&
-								`, ${data.response?.[0].fixture.venue.city}`}
-						</Text>
-					)}
-
-					{/* Insights */}
-					<View className="mt-6">
-						<Text className="text-neu-10 dark:text-neu-06 mb-2">Insights</Text>
-
-						{isInsightsLoading && (
-							<View className="py-4">
-								<ActivityIndicator />
-							</View>
-						)}
-
-						{insightsError && (
-							<Text className="text-red">
-								Insights error: {insightsError.message}
-							</Text>
-						)}
-
-						{insightsData && (
-							<View className="gap-2">
-								{insightsData.overallConfidence && (
-									<Text className="text-neu-06 dark:text-neu-07">
-										Overall confidence: {insightsData.overallConfidence}
+				<Tabs
+					activeKey={isWeb ? normalizeFixtureTab(tab) : undefined}
+					defaultKey="overview"
+					swipeEnabled
+					onChangeKey={(key: string) => {
+						if (isWeb) router.setParams({ tab: key });
+					}}
+					tabs={[
+						{
+							key: "overview",
+							title: "OVERVIEW",
+							render: () => (
+								<View className="p-16">
+									<Text className="text-neu-07 dark:text-neu-06 mb-4">
+										{data.response?.[0].league.name} -{" "}
+										{data.response?.[0].league.round}
 									</Text>
-								)}
-
-								{insightsData.predictions
-									?.filter((p) => p.market === "OVER_UNDER_GOALS")
-									?.sort((a, b) => (a.line ?? 0) - (b.line ?? 0))
-									?.map((p) => (
-										<Text
-											key={`ou-${p.line ?? "na"}`}
-											className="text-neu-06 dark:text-neu-07"
-										>
-											Over/Under {p.line}: O{" "}
-											{Math.round((p.probabilities.over ?? 0) * 10) / 10}% / U{" "}
-											{Math.round((p.probabilities.under ?? 0) * 10) / 10}%{" "}
-											{p.confidence ? `(${p.confidence})` : ""}
+									<Text className="text-neu-07 dark:text-neu-06">
+										{data.response?.[0].fixture.status.long}
+									</Text>
+									<Text className="text-neu-06 dark:text-neu-07 mt-2">
+										{new Date(data.response?.[0].fixture.date).toLocaleString()}
+									</Text>
+									{data.response?.[0].fixture.venue?.name && (
+										<Text className="text-neu-06 dark:text-neu-07 mt-4">
+											{data.response?.[0].fixture.venue.name}
+											{data.response?.[0].fixture.venue.city &&
+												`, ${data.response?.[0].fixture.venue.city}`}
 										</Text>
-									))}
-							</View>
-						)}
-					</View>
-				</View>
+									)}
+								</View>
+							),
+						},
+						{
+							key: "insights",
+							title: "INSIGHTS",
+							render: () => (
+								<View className="p-16">
+									<Text className="text-neu-10 dark:text-neu-06 mb-2">
+										Insights
+									</Text>
+
+									{isInsightsLoading && (
+										<View className="py-4">
+											<ActivityIndicator />
+										</View>
+									)}
+
+									{insightsError && (
+										<Text className="text-red">
+											Insights error: {insightsError.message}
+										</Text>
+									)}
+
+									{insightsData && (
+										<View className="gap-2">
+											{insightsData.overallConfidence && (
+												<Text className="text-neu-06 dark:text-neu-07">
+													Overall confidence: {insightsData.overallConfidence}
+												</Text>
+											)}
+
+											{insightsData.predictions
+												?.filter((p) => p.market === "OVER_UNDER_GOALS")
+												?.sort((a, b) => (a.line ?? 0) - (b.line ?? 0))
+												?.map((p) => (
+													<Text
+														key={`ou-${p.line ?? "na"}`}
+														className="text-neu-06 dark:text-neu-07"
+													>
+														Over/Under {p.line}: O{" "}
+														{Math.round((p.probabilities.over ?? 0) * 10) / 10}%
+														/ U{" "}
+														{Math.round((p.probabilities.under ?? 0) * 10) / 10}
+														% {p.confidence ? `(${p.confidence})` : ""}
+													</Text>
+												))}
+										</View>
+									)}
+								</View>
+							),
+						},
+						{
+							key: "lineups",
+							title: "LINEUPS",
+							render: () => (
+								<View className="p-16">
+									<Text className="text-neu-07 dark:text-neu-06">
+										Coming soon
+									</Text>
+								</View>
+							),
+						},
+						{
+							key: "statistics",
+							title: "STATISTICS",
+							render: () => (
+								<View className="p-16">
+									<Text className="text-neu-07 dark:text-neu-06">
+										Coming soon
+									</Text>
+								</View>
+							),
+						},
+						{
+							key: "h2h",
+							title: "H2H",
+							render: () => (
+								<View className="p-16">
+									<Text className="text-neu-07 dark:text-neu-06">
+										Coming soon
+									</Text>
+								</View>
+							),
+						},
+						{
+							key: "standings",
+							title: "STANDINGS",
+							render: () => (
+								<View className="p-16">
+									<Text className="text-neu-07 dark:text-neu-06">
+										Coming soon
+									</Text>
+								</View>
+							),
+						},
+					]}
+				/>
 			</View>
 		</>
 	);
