@@ -31,7 +31,7 @@ function getStatusText(
 	}
 
 	if (isLiveStatus(status)) {
-		return elapsed !== null ? `${elapsed}'` : "LIVE";
+		return typeof elapsed === "number" ? `${elapsed}'` : "LIVE";
 	}
 
 	if (isFinishedStatus(status)) {
@@ -54,11 +54,11 @@ export function ScoreDisplay({
 	return (
 		<View className="items-center justify-center">
 			{/* Score */}
-			<View className="flex-row items-center gap-8">
-				<Text variant="highlight-02" className="text-neu-01">
+			<View className="flex-row items-center gap-x-32 gap-y-4">
+				<Text variant="highlight-02" className="text-neu-01 text-right">
 					{isNotStarted ? "-" : (homeScore ?? 0)}
 				</Text>
-				<Text variant="highlight-02" className="text-neu-01">
+				<Text variant="highlight-02" className="text-neu-01 text-left">
 					{isNotStarted ? "-" : (awayScore ?? 0)}
 				</Text>
 			</View>

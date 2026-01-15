@@ -86,7 +86,7 @@ export default function FixtureDetailScreen() {
 	} = useQuery({
 		...insightsByFixtureIdQuery({ fixtureId }),
 		// Keep insights refresh cadence aligned with fixture polling
-		refetchInterval: (query) => {
+		refetchInterval: (_query) => {
 			const fixtureData = data;
 			if (!fixtureData) {
 				return FIFTEEN_SECONDS_CACHE + 2000;
@@ -121,7 +121,7 @@ export default function FixtureDetailScreen() {
 		return (
 			<>
 				<Stack.Screen options={{ headerShown: false }} />
-				<View className="flex-1 items-center justify-center bg-neu-02 dark:bg-neu-13">
+				<View className="flex-1 items-center justify-center pt-16 bg-neu-02 dark:bg-neu-13">
 					<Text className="text-neu-07">Fixture not found</Text>
 				</View>
 			</>
@@ -132,7 +132,7 @@ export default function FixtureDetailScreen() {
 		<>
 			<Stack.Screen
 				options={{
-					title: "FIXTURE DETAILS",
+					title: "MATCH INFO",
 					headerShown: true,
 				}}
 			/>
