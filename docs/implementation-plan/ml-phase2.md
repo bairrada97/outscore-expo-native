@@ -24,9 +24,16 @@ ML Phase 2 focuses on training ML models (LightGBM) for each betting market. **I
    - `BTTS_Yes`: Binary (1 if both teams scored, 0 otherwise)
    - `BTTS_No`: Binary (inverse of BTTS_Yes)
 
-2. **Over/Under 2.5 Target Variables**
-   - `Over25_Yes`: Binary (1 if total goals > 2.5, 0 otherwise)
-   - `Under25_Yes`: Binary (inverse of Over25_Yes)
+2. **Over/Under Goals Target Variables (multi-line)**
+   - Create one binary target per line (default lines: 0.5, 1.5, 2.5, 3.5, 4.5, 5.5)
+   - Examples:
+     - `Over0_5_Yes`: 1 if total goals > 0.5, else 0
+     - `Over1_5_Yes`: 1 if total goals > 1.5, else 0
+     - `Over2_5_Yes`: 1 if total goals > 2.5, else 0
+     - `Over3_5_Yes`: 1 if total goals > 3.5, else 0
+     - `Over4_5_Yes`: 1 if total goals > 4.5, else 0
+     - `Over5_5_Yes`: 1 if total goals > 5.5, else 0
+   - Under for a given line is the inverse of the corresponding Over target
 
 3. **Match Result Target Variables**
    - `HomeWin`: Binary (1 if home team won, 0 otherwise)
@@ -69,7 +76,7 @@ ML Phase 2 focuses on training ML models (LightGBM) for each betting market. **I
 
 1. **Model Architecture**
    - BTTS Model: Binary classification (LightGBM)
-   - Over25 Model: Binary classification (LightGBM)
+   - Over/Under Goals Models: Binary classification (LightGBM) per line (0.5..5.5)
    - Match Result Model: Multi-class classification (LightGBM, 3 classes)
    - First Half Model: Binary classification (LightGBM)
    - Goal Prediction Model: Regression (LightGBM)
@@ -87,7 +94,7 @@ ML Phase 2 focuses on training ML models (LightGBM) for each betting market. **I
 #### Files to Create:
 
 - `ml/models/train-btts-model.py` - BTTS model training
-- `ml/models/train-over25-model.py` - Over 2.5 model training
+- `ml/models/train-over-under-goals-models.py` - Over/Under Goals model training (per line)
 - `ml/models/train-match-result-model.py` - Match Result model training
 - `ml/models/train-first-half-model.py` - First Half model training
 - `ml/models/train-goal-prediction-model.py` - Goal prediction model training
@@ -361,7 +368,7 @@ model_config = {
 
 **Top 5 Leagues:**
 - BTTS Model: Brier Score < 0.20, Log-Loss < 0.60, ROC-AUC > 0.70
-- Over25 Model: Brier Score < 0.22, Log-Loss < 0.65, ROC-AUC > 0.68
+- Over/Under Goals Models (per line): Brier Score < 0.22, Log-Loss < 0.65, ROC-AUC > 0.68 (targets may vary slightly by line)
 - Match Result Model: Multi-class Brier Score < 0.50, Log-Loss < 1.20
 - First Half Model: Brier Score < 0.22, Log-Loss < 0.65
 

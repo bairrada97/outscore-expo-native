@@ -1,10 +1,10 @@
-# Phase 4: Market Predictions (Week 2-3)
+# Phase 4: Scenario Simulations (Week 2-3)
 
 **Reference:** See "Phase 4: Market Predictions" section in `betting-insights-algorithm.md`
 
 ## Overview
 
-Phase 4 implements probability calculations for all betting markets (BTTS, Over/Under 2.5, Match Result, First Half). This phase combines all previous phases' data and patterns to generate accurate predictions with confidence levels.
+Phase 4 implements probability calculations for key football scenarios (BothTeamsToScore, TotalGoalsOverUnder, MatchOutcome, FirstHalfActivity). This phase combines all previous phases' data and patterns to generate simulations with model reliability levels.
 
 ## Dependencies
 
@@ -51,7 +51,7 @@ Phase 4 implements probability calculations for all betting markets (BTTS, Over/
 
 #### Files to Create:
 
-- `apps/backend/src/modules/betting-insights/predictions/predict-btts.ts` - BTTS prediction logic
+- `apps/backend/src/modules/betting-insights/simulations/simulate-btts.ts` - BothTeamsToScore simulation logic
 - Extend `apps/backend/src/modules/betting-insights/utils/weight-adjustments.ts` - Add BTTS-specific adjustments
 
 #### Validation Criteria:
@@ -66,18 +66,18 @@ Phase 4 implements probability calculations for all betting markets (BTTS, Over/
 
 ---
 
-### 4.2 Over/Under 2.5 Goals Prediction
+### 4.2 Over/Under Goals Prediction (multi-line)
 
-**Reference:** See "4.2 Over/Under 2.5 Prediction" in `betting-insights-algorithm.md`
+**Reference:** See "4.2 Over/Under Goals Prediction" in `betting-insights-algorithm.md`
 
-**Goal:** Predict probability of Over 2.5 goals
+**Goal:** Predict probabilities for Over/Under goals across lines (0.5, 1.5, 2.5, 3.5, 4.5, 5.5)
 
 #### Sub-tasks:
 
 1. **Factor Calculation**
    - Average Goals Per Game (30%): Combined scoring rate
    - Defensive Weakness (25%): Goals conceded per game
-   - Recent Form (30%): Over 2.5 in recent matches
+   - Recent Form (30%): Over \(line\) in recent matches
    - H2H Goals (20%): Recency-weighted average goals in H2H
    - Home Advantage (12%): Home teams score more
    - Motivation (10%): Must-win games higher scoring
@@ -95,14 +95,14 @@ Phase 4 implements probability calculations for all betting markets (BTTS, Over/
 
 #### Files to Create:
 
-- `apps/backend/src/modules/betting-insights/predictions/predict-over25.ts` - Over 2.5 prediction logic
+- `apps/backend/src/modules/betting-insights/simulations/simulate-total-goals-over-under.ts` - TotalGoalsOverUnder simulation logic (multi-line)
 
 #### Validation Criteria:
 
 - ✅ Average goals calculated correctly
-- ✅ Defensive weakness impacts Over 2.5 appropriately
+- ✅ Defensive weakness impacts Over/Under appropriately (line-aware)
 - ✅ H2H goals use recency weighting
-- ✅ Motivation impacts Over 2.5 correctly
+- ✅ Motivation impacts Over/Under correctly (line-aware)
 - ✅ Formation stability has 40% less impact
 - ✅ Probability range is reasonable
 
@@ -142,7 +142,7 @@ Phase 4 implements probability calculations for all betting markets (BTTS, Over/
 
 #### Files to Create:
 
-- `apps/backend/src/modules/betting-insights/predictions/predict-match-result.ts` - Match Result prediction logic
+- `apps/backend/src/modules/betting-insights/simulations/simulate-match-outcome.ts` - MatchOutcome simulation logic
 - `apps/backend/src/modules/betting-insights/utils/form-score.ts` - Form score calculation
 - `apps/backend/src/modules/betting-insights/utils/home-advantage.ts` - Dynamic home advantage calculation
 - `apps/backend/src/modules/betting-insights/utils/motivation-score.ts` - Motivation score calculation
@@ -186,7 +186,7 @@ Phase 4 implements probability calculations for all betting markets (BTTS, Over/
 
 #### Files to Create:
 
-- `apps/backend/src/modules/betting-insights/predictions/predict-first-half.ts` - First Half prediction logic
+- `apps/backend/src/modules/betting-insights/simulations/simulate-first-half-activity.ts` - FirstHalfActivity simulation logic
 
 #### Validation Criteria:
 
@@ -202,7 +202,7 @@ Phase 4 implements probability calculations for all betting markets (BTTS, Over/
 
 **Reference:** See "Alternative Bet Suggestions" in `betting-insights-algorithm.md`
 
-**Goal:** Suggest safer alternative bets for every prediction
+**Goal:** Suggest related scenarios for every simulation (neutral reframing)
 
 #### Sub-tasks:
 
@@ -217,13 +217,13 @@ Phase 4 implements probability calculations for all betting markets (BTTS, Over/
    - Suggest complementary markets
 
 3. **Alternative Bet Generation**
-   - Generate AlternativeBet objects
-   - Include relationship type (SAFER, CORRELATED, COMPLEMENTARY, MORE_AGGRESSIVE)
+   - Generate related scenario objects
+   - Keep relationships neutral (e.g., nearby lines / often-moves-together) or omit when using minimal schema
    - Sort by relationship priority and probability
 
 #### Files to Create:
 
-- `apps/backend/src/modules/betting-insights/predictions/alternative-bets.ts` - Alternative bet suggestion logic
+- `apps/backend/src/modules/betting-insights/simulations/related-scenarios.ts` - Related scenario suggestion logic
 
 #### Validation Criteria:
 
@@ -236,42 +236,42 @@ Phase 4 implements probability calculations for all betting markets (BTTS, Over/
 
 ## Key Data Structures
 
-### MarketPrediction Interface
+### Simulation Interface
 
 ```typescript
-interface MarketPrediction {
-  market: 'MATCH_RESULT' | 'BTTS' | 'OVER_2_5' | 'FIRST_HALF' | string;
-  probabilities: {
+interface Simulation {
+  scenarioType: 'BothTeamsToScore' | 'TotalGoalsOverUnder' | 'MatchOutcome' | 'FirstHalfActivity';
+  line?: 0.5 | 1.5 | 2.5 | 3.5 | 4.5 | 5.5; // Only for TotalGoalsOverUnder
+  probabilityDistribution: {
     home?: number;
     draw?: number;
     away?: number;
     yes?: number;
     no?: number;
+    over?: number;
+    under?: number;
   };
-  rating: 'VERY_LIKELY' | 'LIKELY' | 'NEUTRAL' | 'UNLIKELY' | 'VERY_UNLIKELY';
-  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  signalStrength: 'Strong' | 'Moderate' | 'Balanced' | 'Weak';
+  modelReliability: 'HIGH' | 'MEDIUM' | 'LOW';
+  mostProbableOutcome: string;
   insights: Insight[];
   conflictingSignals?: ConflictingSignal[];
-  recommendation?: string;
-  alternatives?: AlternativeBet[];
-}
-
-interface AlternativeBet {
-  market: string;
-  probability: number;
-  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
-  reason: string;
-  relationship: 'SAFER' | 'MORE_AGGRESSIVE' | 'CORRELATED' | 'COMPLEMENTARY';
-  probabilityGain?: number;
-  correlation?: number;
-  oddsEstimate?: number;
+  relatedScenarios?: Array<{
+    scenarioType: string;
+    line?: number;
+    probability: number;
+    modelReliability: 'HIGH' | 'MEDIUM' | 'LOW';
+    rationale: string;
+    mostProbableOutcome: string;
+  }>;
+  modelReliabilityBreakdown?: { level: string; reasons: string[] };
 }
 ```
 
 ## Implementation Checklist
 
-### BTTS Prediction
-- [ ] Implement `predictBTTS()` function
+### BothTeamsToScore Simulation
+- [ ] Implement `simulateBTTS()` function
 - [ ] Calculate scoring rate factor
 - [ ] Calculate defensive form factor
 - [ ] Calculate H2H BTTS with recency weighting
@@ -279,8 +279,8 @@ interface AlternativeBet {
 - [ ] Apply formation stability (40% impact)
 - [ ] Convert to probability
 
-### Over 2.5 Prediction
-- [ ] Implement `predictOver25()` function
+### TotalGoalsOverUnder Simulation (multi-line)
+- [ ] Implement `simulateTotalGoalsOverUnder()` function (one simulation per line)
 - [ ] Calculate average goals factor
 - [ ] Calculate defensive weakness factor
 - [ ] Calculate H2H goals with recency weighting
@@ -288,8 +288,8 @@ interface AlternativeBet {
 - [ ] Apply formation stability (40% impact)
 - [ ] Convert to probability
 
-### Match Result Prediction
-- [ ] Implement `predictMatchResult()` function (FULL implementation)
+### MatchOutcome Simulation
+- [ ] Implement `simulateMatchOutcome()` function (FULL implementation)
 - [ ] Calculate form score comparison
 - [ ] Calculate H2H record
 - [ ] Calculate dynamic home advantage
@@ -300,8 +300,8 @@ interface AlternativeBet {
 - [ ] Apply formation stability (full impact)
 - [ ] Normalize probabilities to 100%
 
-### First Half Prediction
-- [ ] Implement `predictFirstHalf()` function
+### FirstHalfActivity Simulation
+- [ ] Implement `simulateFirstHalfActivity()` function
 - [ ] Calculate first half scoring rate
 - [ ] Detect slow starters pattern
 - [ ] Calculate H2H first half patterns
@@ -310,7 +310,7 @@ interface AlternativeBet {
 - [ ] Convert to probability
 
 ### Alternative Bet Suggestions
-- [ ] Implement `suggestAlternativeBets()` function
+- [ ] Implement `attachRelatedScenarios()` function
 - [ ] Implement `findSaferAlternatives()` function
 - [ ] Implement `findCorrelatedAlternatives()` function
 - [ ] Implement `findComplementaryAlternatives()` function
@@ -338,7 +338,7 @@ Before proceeding to Phase 4.5, the following acceptance criteria must be met:
 ### Probability Bounds
 - [ ] **All probabilities in 20-80% range** (before caps)
 - [ ] **Match Result probabilities sum to 100%** (±0.1% tolerance)
-- [ ] **No extreme predictions without supporting evidence**
+- [ ] **No extreme simulations without supporting evidence**
 
 ### Data Quality
 - [ ] **Graceful handling of missing data** - Predictions should not crash on partial data
@@ -346,11 +346,11 @@ Before proceeding to Phase 4.5, the following acceptance criteria must be met:
 
 ## Notes
 
-- BTTS and Over 2.5 use similar factors but different weights
+- BTTS and Over/Under Goals use similar factors but different weights
 - Match Result is most complex - requires all factors
 - First Half focuses on early scoring patterns
 - Formation stability has different impact per market (40% for BTTS/Over25, full for Match Result, 20% for First Half)
-- All predictions should use recency-weighted H2H data
+- All simulations should use recency-weighted H2H data
 - Weight adjustments from Phase 3.5 must be applied
 - Alternative bets must always be safer unless MORE_AGGRESSIVE (HIGH confidence only)
 - Probabilities will be capped in Phase 4.5

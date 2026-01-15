@@ -15,6 +15,13 @@ binding = "FOOTBALL_KV"
 id = "bd0f2fadda52416db9ba5ce58974f6b4"
 preview_id = "058faa4190274550bf7edabe699718f1"
 
+# D1 database for canonical entities (teams, leagues, standings, insights snapshots)
+[[d1_databases]]
+binding = "ENTITIES_DB"
+database_name = "outscore-entities"
+database_id = "57e73af4-ae53-48fe-90c0-b9f7faca2597"  # Replace with actual ID after `wrangler d1 create outscore-entities`
+migrations_dir = "migrations"
+
 # Durable Object for atomic quota tracking
 [[durable_objects.bindings]]
 name = "QUOTA_DO"
@@ -34,6 +41,12 @@ new_sqlite_classes = ["QuotaDurableObject", "RefreshSchedulerDurableObject"]
 # Environment variables
 [vars]
 FOOTBALL_API_URL = "https://api-football-v1.p.rapidapi.com/v3"
+# IMPORTANT: Do not commit secrets in git.
+# Set this as a Wrangler secret instead:
+#   wrangler secret put ADMIN_CACHE_TOKEN
+# Used by:
+#   POST /admin/cache/insights/:fixtureId/purge (header: X-Admin-Token)
+# ADMIN_CACHE_TOKEN is intentionally omitted from this file.
 
 # Rate limiting configuration
 [[ratelimits]]
@@ -44,10 +57,11 @@ namespace_id = "1001"
 limit = 100
 period = 60
 
-# Scheduled triggers - cron acts as failsafe to ensure DO alarm chain is running
-# The actual 15-second refresh happens via Durable Object alarms
+# Scheduled triggers
+# - Every minute: failsafe to ensure DO alarm chain is running (15-second refresh)
+# - Daily 3 AM UTC: prefetch insights for today's fixtures to populate D1
 [triggers]
-crons = ["* * * * *"]  # Every minute (failsafe to restart DO alarm chain if needed)
+crons = ["* * * * *", "0 3 * * *"]
 
 # Enable observability
 [observability]

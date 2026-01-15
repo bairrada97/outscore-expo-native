@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "Bash(pnpm test:*)",
+      "Bash(node:*)",
+      "Bash(source ~/.nvm/nvm.sh)",
+      "Bash(nvm use:*)",
+      "Bash(bun test:*)",
+      "Bash(PATH=\"/opt/homebrew/bin:$PATH\" ./node_modules/.bin/vitest run:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm test:*)",
+      "Bash(npx vitest:*)",
+      "Bash(./node_modules/.bin/vitest run:*)",
+      "Bash(pnpm --filter \"@outscore/backend\" exec vitest run --reporter=dot)",
+      "Bash(/opt/homebrew/bin/pnpm test -- --run src/modules/betting-insights/match-context/context-adjustments.test.ts)",
+      "Bash(~/.nvm/versions/node/v22.0.0/bin/node node_modules/.bin/vitest:*)"
+    ]
+  }
+}
