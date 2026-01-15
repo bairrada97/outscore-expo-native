@@ -1,9 +1,13 @@
 import { Text } from "@/components/ui/text";
 import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
-import PagerView from "react-native-pager-view";
+import { type SceneRendererProps, TabView } from "react-native-tab-view";
+
+function clamp(n: number, min: number, max: number) {
+	return Math.max(min, Math.min(max, n));
+}
 
 export type TabsItem = {
 	key: string;
@@ -17,7 +21,7 @@ export interface TabsProps {
 	activeKey?: string;
 	onChangeKey?: (key: string) => void;
 	swipeEnabled?: boolean;
-	tabWidthClassName?: string;
+	minTabWidthPx?: number;
 	containerClassName?: string;
 }
 
@@ -27,7 +31,7 @@ export function Tabs({
 	activeKey,
 	onChangeKey,
 	swipeEnabled = true,
-	tabWidthClassName = "w-[120px]",
+	minTabWidthPx = 110,
 	containerClassName,
 }: TabsProps) {
 	const firstKey = tabs[0]?.key;
@@ -35,6 +39,7 @@ export function Tabs({
 	const [internalKey, setInternalKey] = useState<string | undefined>(
 		fallbackKey,
 	);
+	const [tabBarWidth, setTabBarWidth] = useState(0);
 
 	const selectedKey = activeKey ?? internalKey ?? fallbackKey;
 	const selectedIndex = useMemo(() => {
@@ -42,29 +47,86 @@ export function Tabs({
 		return idx >= 0 ? idx : 0;
 	}, [selectedKey, tabs]);
 
-	const pagerRef = useRef<PagerView>(null);
+	const shouldFit =
+		tabBarWidth > 0 && tabBarWidth / Math.max(tabs.length, 1) >= minTabWidthPx;
 
-	// Keep pager in sync when selection is controlled externally
+	const scrollRef = useRef<ScrollView>(null);
+
+	const scrollToActiveTab = useCallback(
+		(index: number) => {
+			if (!scrollRef.current) return;
+			if (tabBarWidth <= 0) return;
+			if (shouldFit) return;
+
+			const itemWidth = minTabWidthPx;
+			const totalWidth = itemWidth * tabs.length;
+			const desiredCenter = index * itemWidth + itemWidth / 2;
+			const targetX = clamp(
+				desiredCenter - tabBarWidth / 2,
+				0,
+				Math.max(0, totalWidth - tabBarWidth),
+			);
+			scrollRef.current.scrollTo({ x: targetX, animated: true });
+		},
+		[minTabWidthPx, shouldFit, tabBarWidth, tabs.length],
+	);
+
+	const routes = useMemo(
+		() => tabs.map((t) => ({ key: t.key, title: t.title })),
+		[tabs],
+	);
+	const [index, setIndex] = useState(selectedIndex);
+
+	// Keep TabView in sync when selection is controlled externally
 	useEffect(() => {
-		if (!swipeEnabled) return;
-		pagerRef.current?.setPageWithoutAnimation(selectedIndex);
-	}, [selectedIndex, swipeEnabled]);
+		setIndex(selectedIndex);
+		scrollToActiveTab(selectedIndex);
+	}, [scrollToActiveTab, selectedIndex]);
 
 	function setKey(nextKey: string) {
 		if (!activeKey) setInternalKey(nextKey);
 		onChangeKey?.(nextKey);
+		const nextIndex = tabs.findIndex((t) => t.key === nextKey);
+		if (nextIndex >= 0) {
+			setIndex(nextIndex);
+			scrollToActiveTab(nextIndex);
+		}
 	}
+
+	const renderScene = useMemo(() => {
+		return ({ route }: SceneRendererProps & { route: { key: string } }) => {
+			const tab = tabs.find((t) => t.key === route.key);
+			return (
+				<ScrollView
+					className="flex-1"
+					contentContainerStyle={{ flexGrow: 1 }}
+					nestedScrollEnabled
+					directionalLockEnabled
+					showsVerticalScrollIndicator={false}
+				>
+					{tab?.render()}
+				</ScrollView>
+			);
+		};
+	}, [tabs]);
 
 	return (
 		<View className={cn("w-full flex-1", containerClassName)}>
 			{/* Tab bar */}
-			<View className="h-40 shadow-sha-01 bg-neu-01 dark:bg-neu-11">
-				<ScrollView horizontal showsHorizontalScrollIndicator={false}>
+			<View
+				className="h-40 shadow-sha-01 bg-neu-01 dark:bg-neu-11"
+				onLayout={(e) => setTabBarWidth(e.nativeEvent.layout.width)}
+			>
+				{shouldFit ? (
 					<View className="flex-row h-40">
 						{tabs.map((tab) => {
 							const isActive = tab.key === selectedKey;
 							return (
-								<View key={tab.key} className={cn("h-40", tabWidthClassName)}>
+								<View
+									key={tab.key}
+									className="h-40 flex-1"
+									style={{ minWidth: minTabWidthPx }}
+								>
 									<Pressable
 										onPress={() => setKey(tab.key)}
 										className={cn(
@@ -74,8 +136,11 @@ export function Tabs({
 									>
 										<Text
 											variant="body-02--semi"
+											numberOfLines={1}
+											ellipsizeMode="tail"
+											style={{ width: "100%", flexShrink: 1 }}
 											className={cn(
-												"uppercase",
+												"uppercase text-center",
 												isActive
 													? "text-m-01 dark:text-m-01-light-04"
 													: "text-neu-09",
@@ -84,37 +149,91 @@ export function Tabs({
 											{tab.title}
 										</Text>
 										{isActive && (
-											<View className="absolute bottom-0 left-0 right-0 h-1 bg-linear-to-r from-m-02 to-m-01-light-01" />
+											<View
+												className="absolute bottom-0 left-8 right-8 h-1 bg-linear-to-r from-m-02 to-m-01-light-01"
+												style={{
+													borderTopLeftRadius: 26,
+													borderTopRightRadius: 42,
+												}}
+											/>
 										)}
 									</Pressable>
 								</View>
 							);
 						})}
 					</View>
-				</ScrollView>
+				) : (
+					<ScrollView
+						ref={scrollRef}
+						horizontal
+						showsHorizontalScrollIndicator={false}
+					>
+						<View className="flex-row h-40">
+							{tabs.map((tab) => {
+								const isActive = tab.key === selectedKey;
+								return (
+									<View
+										key={tab.key}
+										className="h-40"
+										style={{ width: minTabWidthPx }}
+									>
+										<Pressable
+											onPress={() => setKey(tab.key)}
+											className={cn(
+												"px-3 py-1.5 text-sm h-full w-full items-center justify-center whitespace-nowrap uppercase",
+												isActive ? "text-neu-01" : "text-neu-09",
+											)}
+										>
+											<Text
+												variant="body-02--semi"
+												numberOfLines={1}
+												ellipsizeMode="tail"
+												style={{ width: "100%", flexShrink: 1 }}
+												className={cn(
+													"uppercase text-center",
+													isActive
+														? "text-m-01 dark:text-m-01-light-04"
+														: "text-neu-09",
+												)}
+											>
+												{tab.title}
+											</Text>
+											{isActive && (
+												<View
+													className="absolute bottom-0 left-8 right-8 h-1 bg-linear-to-r from-m-02 to-m-01-light-01"
+													style={{
+														borderTopLeftRadius: 26,
+														borderTopRightRadius: 42,
+													}}
+												/>
+											)}
+										</Pressable>
+									</View>
+								);
+							})}
+						</View>
+					</ScrollView>
+				)}
 			</View>
 
 			{/* Panels */}
-			{swipeEnabled ? (
-				<PagerView
-					ref={pagerRef}
-					style={{ flex: 1 }}
-					initialPage={selectedIndex}
-					onPageSelected={(e) => {
-						const idx = e.nativeEvent.position ?? 0;
-						const next = tabs[idx]?.key;
-						if (next) setKey(next);
+			<View className="flex-1">
+				<TabView
+					navigationState={{ index, routes }}
+					renderScene={renderScene}
+					onIndexChange={(newIndex) => {
+						setIndex(newIndex);
+						const nextKey = tabs[newIndex]?.key;
+						if (nextKey) {
+							if (!activeKey) setInternalKey(nextKey);
+							onChangeKey?.(nextKey);
+						}
 					}}
-				>
-					{tabs.map((tab) => (
-						<View key={tab.key} collapsable={false} className="flex-1">
-							{tab.render()}
-						</View>
-					))}
-				</PagerView>
-			) : (
-				<View className="flex-1">{tabs[selectedIndex]?.render?.()}</View>
-			)}
+					renderTabBar={() => null}
+					swipeEnabled={swipeEnabled}
+					style={{ flex: 1 }}
+				/>
+			</View>
 		</View>
 	);
 }
