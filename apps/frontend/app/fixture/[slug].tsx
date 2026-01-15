@@ -1,16 +1,17 @@
+import { FixtureEventsBlock } from "@/components/fixture-events-block";
 import { FixtureInfoHeader } from "@/components/fixture-info-header";
 import { Tabs } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/text";
 import {
-    fixtureByIdQuery,
-    getFixtureRefetchInterval,
+	fixtureByIdQuery,
+	getFixtureRefetchInterval,
 } from "@/queries/fixture-by-id";
 import { insightsByFixtureIdQuery } from "@/queries/insights-by-fixture-id";
 import { FIFTEEN_SECONDS_CACHE } from "@/utils/constants";
 import { parseFixtureSlug } from "@/utils/fixture-slug";
 import {
-    FIXTURE_IS_FINISHED_STATUS,
-    FIXTURE_IS_LIVE_STATUS,
+	FIXTURE_IS_FINISHED_STATUS,
+	FIXTURE_IS_LIVE_STATUS,
 } from "@/utils/fixtures-status-constants";
 import { isWeb } from "@/utils/platform";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -175,23 +176,7 @@ export default function FixtureDetailScreen() {
 							title: "OVERVIEW",
 							render: () => (
 								<View className="p-16">
-									<Text className="text-neu-07 dark:text-neu-06 mb-4">
-										{data.response?.[0].league.name} -{" "}
-										{data.response?.[0].league.round}
-									</Text>
-									<Text className="text-neu-07 dark:text-neu-06">
-										{data.response?.[0].fixture.status.long}
-									</Text>
-									<Text className="text-neu-06 dark:text-neu-07 mt-2">
-										{new Date(data.response?.[0].fixture.date).toLocaleString()}
-									</Text>
-									{data.response?.[0].fixture.venue?.name && (
-										<Text className="text-neu-06 dark:text-neu-07 mt-4">
-											{data.response?.[0].fixture.venue.name}
-											{data.response?.[0].fixture.venue.city &&
-												`, ${data.response?.[0].fixture.venue.city}`}
-										</Text>
-									)}
+									<FixtureEventsBlock fixture={data.response?.[0]} />
 								</View>
 							),
 						},

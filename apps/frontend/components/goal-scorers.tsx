@@ -113,7 +113,7 @@ export function GoalScorers({
 					<Text
 						key={`home-${goal.playerName}-${goal.suffix ?? "NONE"}-${goal.minutes.join("-")}`}
 						variant="caption-03"
-						className="text-neu-01"
+						className="text-neu-01/80"
 					>
 						{formatGroupedGoal(goal)}
 						{index < homeGrouped.length - 1 ? "," : ""}
@@ -132,7 +132,7 @@ export function GoalScorers({
 					<Text
 						key={`away-${goal.playerName}-${goal.suffix ?? "NONE"}-${goal.minutes.join("-")}`}
 						variant="caption-03"
-						className="text-neu-01"
+						className="text-neu-01/80"
 					>
 						{formatGroupedGoal(goal)}
 						{index < awayGrouped.length - 1 ? "," : ""}

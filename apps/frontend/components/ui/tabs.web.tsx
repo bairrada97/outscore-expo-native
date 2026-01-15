@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 
 function clamp(n: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, n));
+	return Math.max(min, Math.min(max, n));
 }
 
 export type TabsItem = {
@@ -36,7 +36,9 @@ export function Tabs({
 }: TabsProps) {
 	const firstKey = tabs[0]?.key;
 	const fallbackKey = defaultKey ?? firstKey;
-	const [internalKey, setInternalKey] = useState<string | undefined>(fallbackKey);
+	const [internalKey, setInternalKey] = useState<string | undefined>(
+		fallbackKey,
+	);
 	const [tabBarWidth, setTabBarWidth] = useState(0);
 
 	const selectedKey = activeKey ?? internalKey ?? fallbackKey;
@@ -45,21 +47,29 @@ export function Tabs({
 		return idx >= 0 ? idx : 0;
 	}, [selectedKey, tabs]);
 
-	const shouldFit = tabBarWidth > 0 && tabBarWidth / Math.max(tabs.length, 1) >= minTabWidthPx;
+	const shouldFit =
+		tabBarWidth > 0 && tabBarWidth / Math.max(tabs.length, 1) >= minTabWidthPx;
 
 	const scrollRef = useRef<ScrollView>(null);
 
-	const scrollToActiveTab = useCallback((index: number) => {
-		if (!scrollRef.current) return;
-		if (tabBarWidth <= 0) return;
-		if (shouldFit) return;
+	const scrollToActiveTab = useCallback(
+		(index: number) => {
+			if (!scrollRef.current) return;
+			if (tabBarWidth <= 0) return;
+			if (shouldFit) return;
 
-		const itemWidth = minTabWidthPx;
-		const totalWidth = itemWidth * tabs.length;
-		const desiredCenter = index * itemWidth + itemWidth / 2;
-		const targetX = clamp(desiredCenter - tabBarWidth / 2, 0, Math.max(0, totalWidth - tabBarWidth));
-		scrollRef.current.scrollTo({ x: targetX, animated: true });
-	}, [minTabWidthPx, shouldFit, tabBarWidth, tabs.length]);
+			const itemWidth = minTabWidthPx;
+			const totalWidth = itemWidth * tabs.length;
+			const desiredCenter = index * itemWidth + itemWidth / 2;
+			const targetX = clamp(
+				desiredCenter - tabBarWidth / 2,
+				0,
+				Math.max(0, totalWidth - tabBarWidth),
+			);
+			scrollRef.current.scrollTo({ x: targetX, animated: true });
+		},
+		[minTabWidthPx, shouldFit, tabBarWidth, tabs.length],
+	);
 
 	function setKey(nextKey: string) {
 		if (!activeKey) setInternalKey(nextKey);
@@ -79,48 +89,46 @@ export function Tabs({
 				className="h-40 shadow-sha-01 bg-neu-01 dark:bg-neu-11"
 				onLayout={(e) => setTabBarWidth(e.nativeEvent.layout.width)}
 			>
-				<ScrollView
-					ref={scrollRef}
-					horizontal
-					showsHorizontalScrollIndicator={false}
-				>
-					{shouldFit ? (
-						<View className="flex-row h-40 w-full">
-							{tabs.map((tab) => {
-								const isActive = tab.key === selectedKey;
-								return (
-									<View
-										key={tab.key}
-										className="h-40 flex-1"
-										style={{ minWidth: minTabWidthPx }}
+				{shouldFit ? (
+					// Fit mode: equal widths, fill container (no scroll)
+					<View className="flex-row h-40 w-full">
+						{tabs.map((tab) => {
+							const isActive = tab.key === selectedKey;
+							return (
+								<View key={tab.key} className="h-40 flex-1">
+									<Pressable
+										onPress={() => setKey(tab.key)}
+										className={cn(
+											"px-3 py-1.5 text-sm h-full w-full items-center justify-center whitespace-nowrap uppercase",
+											isActive ? "text-neu-01" : "text-neu-09",
+										)}
 									>
-										<Pressable
-											onPress={() => setKey(tab.key)}
+										<Text
+											variant="body-02--semi"
 											className={cn(
-												"px-3 py-1.5 text-sm h-full w-full items-center justify-center whitespace-nowrap uppercase",
-												isActive ? "text-neu-01" : "text-neu-09",
+												"uppercase",
+												isActive
+													? "text-m-01 dark:text-m-01-light-04"
+													: "text-neu-09",
 											)}
 										>
-											<Text
-												variant="body-02--semi"
-												className={cn(
-													"uppercase",
-													isActive
-														? "text-m-01 dark:text-m-01-light-04"
-														: "text-neu-09",
-												)}
-											>
-												{tab.title}
-											</Text>
-											{isActive && (
+											{tab.title}
+										</Text>
+										{isActive && (
 											<View className="absolute bottom-0 left-8 right-8 h-1 bg-linear-to-r from-m-02 to-m-01-light-01 rounded-[26px_42px_0_0]" />
-											)}
-										</Pressable>
-									</View>
-								);
-							})}
-						</View>
-					) : (
+										)}
+									</Pressable>
+								</View>
+							);
+						})}
+					</View>
+				) : (
+					// Overflow mode: lock to min width and enable horizontal scroll
+					<ScrollView
+						ref={scrollRef}
+						horizontal
+						showsHorizontalScrollIndicator={false}
+					>
 						<View className="flex-row h-40">
 							{tabs.map((tab) => {
 								const isActive = tab.key === selectedKey;
@@ -149,15 +157,15 @@ export function Tabs({
 												{tab.title}
 											</Text>
 											{isActive && (
-											<View className="absolute bottom-0 left-8 right-8 h-1 bg-linear-to-r from-m-02 to-m-01-light-01 rounded-[26px_42px_0_0]" />
+												<View className="absolute bottom-0 left-8 right-8 h-1 bg-linear-to-r from-m-02 to-m-01-light-01 rounded-[26px_42px_0_0]" />
 											)}
 										</Pressable>
 									</View>
 								);
 							})}
 						</View>
-					)}
-				</ScrollView>
+					</ScrollView>
+				)}
 			</View>
 
 			{/* Panels */}
@@ -165,5 +173,3 @@ export function Tabs({
 		</View>
 	);
 }
-
-

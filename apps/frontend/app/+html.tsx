@@ -26,24 +26,8 @@ export default function Root({ children }: PropsWithChildren) {
 					href="https://outscore-api.outscore.workers.dev"
 				/>
 
-				{/* Preload critical fonts for faster rendering */}
-				<link
-					rel="preload"
-					href="/assets/fonts/SourceSans3-Regular.ttf"
-					as="font"
-					type="font/ttf"
-					crossOrigin="anonymous"
-				/>
-				<link
-					rel="preload"
-					href="/assets/fonts/SourceSans3-SemiBold.ttf"
-					as="font"
-					type="font/ttf"
-					crossOrigin="anonymous"
-				/>
-
 				{/* Using raw CSS styles as an escape-hatch to ensure the background color never flickers in dark-mode. */}
-				<style dangerouslySetInnerHTML={{ __html: responsiveBackground }} />
+				<style>{responsiveBackground}</style>
 			</head>
 			<body>{children}</body>
 		</html>
@@ -63,33 +47,6 @@ body {
 /* Critical CSS - primary color for icons using currentColor */
 :root {
   --color-m-01: rgb(24 124 86);
-}
-
-/* Font face declarations with font-display: block to prevent layout shifts */
-/* Block ensures text is invisible until font loads, preventing CLS */
-/* Fonts are preloaded above, so this should be fast */
-@font-face {
-  font-family: 'SourceSans3-Regular';
-  src: url('/assets/fonts/SourceSans3-Regular.ttf') format('truetype');
-  font-display: block;
-  font-weight: 400;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'SourceSans3-SemiBold';
-  src: url('/assets/fonts/SourceSans3-SemiBold.ttf') format('truetype');
-  font-display: block;
-  font-weight: 600;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'SourceSans3-Bold';
-  src: url('/assets/fonts/SourceSans3-Bold.ttf') format('truetype');
-  font-display: block;
-  font-weight: 700;
-  font-style: normal;
 }
 
 /* Remove opacity:0 to improve FCP - content renders immediately */

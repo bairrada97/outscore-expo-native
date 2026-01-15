@@ -11,7 +11,8 @@ export default function FixtureLayout() {
 		<Stack
 			screenOptions={{
 				headerShown: true,
-				presentation: "pageSheet",
+				presentation: "card",
+				animation: "slide_from_right",
 				title: "MATCH INFO",
 				header: () => (
 					<SafeAreaView
