@@ -2,6 +2,9 @@
 export type { CacheProvider, R2CacheProvider } from './provider.interface';
 export * from './types';
 
+// Admin routes
+export { createCacheAdminRoutes } from './cache-admin.routes';
+
 // Providers
 export {
   createEdgeCacheProvider,
@@ -54,6 +57,7 @@ export {
 // Generic Cache Manager
 export {
   cacheGet,
+  cacheDelete,
   cacheSet,
   cacheSetEdgeOnly,
   isStale,

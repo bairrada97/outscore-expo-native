@@ -1,13 +1,13 @@
 import {
-    getCacheKey,
-    getStrategy,
-    getTTLForResource
+  getCacheKey,
+  getStrategy,
+  getTTLForResource
 } from './cache-strategies';
 import { createEdgeCacheProvider, generateEdgeCacheKey } from './edge-cache';
 import {
-    checkFixturesDateTransition,
-    getFixturesCacheLocation,
-    getFixturesR2Key,
+  checkFixturesDateTransition,
+  getFixturesCacheLocation,
+  getFixturesR2Key,
 } from './fixtures-strategy';
 import { createKVCacheProvider } from './kv-provider';
 import { createR2CacheProvider } from './r2-provider';
@@ -35,6 +35,10 @@ const toEdgeCacheUrl = (cacheKey: string, params: Record<string, string>): strin
   if (cacheKey.startsWith('fixture-details/')) {
     return `https://api.outscore.live/fixtures?id=${params.fixtureId}`;
   }
+  // For betting insights, use fixture ID and the canonical route shape
+  if (cacheKey.startsWith('insights/')) {
+    return `https://api.outscore.live/fixtures/${params.fixtureId}/insights`;
+  }
   // For other resources, create a generic URL
   return `https://api.outscore.live/cache/${encodeURIComponent(cacheKey)}`;
 };
@@ -43,6 +47,17 @@ const toEdgeCacheUrl = (cacheKey: string, params: Record<string, string>): strin
 export interface CacheEnv {
   FOOTBALL_KV: KVNamespace;
   FOOTBALL_CACHE: R2Bucket;
+  ENTITIES_DB: D1Database;
+}
+
+export interface CacheDeleteResult {
+  cacheKey: string;
+  edgeKey?: string;
+  deleted: {
+    edge?: boolean;
+    kv?: boolean;
+    r2?: boolean;
+  };
 }
 
 // =============================================================================
@@ -105,6 +120,9 @@ export const cacheGet = async <T>(
       r2Key = getFixturesR2Key(location, params.date, params.live === 'true');
     } else if (resourceType === 'fixtureDetail') {
       // Fixture details use the key generator directly (fixture-details/{date}/fixture-{id}.json)
+      r2Key = cacheKey;
+    } else if (resourceType === 'insights') {
+      // Insights use the key generator directly (insights/{fixtureId}.json)
       r2Key = cacheKey;
     }
 
@@ -180,6 +198,9 @@ export const cacheSet = async <T>(
     } else if (resourceType === 'fixtureDetail') {
       // Fixture details use the key generator directly (fixture-details/{date}/fixture-{id}.json)
       r2Key = cacheKey;
+    } else if (resourceType === 'insights') {
+      // Insights use the key generator directly (insights/{fixtureId}.json)
+      r2Key = cacheKey;
     }
 
     const r2Success = await r2Cache.set(r2Key, data, config);
@@ -210,6 +231,60 @@ export const cacheSetEdgeOnly = async <T>(
 
   const edgeCache = createEdgeCacheProvider<T>();
   return edgeCache.set(edgeCacheUrl, data, config);
+};
+
+/**
+ * Generic cache delete operation
+ * Deletes from cache layers based on resource strategy: Edge → KV → R2
+ *
+ * Note: Edge Cache delete uses a fully-qualified URL key (see toEdgeCacheUrl()).
+ */
+export const cacheDelete = async (
+  env: CacheEnv,
+  resourceType: ResourceType,
+  params: Record<string, string>,
+): Promise<CacheDeleteResult> => {
+  const strategy = getStrategy(resourceType);
+  const cacheKey = getCacheKey(resourceType, params);
+
+  const result: CacheDeleteResult = {
+    cacheKey,
+    deleted: {},
+  };
+
+  // 1) Edge Cache delete
+  if (strategy.useEdge) {
+    const edgeCacheUrl = toEdgeCacheUrl(cacheKey, params);
+    result.edgeKey = edgeCacheUrl;
+    const edgeCache = createEdgeCacheProvider<unknown>();
+    result.deleted.edge = await edgeCache.delete(edgeCacheUrl);
+  }
+
+  // 2) KV delete
+  if (strategy.useKV) {
+    const kvCache = createKVCacheProvider<unknown>(env.FOOTBALL_KV);
+    result.deleted.kv = await kvCache.delete(cacheKey);
+  }
+
+  // 3) R2 delete
+  if (strategy.useR2) {
+    const r2Cache = createR2CacheProvider<unknown>(env.FOOTBALL_CACHE);
+
+    // Determine R2 key based on resource type
+    let r2Key = cacheKey;
+    if (resourceType === 'fixtures') {
+      const location = getFixturesCacheLocation(params.date);
+      r2Key = getFixturesR2Key(location, params.date, params.live === 'true');
+    } else if (resourceType === 'fixtureDetail') {
+      r2Key = cacheKey;
+    } else if (resourceType === 'insights') {
+      r2Key = cacheKey;
+    }
+
+    result.deleted.r2 = await r2Cache.delete(r2Key);
+  }
+
+  return result;
 };
 
 // =============================================================================
@@ -276,14 +351,14 @@ export { checkFixturesDateTransition };
 
 // Re-export strategy helpers
   export {
-        getCurrentUtcDate,
-        getFixturesTTL,
-        getTomorrowUtcDate,
-        getYesterdayUtcDate
-    } from './cache-strategies';
+    getCurrentUtcDate,
+    getFixturesTTL,
+    getTomorrowUtcDate,
+    getYesterdayUtcDate
+  } from './cache-strategies';
 
 export {
-    getFixturesCacheLocation,
-    handleFixturesDateTransition
+  getFixturesCacheLocation,
+  handleFixturesDateTransition
 } from './fixtures-strategy';
 

@@ -27,7 +27,7 @@ ML Phase 3 focuses on extracting weights from trained ML models and integrating 
 
 2. **Weight Extraction**
    - Extract weights for: recentForm, h2h, homeAdvantage, scoringRate, defensiveForm, etc.
-   - Different weights per market (BTTS, Over25, MatchResult, FirstHalf)
+   - Different weights per market (BTTS, Over/Under Goals, MatchResult, FirstHalf)
    - Normalize weights to sum to 1.0
 
 3. **Configuration Update**
@@ -210,7 +210,7 @@ interface MLWeights {
     recentForm: number;
     // ... other factors
   };
-  over25: {
+  overUnderGoals: {
     avgGoalsPerGame: number;
     recentForm: number;
     h2h: number;

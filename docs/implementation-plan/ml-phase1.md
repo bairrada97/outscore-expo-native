@@ -171,7 +171,7 @@ These features are INPUT to the ML models. The ML models learn:
 **Example:** ML might learn:
 - For BTTS: `dna_under25Percentage` is very important (30% weight), `mind_tier` is less important (5% weight)
 - For Match Result: `mind_tier` is very important (25% weight), `mood_tier` is important (20% weight)
-- For Over 2.5: `dna_over25Percentage` is critical (35% weight), `mood_tier` is less important (10% weight)
+- For Over/Under Goals @2.5: `dna_goalLineOverPct_2_5` is critical (35% weight), `mood_tier` is less important (10% weight)
 
 **Benefit:** Instead of guessing weights (e.g., "Mind should be 20%"), ML learns optimal weights from historical data. These learned weights improve rule-based predictions.
 
@@ -192,7 +192,7 @@ These features are INPUT to the ML models. The ML models learn:
 3. **DNA Layer Features**
    - Most played formation
    - Formation frequency
-   - Under25/Over25 percentages
+   - Over/Under goals percentages per line (e.g., `goalLineOverPct` for 0.5..5.5)
    - Clean sheet percentage
    - Failed to score percentage
    - Late starter pattern
@@ -386,8 +386,8 @@ features = {
     'away_mood_tier': int,
     'home_dna_formation': str,
     'away_dna_formation': str,
-    'home_under25_percentage': float,
-    'away_under25_percentage': float,
+    'home_goalLineOverPct_2_5': float,
+    'away_goalLineOverPct_2_5': float,
     
     # Match Context Features
     'match_type': str,

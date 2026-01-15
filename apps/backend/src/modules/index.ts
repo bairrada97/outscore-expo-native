@@ -1,10 +1,18 @@
 // Cache module
-export * from "./cache";
 
+// Betting Insights module
+export {
+  createInsightsRoutes, insightsService, type InsightsEnv
+} from "./betting-insights";
+export * from "./cache";
+// Entities module (D1 canonical storage)
+export * from "./entities";
 // Fixtures module
 export * from "./fixtures";
 // Scheduler module
 export * from "./scheduler";
+// Security module
+export * from "./security";
 // Security module
 export * from "./security";
 // Standings module

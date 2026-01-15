@@ -213,3 +213,10 @@ yarn-error.log*
 
 # turbo
 .turbo
+
+# Cloudflare Wrangler (local state)
+.wrangler/
+
+# Wrangler local vars (often contains secrets)
+dev.vars
+.dev.vars

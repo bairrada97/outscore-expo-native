@@ -1,10 +1,10 @@
 import { FixtureInfoHeader } from "@/components/fixture-info-header";
 import { Text } from "@/components/ui/text";
-import { useFixtureRelatedData } from "@/hooks/useFixtureRelatedData";
 import {
 	fixtureByIdQuery,
 	getFixtureRefetchInterval,
 } from "@/queries/fixture-by-id";
+import { insightsByFixtureIdQuery } from "@/queries/insights-by-fixture-id";
 import { FIFTEEN_SECONDS_CACHE } from "@/utils/constants";
 import { parseFixtureSlug } from "@/utils/fixture-slug";
 import {
@@ -46,6 +46,9 @@ export default function FixtureDetailScreen() {
 					queryClient.invalidateQueries({
 						queryKey: ["fixture", String(fixtureId)],
 					});
+					queryClient.invalidateQueries({
+						queryKey: ["fixture-insights", String(fixtureId)],
+					});
 				}
 			}
 		},
@@ -76,11 +79,21 @@ export default function FixtureDetailScreen() {
 		},
 	});
 
-	const fixture = data?.response?.[0];
-
-	// Prefetch all related data for the fixture (team stats, H2H, injuries, standings)
-	// This hook triggers parallel queries for all related data once fixture is loaded
-	useFixtureRelatedData(fixture);
+	const {
+		data: insightsData,
+		isLoading: isInsightsLoading,
+		error: insightsError,
+	} = useQuery({
+		...insightsByFixtureIdQuery({ fixtureId }),
+		// Keep insights refresh cadence aligned with fixture polling
+		refetchInterval: (query) => {
+			const fixtureData = data;
+			if (!fixtureData) {
+				return FIFTEEN_SECONDS_CACHE + 2000;
+			}
+			return getFixtureRefetchInterval(fixtureData);
+		},
+	});
 
 	if (isLoading) {
 		return (
@@ -104,7 +117,7 @@ export default function FixtureDetailScreen() {
 		);
 	}
 
-	if (!fixture) {
+	if (!data) {
 		return (
 			<>
 				<Stack.Screen options={{ headerShown: false }} />
@@ -128,32 +141,75 @@ export default function FixtureDetailScreen() {
 					isWeb ? "bg-neu-02 dark:bg-neu-13" : "flex-1 bg-neu-02 dark:bg-neu-13"
 				}
 			>
-				<FixtureInfoHeader fixture={fixture} />
+				<FixtureInfoHeader fixture={data.response?.[0]} />
 
 				{/* Additional content area */}
 				<View className="p-4">
 					{/* League info */}
 					<Text className="text-neu-07 dark:text-neu-06 mb-4">
-						{fixture.league.name} - {fixture.league.round}
+						{data.response?.[0].league.name} - {data.response?.[0].league.round}
 					</Text>
 
 					{/* Fixture status */}
 					<Text className="text-neu-07 dark:text-neu-06">
-						{fixture.fixture.status.long}
+						{data.response?.[0].fixture.status.long}
 					</Text>
 
 					{/* Fixture date/time */}
 					<Text className="text-neu-06 dark:text-neu-07 mt-2">
-						{new Date(fixture.fixture.date).toLocaleString()}
+						{new Date(data.response?.[0].fixture.date).toLocaleString()}
 					</Text>
 
 					{/* Venue */}
-					{fixture.fixture.venue?.name && (
+					{data.response?.[0].fixture.venue?.name && (
 						<Text className="text-neu-06 dark:text-neu-07 mt-4">
-							{fixture.fixture.venue.name}
-							{fixture.fixture.venue.city && `, ${fixture.fixture.venue.city}`}
+							{data.response?.[0].fixture.venue.name}
+							{data.response?.[0].fixture.venue.city &&
+								`, ${data.response?.[0].fixture.venue.city}`}
 						</Text>
 					)}
+
+					{/* Insights */}
+					<View className="mt-6">
+						<Text className="text-neu-10 dark:text-neu-06 mb-2">Insights</Text>
+
+						{isInsightsLoading && (
+							<View className="py-4">
+								<ActivityIndicator />
+							</View>
+						)}
+
+						{insightsError && (
+							<Text className="text-red">
+								Insights error: {insightsError.message}
+							</Text>
+						)}
+
+						{insightsData && (
+							<View className="gap-2">
+								{insightsData.overallConfidence && (
+									<Text className="text-neu-06 dark:text-neu-07">
+										Overall confidence: {insightsData.overallConfidence}
+									</Text>
+								)}
+
+								{insightsData.predictions
+									?.filter((p) => p.market === "OVER_UNDER_GOALS")
+									?.sort((a, b) => (a.line ?? 0) - (b.line ?? 0))
+									?.map((p) => (
+										<Text
+											key={`ou-${p.line ?? "na"}`}
+											className="text-neu-06 dark:text-neu-07"
+										>
+											Over/Under {p.line}: O{" "}
+											{Math.round((p.probabilities.over ?? 0) * 10) / 10}% / U{" "}
+											{Math.round((p.probabilities.under ?? 0) * 10) / 10}%{" "}
+											{p.confidence ? `(${p.confidence})` : ""}
+										</Text>
+									))}
+							</View>
+						)}
+					</View>
 				</View>
 			</View>
 		</>

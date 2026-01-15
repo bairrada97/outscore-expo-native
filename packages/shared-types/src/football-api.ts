@@ -101,7 +101,9 @@ export interface Fixture {
 export interface FixturesResponse {
   get: string;
   parameters: Record<string, string>;
-  errors: any[];
+  // API-Football returns an array of error strings/objects depending on endpoint.
+  // Keep it permissive but avoid `any`.
+  errors: unknown[];
   results: number;
   paging: {
     current: number;
@@ -174,8 +176,12 @@ export type FormattedFixturesResponse = FormattedCountry[];
  * Fixture status constants for classification
  */
 export const FIXTURE_STATUS = {
-  LIVE: ['1H', '2H', 'HT', 'ET', 'INT', 'BT', 'P'],
-  FINISHED: ['FT', 'AET', 'PEN'],
+  // API-Football status.short values
+  // Notes:
+  // - 'SUSP' (suspended) and 'INT' (interrupted) are treated as "live-ish" for polling/classification.
+  // - 'AWD' (awarded) is treated as finished.
+  LIVE: ['1H', '2H', 'HT', 'ET', 'INT', 'BT', 'P', 'SUSP'],
+  FINISHED: ['FT', 'AET', 'PEN', 'AWD'],
   NOT_STARTED: ['NS'],
   CANCELLED: ['CANC', 'PST', 'ABD', 'WO', 'TBD'],
 } as const;
@@ -214,211 +220,20 @@ export function isNotStartedStatus(status: FixtureStatusShort): status is NotSta
   return (FIXTURE_STATUS.NOT_STARTED as readonly string[]).includes(status);
 }
 
-/**
- * Team Statistics Response Types
- * Endpoint: /teams/statistics?league={league}&season={season}&team={team}
- */
-export interface GoalMinuteStats {
-  '0-15': { total: number | null; percentage: string | null };
-  '16-30': { total: number | null; percentage: string | null };
-  '31-45': { total: number | null; percentage: string | null };
-  '46-60': { total: number | null; percentage: string | null };
-  '61-75': { total: number | null; percentage: string | null };
-  '76-90': { total: number | null; percentage: string | null };
-  '91-105': { total: number | null; percentage: string | null };
-  '106-120': { total: number | null; percentage: string | null };
-}
-
-export interface UnderOverStats {
-  '0.5': { over: number; under: number };
-  '1.5': { over: number; under: number };
-  '2.5': { over: number; under: number };
-  '3.5': { over: number; under: number };
-  '4.5': { over: number; under: number };
-}
-
-export interface TeamStatistics {
-  league: {
-    id: number;
-    name: string;
-    country: string;
-    logo: string;
-    flag: string | null;
-    season: number;
-  };
-  team: {
-    id: number;
-    name: string;
-    logo: string;
-  };
-  form: string | null;
-  fixtures: {
-    played: { home: number; away: number; total: number };
-    wins: { home: number; away: number; total: number };
-    draws: { home: number; away: number; total: number };
-    loses: { home: number; away: number; total: number };
-  };
-  goals: {
-    for: {
-      total: { home: number; away: number; total: number };
-      average: { home: string; away: string; total: string };
-      minute: GoalMinuteStats;
-      under_over: UnderOverStats;
-    };
-    against: {
-      total: { home: number; away: number; total: number };
-      average: { home: string; away: string; total: string };
-      minute: GoalMinuteStats;
-      under_over: UnderOverStats;
-    };
-  };
-  biggest: {
-    streak: { wins: number; draws: number; loses: number };
-    wins: { home: string | null; away: string | null };
-    loses: { home: string | null; away: string | null };
-    goals: {
-      for: { home: number; away: number };
-      against: { home: number; away: number };
-    };
-  };
-  clean_sheet: { home: number; away: number; total: number };
-  failed_to_score: { home: number; away: number; total: number };
-  penalty: {
-    scored: { total: number; percentage: string };
-    missed: { total: number; percentage: string };
-    total: number;
-  };
-  lineups: Array<{
-    formation: string;
-    played: number;
-  }>;
-  cards: {
-    yellow: GoalMinuteStats;
-    red: GoalMinuteStats;
-  };
-}
-
-export interface TeamStatisticsResponse {
-  get: string;
-  parameters: Record<string, string>;
-  errors: any[];
-  results: number;
-  paging: {
-    current: number;
-    total: number;
-  };
-  response: TeamStatistics;
-}
+// ============================================================================
+// STANDINGS RESPONSE TYPES
+// ============================================================================
 
 /**
- * Injuries Response Types
- * Endpoint: /injuries?fixture={fixtureId}
+ * API-Football /standings endpoint response
  */
-export interface Injury {
-  player: {
-    id: number;
-    name: string;
-    photo: string;
-    type: string;
-    reason: string;
-  };
-  team: {
-    id: number;
-    name: string;
-    logo: string;
-  };
-  fixture: {
-    id: number;
-    timezone: string;
-    date: string;
-    timestamp: number;
-  };
-  league: {
-    id: number;
-    season: number;
-    name: string;
-    country: string;
-    logo: string;
-    flag: string | null;
-  };
-}
-
-export interface InjuriesResponse {
-  get: string;
-  parameters: Record<string, string>;
-  errors: any[];
-  results: number;
-  paging: {
-    current: number;
-    total: number;
-  };
-  response: Injury[];
-}
-
-/**
- * Standings Response Types
- * Endpoint: /standings?league={league}&season={season}
- */
-export interface StandingTeam {
-  rank: number;
-  team: {
-    id: number;
-    name: string;
-    logo: string;
-  };
-  points: number;
-  goalsDiff: number;
-  group: string;
-  form: string;
-  status: string;
-  description: string | null;
-  all: {
-    played: number;
-    win: number;
-    draw: number;
-    lose: number;
-    goals: {
-      for: number;
-      against: number;
-    };
-  };
-  home: {
-    played: number;
-    win: number;
-    draw: number;
-    lose: number;
-    goals: {
-      for: number;
-      against: number;
-    };
-  };
-  away: {
-    played: number;
-    win: number;
-    draw: number;
-    lose: number;
-    goals: {
-      for: number;
-      against: number;
-    };
-  };
-  update: string;
-}
-
-export interface StandingsLeague {
-  id: number;
-  name: string;
-  country: string;
-  logo: string;
-  flag: string | null;
-  season: number;
-  standings: StandingTeam[][];
-}
-
 export interface StandingsResponse {
-  get: string;
-  parameters: Record<string, string>;
-  errors: any[];
+  get: "standings";
+  parameters: {
+    league: string;
+    season: string;
+  };
+  errors: unknown[];
   results: number;
   paging: {
     current: number;
@@ -427,4 +242,63 @@ export interface StandingsResponse {
   response: Array<{
     league: StandingsLeague;
   }>;
+}
+
+/**
+ * League data within standings response
+ */
+export interface StandingsLeague {
+  id: number;
+  name: string;
+  country: string;
+  logo: string;
+  flag: string | null;
+  season: number;
+  /**
+   * 2D array structure:
+   * - Outer array: different tables/groups (e.g., overall table, group stages)
+   * - Inner array: rows within that table/group
+   */
+  standings: StandingsRow[][];
+}
+
+/**
+ * Single row in a standings table
+ */
+export interface StandingsRow {
+  rank: number;
+  team: StandingsTeamRef;
+  points: number;
+  goalsDiff: number;
+  group: string | null;
+  form: string | null;
+  status: string | null;
+  description: string | null;
+  all: StandingsRecord;
+  home: StandingsRecord;
+  away: StandingsRecord;
+  update: string;
+}
+
+/**
+ * Team reference in standings
+ */
+export interface StandingsTeamRef {
+  id: number;
+  name: string;
+  logo: string;
+}
+
+/**
+ * Record statistics (all/home/away)
+ */
+export interface StandingsRecord {
+  played: number;
+  win: number;
+  draw: number;
+  lose: number;
+  goals: {
+    for: number;
+    against: number;
+  };
 }

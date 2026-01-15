@@ -45,6 +45,7 @@ export const SWR = {
 export type ResourceType =
   | 'fixtures'
   | 'fixtureDetail'
+  | 'insights'
   | 'teams'
   | 'leagues'
   | 'standings'

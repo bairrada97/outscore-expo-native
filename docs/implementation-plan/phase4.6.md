@@ -4,11 +4,11 @@
 
 ## Overview
 
-Phase 4.6 implements critical refinements to improve prediction accuracy. This phase focuses on enhancing Match Result prediction, integrating rest advantage, opponent quality weighting, weighted scoring rate, and fixture congestion handling.
+Phase 4.6 implements critical refinements to improve simulation accuracy. This phase focuses on enhancing MatchOutcome simulation, integrating rest advantage, opponent quality weighting, weighted scoring rate, and fixture congestion handling.
 
 ## Dependencies
 
-- **Phase 4:** Market Predictions (Prediction functions)
+- **Phase 4:** Scenario Simulations (Simulation functions)
 - **Phase 4.5:** Probability Caps & Asymmetric Weighting (Caps and adjustments)
 
 ## Sub-Phases
@@ -60,7 +60,7 @@ Phase 4.6 implements critical refinements to improve prediction accuracy. This p
 
 #### Files to Create:
 
-- `apps/backend/src/modules/betting-insights/predictions/predict-match-result.ts` - Replace with full implementation
+- `apps/backend/src/modules/betting-insights/simulations/simulate-match-outcome.ts` - Replace with full implementation
 - `apps/backend/src/modules/betting-insights/utils/form-score.ts` - Form score calculation
 - `apps/backend/src/modules/betting-insights/utils/home-advantage.ts` - Dynamic home advantage
 - `apps/backend/src/modules/betting-insights/utils/motivation-score.ts` - Motivation score
@@ -82,7 +82,7 @@ Phase 4.6 implements critical refinements to improve prediction accuracy. This p
 
 **Reference:** See "4.6.2 Rest Advantage Integration" in `betting-insights-algorithm.md`
 
-**Goal:** Integrate rest advantage into all prediction functions
+**Goal:** Integrate rest advantage into all simulation functions
 
 #### Sub-tasks:
 
@@ -91,11 +91,11 @@ Phase 4.6 implements critical refinements to improve prediction accuracy. This p
    - Calculate rest difference
    - Convert to adjustment value
 
-2. **Integration into Predictions**
-   - Add rest advantage to BTTS prediction
-   - Add rest advantage to Over 2.5 prediction
-   - Add rest advantage to Match Result prediction (already in 4.6.1)
-   - Add rest advantage to First Half prediction
+2. **Integration into Simulations**
+   - Add rest advantage to BothTeamsToScore simulation
+   - Add rest advantage to TotalGoalsOverUnder simulations
+   - Add rest advantage to MatchOutcome simulation (already in 4.6.1)
+   - Add rest advantage to FirstHalfActivity simulation
 
 3. **Weight Adjustment**
    - Adjust weights based on rest days
@@ -104,13 +104,13 @@ Phase 4.6 implements critical refinements to improve prediction accuracy. This p
 
 #### Files to Create:
 
-- Extend `apps/backend/src/modules/betting-insights/utils/rest-score.ts` - Add to all predictions
+- Extend `apps/backend/src/modules/betting-insights/utils/rest-score.ts` - Add to all simulations
 - Extend `apps/backend/src/modules/betting-insights/utils/weight-adjustments.ts` - Add rest adjustments
 
 #### Validation Criteria:
 
 - ✅ Rest advantage calculated correctly
-- ✅ Integrated into all prediction functions
+- ✅ Integrated into all simulation functions
 - ✅ Weight adjustments work correctly
 - ✅ Accuracy improves by 1-2%
 
@@ -141,13 +141,13 @@ Phase 4.6 implements critical refinements to improve prediction accuracy. This p
 #### Files to Create:
 
 - `apps/backend/src/modules/betting-insights/utils/opponent-weighting.ts` - Opponent quality weighting
-- Extend `apps/backend/src/modules/betting-insights/predictions/` - Use weighted rates
+- Extend `apps/backend/src/modules/betting-insights/simulations/` - Use weighted rates
 
 #### Validation Criteria:
 
 - ✅ Opponent tiers detected correctly
 - ✅ Weighted scoring rates calculated correctly
-- ✅ Integrated into predictions
+- ✅ Integrated into simulations
 - ✅ Accuracy improves by 2-3%
 
 ---
@@ -193,7 +193,7 @@ Phase 4.6 implements critical refinements to improve prediction accuracy. This p
 
 **Reference:** See "4.6.5 Fixture Congestion" in `betting-insights-algorithm.md`
 
-**Goal:** Account for fixture congestion in predictions
+**Goal:** Account for fixture congestion in simulations
 
 #### Sub-tasks:
 
@@ -207,7 +207,7 @@ Phase 4.6 implements critical refinements to improve prediction accuracy. This p
    - Adjust goal expectations
 
 3. **Integration**
-   - Add congestion factor to all predictions
+   - Add congestion factor to all simulations
    - Adjust weights based on congestion
 
 #### Files to Create:
@@ -219,7 +219,7 @@ Phase 4.6 implements critical refinements to improve prediction accuracy. This p
 
 - ✅ Congestion detected correctly
 - ✅ Weight adjustments work correctly
-- ✅ Integrated into predictions
+- ✅ Integrated into simulations
 - ✅ Accuracy improves by 1%
 
 ---
@@ -274,7 +274,7 @@ Phase 4.6 implements critical refinements to improve prediction accuracy. This p
 ### Fixture Congestion
 - [ ] Implement congestion detection
 - [ ] Implement congestion-based weight adjustments
-- [ ] Integrate into all predictions
+- [ ] Integrate into all simulations
 - [ ] Test accuracy improvement
 
 ### Testing

@@ -282,8 +282,14 @@ const LEAGUE_CHARACTERISTICS: Record<number, LeagueCharacteristics> = {
     bttsRate: 0.52,
     drawRate: 0.25,
     homeAdvantageStrength: 1.0,
-    over25Baseline: 0.52,
-    over15Baseline: 0.78,
+    overGoalsBaselineByLine: {
+      '0.5': 0.93,
+      '1.5': 0.78,
+      '2.5': 0.52,
+      '3.5': 0.28,
+      '4.5': 0.14,
+      '5.5': 0.07,
+    },
     cleanSheetRate: 0.32,
     scoringRate: 1.38,
   },
@@ -301,8 +307,7 @@ const LEAGUE_CHARACTERISTICS: Record<number, LeagueCharacteristics> = {
 - `bttsRate`: Baseline BTTS (Both Teams to Score) rate (0-1)
 - `drawRate`: Baseline draw rate (0-1)
 - `homeAdvantageStrength`: Multiplier for home advantage (default: 1.0)
-- `over25Baseline`: Baseline Over 2.5 goals rate (0-1)
-- `over15Baseline`: Baseline Over 1.5 goals rate (0-1)
+- `overGoalsBaselineByLine`: Baseline P(totalGoals > line) (0-1), keyed by line string (e.g. "2.5")
 - `cleanSheetRate`: Average clean sheet rate
 - `scoringRate`: Average goals per team per game
 

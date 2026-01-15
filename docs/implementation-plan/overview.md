@@ -55,14 +55,14 @@ This checkpoint ensures that the implementation can proceed smoothly without mis
    - League-specific characteristics
    - International match handling
 
-5. **Phase 4: Market Predictions (Week 2-3)**
+5. **Phase 4: Scenario Simulations (Week 2-3)**
    - See: `phase4.md` for detailed implementation plan
    - Reference: "Phase 4: Market Predictions" section in `betting-insights-algorithm.md`
-   - BTTS prediction
-   - Over/Under 2.5 prediction
-   - Match Result prediction
-   - First Half prediction
-   - Alternative bet suggestions
+   - BothTeamsToScore simulation
+   - TotalGoalsOverUnder simulation (includes line)
+   - MatchOutcome simulation
+   - FirstHalfActivity simulation
+   - Related scenario suggestions
 
 6. **Phase 4.5: Probability Swing Caps & Asymmetric Weighting**
    - See: `phase4.5.md` for detailed implementation plan
@@ -87,7 +87,7 @@ This checkpoint ensures that the implementation can proceed smoothly without mis
    - Injury data processing from pre-implemented endpoints
    - Player importance calculation using statistics
    - Market-specific injury adjustments
-   - Integration into prediction functions
+   - Integration into simulation functions
 
 9. **Phase 5: API Endpoint (Week 3)**
    - See: `phase5.md` for detailed implementation plan
@@ -160,7 +160,7 @@ These phases focus specifically on ML model training and are implemented separat
   - See: `ml-phase6.md` for detailed implementation plan
   - Reference: "ML Phase 6" sections (6.1-6.3) in `betting-insights-algorithm.md`
   - Prediction confidence intervals (6.1)
-  - Risk-adjusted predictions (6.2)
+  - Risk-adjusted simulations (6.2)
   - Model monitoring & alerting (6.3)
 
 ## Dependencies
@@ -179,14 +179,14 @@ Phase 1 (Core Data Layer)
 
 ## ML Usage Clarification
 
-**Important:** ML (LightGBM + Optuna) is ONLY used to learn optimal weights for factors, NOT for making predictions.
+**Important:** ML (LightGBM + Optuna) is ONLY used to learn optimal weights for factors, NOT for making simulations.
 
 **How ML is Used:**
 1. **ML Training (ML Phases 1-2):** Train LightGBM models on historical data to learn which factor weights work best
 2. **Weight Extraction (ML Phase 3):** Extract feature importance/weights from trained models
 3. **Weight Storage:** Store ML-learned weights in configuration file
 4. **Rule-Based Predictions (Week-by-Week Phases):** Use ML-learned weights in rule-based prediction calculations
-5. **Rule-Based Adjustments:** Apply contextual/safety adjustments on top of ML-weighted base predictions
+5. **Rule-Based Adjustments:** Apply contextual/safety adjustments on top of ML-weighted base simulations
 
 **Final Prediction Formula:**
 ```
@@ -232,7 +232,7 @@ finalProbability = baseProbability + Σ(ruleBasedAdjustments)
 
 **Top 5 Leagues:**
 - BTTS Model: Brier Score < 0.20, Log-Loss < 0.60, ROC-AUC > 0.70
-- Over25 Model: Brier Score < 0.22, Log-Loss < 0.65, ROC-AUC > 0.68
+- Over/Under Goals Models (per line): Brier Score < 0.22, Log-Loss < 0.65, ROC-AUC > 0.68
 - Match Result Model: Multi-class Brier Score < 0.50, Log-Loss < 1.20
 - First Half Model: Brier Score < 0.22, Log-Loss < 0.65
 
