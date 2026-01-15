@@ -2156,8 +2156,8 @@ async function predictBTTS(
   // ... rest of prediction logic ...
 }
 
-// Similar integration for predictOver25, predictMatchResult, predictFirstHalf
-// Use appropriate market type: 'OVER_2_5', 'MATCH_RESULT', 'FIRST_HALF'
+// Similar integration for predictOverUnderGoals (per-line), predictMatchResult, predictFirstHalf
+// Use appropriate market type: 'OVER_UNDER_GOALS' (with line), 'MATCH_RESULT', 'FIRST_HALF'
 ```
 
 **Add Congestion Data to TeamData Interface (Optional):**
@@ -5763,7 +5763,8 @@ const MARKET_WEIGHTS = {
     scoringRate: 25,       // ⬆️ NEW: Goals per game critical
   },
   
-  OVER_2_5: {
+  // Over/Under Goals (multi-line): weights apply per line (0.5..5.5)
+  OVER_UNDER_GOALS: {
     recentForm: 30,        // Scoring trends
     h2h: 20,               // ⬇️ Less weight (historical goals)
     homeAdvantage: 12,     // ⬇️ Less relevant
@@ -6595,8 +6596,7 @@ interface TeamMood {
 interface TeamDNA {
   mostPlayedFormation: string;     // e.g., "4-3-3"
   formationFrequency: Record<string, number>; // Formation usage percentages
-  under25Percentage: number;       // Season Under 2.5 rate
-  over25Percentage: number;        // Season Over 2.5 rate
+  goalLineOverPct: Record<string, number>; // Season P(totalGoals > line), keyed by line string (e.g. "2.5")
   cleanSheetPercentage: number;    // Season clean sheet rate
   failedToScorePercentage: number; // Season failed to score rate
   goalMinuteDistribution: Record<string, number>; // Goals by time windows
@@ -6682,8 +6682,8 @@ interface H2HData {
   bttsCount: number;
   bttsPercentage: number;
   
-  over25Count: number;
-  over25Percentage: number;
+  goalLineOverCount: Record<string, number>; // Count of matches with totalGoals > line
+  goalLineOverPct: Record<string, number>;   // Percentage of matches with totalGoals > line
   
   avgGoalsPerMatch: number;
   avgHomeGoals: number;
@@ -9085,8 +9085,7 @@ interface LeagueCharacteristics {
   bttsRate: number;              // Baseline BTTS rate (0-1)
   drawRate: number;              // Baseline draw rate (0-1)
   homeAdvantageStrength: number;  // Multiplier for home advantage (default: 1.0)
-  over25Baseline: number;        // Baseline Over 2.5 rate (0-1)
-  over15Baseline: number;        // Baseline Over 1.5 rate (0-1)
+  overGoalsBaselineByLine: Record<string, number>; // Baseline P(totalGoals > line), keyed by line string (e.g. "2.5")
   cleanSheetRate: number;        // Average clean sheet rate
   scoringRate: number;            // Average scoring rate (goals per game)
 }
@@ -9102,8 +9101,14 @@ const LEAGUE_CHARACTERISTICS: Record<number, LeagueCharacteristics> = {
     bttsRate: 0.52,
     drawRate: 0.25,
     homeAdvantageStrength: 1.0,
-    over25Baseline: 0.52,
-    over15Baseline: 0.78,
+    overGoalsBaselineByLine: {
+      '0.5': 0.93,
+      '1.5': 0.78,
+      '2.5': 0.52,
+      '3.5': 0.28,
+      '4.5': 0.14,
+      '5.5': 0.07,
+    },
     cleanSheetRate: 0.32,
     scoringRate: 1.38, // Average goals per team per game
   },
@@ -9114,8 +9119,14 @@ const LEAGUE_CHARACTERISTICS: Record<number, LeagueCharacteristics> = {
     bttsRate: 0.48,
     drawRate: 0.26,
     homeAdvantageStrength: 1.0,
-    over25Baseline: 0.48,
-    over15Baseline: 0.75,
+    overGoalsBaselineByLine: {
+      '0.5': 0.92,
+      '1.5': 0.75,
+      '2.5': 0.48,
+      '3.5': 0.25,
+      '4.5': 0.12,
+      '5.5': 0.06,
+    },
     cleanSheetRate: 0.35,
     scoringRate: 1.30,
   },
@@ -9126,8 +9137,14 @@ const LEAGUE_CHARACTERISTICS: Record<number, LeagueCharacteristics> = {
     bttsRate: 0.45,
     drawRate: 0.28,
     homeAdvantageStrength: 0.95, // Slightly lower home advantage
-    over25Baseline: 0.42,
-    over15Baseline: 0.72,
+    overGoalsBaselineByLine: {
+      '0.5': 0.91,
+      '1.5': 0.72,
+      '2.5': 0.42,
+      '3.5': 0.22,
+      '4.5': 0.10,
+      '5.5': 0.05,
+    },
     cleanSheetRate: 0.38,
     scoringRate: 1.25,
   },
@@ -9138,8 +9155,14 @@ const LEAGUE_CHARACTERISTICS: Record<number, LeagueCharacteristics> = {
     bttsRate: 0.58,
     drawRate: 0.22,
     homeAdvantageStrength: 1.05, // Slightly higher home advantage
-    over25Baseline: 0.62,
-    over15Baseline: 0.85,
+    overGoalsBaselineByLine: {
+      '0.5': 0.95,
+      '1.5': 0.85,
+      '2.5': 0.62,
+      '3.5': 0.38,
+      '4.5': 0.20,
+      '5.5': 0.10,
+    },
     cleanSheetRate: 0.28,
     scoringRate: 1.55,
   },
@@ -9150,8 +9173,14 @@ const LEAGUE_CHARACTERISTICS: Record<number, LeagueCharacteristics> = {
     bttsRate: 0.50,
     drawRate: 0.27,
     homeAdvantageStrength: 1.0,
-    over25Baseline: 0.50,
-    over15Baseline: 0.76,
+    overGoalsBaselineByLine: {
+      '0.5': 0.92,
+      '1.5': 0.76,
+      '2.5': 0.50,
+      '3.5': 0.27,
+      '4.5': 0.13,
+      '5.5': 0.06,
+    },
     cleanSheetRate: 0.33,
     scoringRate: 1.33,
   },
@@ -9162,8 +9191,14 @@ const LEAGUE_CHARACTERISTICS: Record<number, LeagueCharacteristics> = {
     bttsRate: 0.47,
     drawRate: 0.27,
     homeAdvantageStrength: 1.0,
-    over25Baseline: 0.46,
-    over15Baseline: 0.74,
+    overGoalsBaselineByLine: {
+      '0.5': 0.91,
+      '1.5': 0.74,
+      '2.5': 0.46,
+      '3.5': 0.24,
+      '4.5': 0.11,
+      '5.5': 0.05,
+    },
     cleanSheetRate: 0.36,
     scoringRate: 1.28,
   },
@@ -9191,8 +9226,9 @@ function getLeagueCharacteristics(leagueId: number): LeagueCharacteristics {
  */
 function applyLeagueSpecificAdjustments(
   baseProbability: number,
-  market: 'BTTS' | 'OVER_2_5' | 'OVER_1_5' | 'MATCH_RESULT' | 'FIRST_HALF',
+  market: 'BTTS' | 'OVER_UNDER_GOALS' | 'MATCH_RESULT' | 'FIRST_HALF',
   leagueId: number,
+  line: 0.5 | 1.5 | 2.5 | 3.5 | 4.5 | 5.5 | undefined,
   config: AlgorithmConfig
 ): number {
   const leagueChars = getLeagueCharacteristics(leagueId);
@@ -9209,15 +9245,18 @@ function applyLeagueSpecificAdjustments(
       adjustmentFactor = leagueChars.bttsRate / globalBaseline.bttsRate;
       break;
       
-    case 'OVER_2_5':
-      // Compare league Over 2.5 rate to global baseline
-      adjustmentFactor = leagueChars.over25Baseline / globalBaseline.over25Baseline;
+    case 'OVER_UNDER_GOALS': {
+      // Compare league P(totalGoals > line) to global baseline for the same line.
+      // If line is missing, default to 2.5.
+      const effectiveLine = line ?? 2.5;
+      const key = String(effectiveLine);
+      const leagueBase = leagueChars.overGoalsBaselineByLine[key];
+      const globalBase = globalBaseline.overGoalsBaselineByLine[key];
+      if (leagueBase != null && globalBase != null && globalBase > 0) {
+        adjustmentFactor = leagueBase / globalBase;
+      }
       break;
-      
-    case 'OVER_15':
-      // Compare league Over 1.5 rate to global baseline
-      adjustmentFactor = leagueChars.over15Baseline / globalBaseline.over15Baseline;
-      break;
+    }
       
     case 'MATCH_RESULT':
       // Apply home advantage strength multiplier
@@ -9269,6 +9308,7 @@ async function predictBTTS(
 }
 
 // Similar for predictOver25, predictOver15, etc.
+// Similar for predictOverUnderGoals (pass the line), predictMatchResult, etc.
 ```
 
 **Configuration:**
@@ -9517,7 +9557,8 @@ function adjustWeightsForLowH2H(
 }
 
 interface AlternativeBet {
-  market: string; // Any market: "OVER_1_5", "OVER_3_5", "HOME_DRAW", "BTTS_FIRST_HALF", "DRAW_NO_BET_HOME", etc.
+  market: string; // Any market: "OVER_UNDER_GOALS", "HOME_DRAW", "BTTS_FIRST_HALF", "DRAW_NO_BET_HOME", etc.
+  line?: 0.5 | 1.5 | 2.5 | 3.5 | 4.5 | 5.5; // Only for OVER_UNDER_GOALS
   probability: number;
   confidence: 'HIGH' | 'MEDIUM' | 'LOW';
   reason: string;
@@ -9528,13 +9569,16 @@ interface AlternativeBet {
 }
 
 interface MarketPrediction {
-  market: 'MATCH_RESULT' | 'BTTS' | 'OVER_2_5' | 'FIRST_HALF' | string; // Allow any market string
+  market: 'MATCH_RESULT' | 'BTTS' | 'OVER_UNDER_GOALS' | 'FIRST_HALF' | string; // Allow any market string
+  line?: 0.5 | 1.5 | 2.5 | 3.5 | 4.5 | 5.5; // Only for OVER_UNDER_GOALS (goal line)
   probabilities: {
     home?: number;
     draw?: number;
     away?: number;
     yes?: number;
     no?: number;
+    over?: number;  // Used by OVER_UNDER_GOALS
+    under?: number; // Used by OVER_UNDER_GOALS
   };
   rating: 'VERY_LIKELY' | 'LIKELY' | 'NEUTRAL' | 'UNLIKELY' | 'VERY_UNLIKELY';
   confidence: 'HIGH' | 'MEDIUM' | 'LOW';
@@ -9609,18 +9653,23 @@ async function generateMarketPredictions(
     }
   ));
   
-  // 2. Over/Under 2.5 (40% less impact from formations)
-  predictions.push(await predictOver25(
-    homeTeamData, 
-    awayTeamData, 
-    h2hData,
-    isEarlySeason,
-    { 
-      homeFormationStability, 
-      awayFormationStability,
-      totalFormationReduction: totalFormationReduction * 0.6 // 40% less impact
-    }
-  ));
+  // 2. Over/Under Goals (multi-line) (40% less impact from formations)
+  // One prediction per goal line, using the same base signals but line-aware conversion.
+  const defaultGoalLines: Array<0.5 | 1.5 | 2.5 | 3.5 | 4.5 | 5.5> = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5];
+  for (const line of defaultGoalLines) {
+    predictions.push(await predictOverUnderGoals(
+      homeTeamData,
+      awayTeamData,
+      h2hData,
+      line,
+      isEarlySeason,
+      {
+        homeFormationStability,
+        awayFormationStability,
+        totalFormationReduction: totalFormationReduction * 0.6 // 40% less impact
+      }
+    ));
+  }
   
   // 3. Match Result (Full impact from formations)
   predictions.push(await predictMatchResult(
@@ -9774,20 +9823,26 @@ async function predictBTTS(
   const allAdjustments: Adjustment[] = [];
   
   // 1. DNA adjustments
-  const homeDnaAdjustment = homeTeam.dna.under25Percentage > 70 ? -5 : 0;
-  const awayDnaAdjustment = awayTeam.dna.under25Percentage > 70 ? -5 : 0;
+  // NOTE: DNA goal trends are stored per goal line in goalLineOverPct.
+  // For BTTS, we use the 2.5 line as a proxy for low-scoring DNA and derive under% as (100 - over%).
+  const homeOver25Pct = homeTeam.dna.goalLineOverPct['2.5'] || 0;
+  const awayOver25Pct = awayTeam.dna.goalLineOverPct['2.5'] || 0;
+  const homeUnder25Pct = 100 - homeOver25Pct;
+  const awayUnder25Pct = 100 - awayOver25Pct;
+  const homeDnaAdjustment = homeUnder25Pct > 70 ? -5 : 0;
+  const awayDnaAdjustment = awayUnder25Pct > 70 ? -5 : 0;
   if (homeDnaAdjustment !== 0) {
     allAdjustments.push({
-      name: 'dna_home_under25',
+      name: 'dna_home_under_goals',
       value: homeDnaAdjustment,
-      reason: `${homeTeam.name} season DNA: ${homeTeam.dna.under25Percentage}% Under 2.5`,
+      reason: `${homeTeam.name} season DNA: ${homeUnder25Pct.toFixed(0)}% Under 2.5`,
     });
   }
   if (awayDnaAdjustment !== 0) {
     allAdjustments.push({
-      name: 'dna_away_under25',
+      name: 'dna_away_under_goals',
       value: awayDnaAdjustment,
-      reason: `${awayTeam.name} season DNA: ${awayTeam.dna.under25Percentage}% Under 2.5`,
+      reason: `${awayTeam.name} season DNA: ${awayUnder25Pct.toFixed(0)}% Under 2.5`,
     });
   }
   
@@ -9870,9 +9925,9 @@ async function predictBTTS(
   }
   
   // Add DNA insights
-  if (homeTeam.dna.under25Percentage > 70) {
+  if (homeUnder25Pct > 70) {
     insights.push({
-      text: `${homeTeam.name} season DNA: ${homeTeam.dna.under25Percentage.toFixed(0)}% Under 2.5 (vs ${(100 - homeScoredPct).toFixed(0)}% in L5) - Trust the DNA`,
+      text: `${homeTeam.name} season DNA: ${homeUnder25Pct.toFixed(0)}% Under 2.5 (proxy for low-scoring DNA) - Trust the DNA`,
       emoji: '🧬',
       priority: 75,
       category: 'SCORING',
@@ -9964,11 +10019,13 @@ async function predictBTTS(
   };
 }
 
-// Predict Over/Under 2.5 Goals with Goal Efficiency (DNA layer)
-async function predictOver25(
+// Predict Over/Under Goals (multi-line) with Goal Efficiency (DNA layer)
+// Returns ONE prediction for a given goal line; call in a loop for multiple lines.
+async function predictOverUnderGoals(
   homeTeam: TeamData,
   awayTeam: TeamData,
   h2h: H2HData,
+  line: 0.5 | 1.5 | 2.5 | 3.5 | 4.5 | 5.5,
   isEarlySeason: boolean = false,
   formationStability?: {
     homeFormationStability: { isStable: boolean; stabilityScore: number; confidenceReduction: number };
@@ -9999,18 +10056,21 @@ async function predictOver25(
   const combinedAvgGoals = homeAvgGoals + awayAvgGoals;
   
   // Apply Goal Efficiency (DNA layer) - Frustration Filter
-  // Trust long-term DNA over recent outliers
-  const homeDnaUnderRate = homeTeam.dna.under25Percentage;
-  const awayDnaUnderRate = awayTeam.dna.under25Percentage;
+  // Trust long-term DNA over recent outliers.
+  // NOTE: DNA is stored per-line in goalLineOverPct; under% is derived as (100 - over%).
+  const homeDnaOverPct = homeTeam.dna.goalLineOverPct[String(line)] || 0;
+  const awayDnaOverPct = awayTeam.dna.goalLineOverPct[String(line)] || 0;
+  const homeDnaUnderPct = 100 - homeDnaOverPct;
+  const awayDnaUnderPct = 100 - awayDnaOverPct;
   
   let dnaAdjustment = 0;
-  if (homeDnaUnderRate > 70 || awayDnaUnderRate > 70) {
-    // Strong Under DNA: reduce Over probability even if recent form suggests Over
-    const avgDnaUnderRate = (homeDnaUnderRate + awayDnaUnderRate) / 2;
-    dnaAdjustment = -(avgDnaUnderRate - 50) * 0.3; // -6% to -9% adjustment
+  if (homeDnaUnderPct > 70 || awayDnaUnderPct > 70) {
+    // Strong Under DNA at this line: reduce Over probability even if recent form suggests Over
+    const avgDnaUnderPct = (homeDnaUnderPct + awayDnaUnderPct) / 2;
+    dnaAdjustment = -(avgDnaUnderPct - 50) * 0.3; // e.g. -6% to -9%
     
     insights.push({
-      text: `🧬 Season DNA: ${homeTeam.name} ${homeDnaUnderRate.toFixed(0)}% Under 2.5, ${awayTeam.name} ${awayDnaUnderRate.toFixed(0)}% Under 2.5 - Trust the DNA over recent form`,
+      text: `🧬 Season DNA (line ${line}): ${homeTeam.name} ${homeDnaUnderPct.toFixed(0)}% Under, ${awayTeam.name} ${awayDnaUnderPct.toFixed(0)}% Under - Trust the DNA over recent form`,
       emoji: '🧬',
       priority: 85,
       category: 'SCORING',
@@ -10027,9 +10087,9 @@ async function predictOver25(
   // 1. DNA adjustments
   if (dnaAdjustment !== 0) {
     allAdjustments.push({
-      name: 'dna_under25',
+      name: 'dna_under_goals',
       value: dnaAdjustment,
-      reason: `Season DNA: ${homeTeam.name} ${homeDnaUnderRate.toFixed(0)}% Under 2.5, ${awayTeam.name} ${awayDnaUnderRate.toFixed(0)}% Under 2.5`,
+      reason: `Season DNA (line ${line}): ${homeTeam.name} ${homeDnaUnderPct.toFixed(0)}% Under, ${awayTeam.name} ${awayDnaUnderPct.toFixed(0)}% Under`,
     });
   }
   
@@ -10056,15 +10116,15 @@ async function predictOver25(
   const adjustmentResult = applyCappedAsymmetricAdjustments(
     baseProbability,
     allAdjustments,
-    'OVER_2_5',
+    'OVER_UNDER_GOALS',
     config
   );
   
   const finalProbability = adjustmentResult.finalProbability;
   
-  const yesProbability = finalProbability;
-  const noProbability = 100 - yesProbability;
-  const rating = getRating(yesProbability);
+  const overProbability = finalProbability;
+  const underProbability = 100 - overProbability;
+  const rating = getRating(overProbability);
   
   // Calculate base confidence
   let baseConfidence: 'HIGH' | 'MEDIUM' | 'LOW' = 'MEDIUM';
@@ -10090,16 +10150,17 @@ async function predictOver25(
   }
   
   return {
-    market: 'OVER_2_5',
-    probabilities: { yes: yesProbability, no: noProbability },
+    market: 'OVER_UNDER_GOALS',
+    line,
+    probabilities: { over: overProbability, under: underProbability },
     rating,
     confidence,
     insights: insights.slice(0, 5),
-    recommendation: rating === 'LIKELY' || rating === 'VERY_LIKELY' 
-      ? 'Over 2.5 - Yes ✅' 
+    recommendation: rating === 'LIKELY' || rating === 'VERY_LIKELY'
+      ? `Over ${line} - Yes ✅`
       : rating === 'UNLIKELY' || rating === 'VERY_UNLIKELY'
-      ? 'Under 2.5 - Yes ✅'
-      : 'Over 2.5 - Neutral 🤔',
+      ? `Under ${line} - Yes ✅`
+      : `Over/Under ${line} - Neutral 🤔`,
   };
 }
 
@@ -10569,9 +10630,9 @@ const ASYMMETRIC_WEIGHTS: Record<string, AsymmetricConfig[]> = {
       falseNegativePenalty: 1.2, // Slight penalty for missing BTTS
     },
   ],
-  OVER_2_5: [
+  OVER_UNDER_GOALS: [
     {
-      market: 'OVER_2_5',
+      market: 'OVER_UNDER_GOALS',
       direction: 'UP',    // Predicting Over more
       maxAdjustment: 18,   // Allow bigger upward moves (higher odds = more acceptable)
       riskMultiplier: 0.9, // Less penalty for false positives
@@ -10579,7 +10640,7 @@ const ASYMMETRIC_WEIGHTS: Record<string, AsymmetricConfig[]> = {
       falseNegativePenalty: 1.3, // More penalty (missed value)
     },
     {
-      market: 'OVER_2_5',
+      market: 'OVER_UNDER_GOALS',
       direction: 'DOWN',  // Predicting Under more
       maxAdjustment: 15,   // Cap downward moves
       riskMultiplier: 1.1,
@@ -10660,8 +10721,8 @@ const MARKET_ASYMMETRY: Record<string, MarketAsymmetry> = {
     falsePositivePenalty: 1.5,   // Heavy penalty for predicting Yes when No
     falseNegativePenalty: 1.0,   // Normal penalty for predicting No when Yes
   },
-  OVER_2_5: {
-    market: 'OVER_2_5',
+  OVER_UNDER_GOALS: {
+    market: 'OVER_UNDER_GOALS',
     favorUpward: 1.2,           // Increase upward moves (Over has higher odds)
     favorDownward: 0.9,         // Reduce downward moves
     falsePositivePenalty: 0.8,   // Less penalty (higher payout compensates)
@@ -12916,6 +12977,7 @@ function findSafestUnderMarket(
  */
 function findCorrelatedAlternatives(
   primaryMarket: string,
+  primaryLine: 0.5 | 1.5 | 2.5 | 3.5 | 4.5 | 5.5 | undefined,
   primaryProb: number,
   allPredictions: Map<string, MarketPrediction>,
   homeTeam: TeamData,
@@ -12926,52 +12988,57 @@ function findCorrelatedAlternatives(
   const maxDiff = config.alternativeBets.maxProbabilityDiff || 15;
   const correlationThreshold = config.alternativeBets.correlationThreshold || 0.6;
   
-  // BTTS Yes correlates with Over 2.5
+  // NOTE: For OVER_UNDER_GOALS, store predictions in the map under a composite key:
+  // `${market}:${line}` e.g. 'OVER_UNDER_GOALS:2.5'
+  //
+  // BTTS Yes correlates with Over 2.5 (line = 2.5)
   if (primaryMarket === 'BTTS' && primaryProb > 60) {
-    const over25 = allPredictions.get('OVER_2_5');
+    const ou25 = allPredictions.get('OVER_UNDER_GOALS:2.5');
+    const ou25OverProb = ou25?.probabilities.over ?? 0;
     // FIXED: Only suggest if similar probability (within threshold) AND not harder
     // Allow up to 5% lower for CORRELATED, but prefer safer (higher probability)
-    if (over25 && 
-        Math.abs(over25.probabilities.yes - primaryProb) < maxDiff &&
-        over25.probabilities.yes >= primaryProb - 5) { // Allow up to 5% lower, but prefer safer
+    if (ou25 && 
+        Math.abs(ou25OverProb - primaryProb) < maxDiff &&
+        ou25OverProb >= primaryProb - 5) { // Allow up to 5% lower, but prefer safer
       
-      const correlation = calculateCorrelation('BTTS', 'OVER_2_5', homeTeam, awayTeam);
+      const correlation = calculateCorrelation('BTTS', undefined, 'OVER_UNDER_GOALS', 2.5, homeTeam, awayTeam);
       
       // Only suggest if correlation is high enough
       if (correlation >= correlationThreshold) {
         // If it's actually safer (higher probability), mark as SAFER, not CORRELATED
-        const relationship = over25.probabilities.yes > primaryProb 
+        const relationship = ou25OverProb > primaryProb 
           ? 'SAFER' 
-          : (Math.abs(over25.probabilities.yes - primaryProb) <= 5 ? 'CORRELATED' : null);
+          : (Math.abs(ou25OverProb - primaryProb) <= 5 ? 'CORRELATED' : null);
         
         // Don't suggest if it's harder (more than 5% lower)
         if (relationship) {
           alternatives.push({
-            market: 'OVER_2_5',
-            probability: over25.probabilities.yes,
-            confidence: over25.confidence,
-            reason: over25.probabilities.yes > primaryProb
-              ? `Safer: Over 2.5 has ${over25.probabilities.yes}% probability (vs ${primaryProb}% for BTTS)`
-              : `Correlated: BTTS Yes (${primaryProb}%) often means Over 2.5 (${over25.probabilities.yes}%) - similar probability`,
+            market: 'OVER_UNDER_GOALS',
+            line: 2.5,
+            probability: ou25OverProb,
+            confidence: ou25.confidence,
+            reason: ou25OverProb > primaryProb
+              ? `Safer: Over 2.5 has ${ou25OverProb}% probability (vs ${primaryProb}% for BTTS)`
+              : `Correlated: BTTS Yes (${primaryProb}%) often means Over 2.5 (${ou25OverProb}%) - similar probability`,
             relationship: relationship,
             correlation: correlation,
-            probabilityGain: over25.probabilities.yes > primaryProb ? over25.probabilities.yes - primaryProb : undefined,
-            oddsEstimate: probabilityToOdds(over25.probabilities.yes)
+            probabilityGain: ou25OverProb > primaryProb ? ou25OverProb - primaryProb : undefined,
+            oddsEstimate: probabilityToOdds(ou25OverProb)
           });
         }
       }
     }
   }
   
-  // Over 2.5 correlates with BTTS Yes
-  if (primaryMarket === 'OVER_2_5' && primaryProb > 60) {
+  // Over 2.5 (line = 2.5) correlates with BTTS Yes
+  if (primaryMarket === 'OVER_UNDER_GOALS' && primaryLine === 2.5 && primaryProb > 60) {
     const btts = allPredictions.get('BTTS');
     // FIXED: Only suggest if similar or safer, not harder
     if (btts && 
         Math.abs(btts.probabilities.yes - primaryProb) < maxDiff &&
         btts.probabilities.yes >= primaryProb - 5) {
       
-      const correlation = calculateCorrelation('OVER_2_5', 'BTTS', homeTeam, awayTeam);
+      const correlation = calculateCorrelation('OVER_UNDER_GOALS', 2.5, 'BTTS', undefined, homeTeam, awayTeam);
       
       if (correlation >= correlationThreshold) {
         const relationship = btts.probabilities.yes > primaryProb 
@@ -13047,14 +13114,18 @@ function findCorrelatedAlternatives(
  */
 function calculateCorrelation(
   market1: string,
+  market1Line: 0.5 | 1.5 | 2.5 | 3.5 | 4.5 | 5.5 | undefined,
   market2: string,
+  market2Line: 0.5 | 1.5 | 2.5 | 3.5 | 4.5 | 5.5 | undefined,
   homeTeam: TeamData,
   awayTeam: TeamData
 ): number {
   // Use historical correlation data or calculate from team stats
-  // Example: BTTS and Over 2.5 correlation
-  if ((market1 === 'BTTS' && market2 === 'OVER_2_5') || 
-      (market1 === 'OVER_2_5' && market2 === 'BTTS')) {
+  // Example: BTTS and Over/Under Goals @2.5 correlation
+  if (
+    (market1 === 'BTTS' && market2 === 'OVER_UNDER_GOALS' && market2Line === 2.5) ||
+    (market2 === 'BTTS' && market1 === 'OVER_UNDER_GOALS' && market1Line === 2.5)
+  ) {
     // If both teams score frequently and concede frequently, high correlation
     const homeScoringRate = homeTeam.mood.last10Matches.filter(m => m.goalsScored > 0).length / 10;
     const awayScoringRate = awayTeam.mood.last10Matches.filter(m => m.goalsScored > 0).length / 10;
@@ -13384,8 +13455,8 @@ async function generateMarketPredictionsWithAlternatives(
   // Step 2: For each primary prediction, suggest alternatives
   const predictions: MarketPrediction[] = [];
   
-  // Primary markets (BTTS, Over 2.5, Match Result, First Half)
-  const primaryMarkets = ['BTTS', 'OVER_2_5', 'MATCH_RESULT', 'FIRST_HALF'];
+  // Primary markets (BTTS, Over/Under Goals, Match Result, First Half)
+  const primaryMarkets = ['BTTS', 'OVER_UNDER_GOALS', 'MATCH_RESULT', 'FIRST_HALF'];
   
   for (const market of primaryMarkets) {
     const prediction = allPredictions.get(market);
@@ -13410,10 +13481,11 @@ async function generateMarketPredictionsWithAlternatives(
 
 ```json
 {
-  "market": "OVER_2_5",
+  "market": "OVER_UNDER_GOALS",
+  "line": 2.5,
   "probabilities": {
-    "yes": 75,
-    "no": 25
+    "over": 75,
+    "under": 25
   },
   "confidence": "HIGH",
   "rating": "STRONG",
@@ -14472,10 +14544,11 @@ function calculateOverallConfidence(
     },
     
     {
-      "market": "OVER_2_5",
+      "market": "OVER_UNDER_GOALS",
+      "line": 2.5,
       "probabilities": {
-        "yes": 71,
-        "no": 29
+        "over": 71,
+        "under": 29
       },
       "rating": "LIKELY",
       "confidence": "MEDIUM",
@@ -15420,7 +15493,7 @@ async function runShadowMode(
 
 5. **Unified Helper Function** (High Priority - Safety)
    - `applyCappedAsymmetricAdjustments()` — single function for all caps
-   - Simplifies integration into prediction functions
+   - Simplifies integration into simulation functions
    - Implementation: 4-6 hours
    - **Reference:** Section 4.5.6
 
@@ -15432,11 +15505,34 @@ async function runShadowMode(
    - **Starting Values:** See Section 4.5.8
 
 7. **Rest Advantage Integration** (High Priority - Algorithm)
-   - Use calculated rest advantage gap in predictions
+   - Use calculated rest advantage gap in simulations
    - Small but meaningful accuracy improvement
-   - Implementation: 2-3 hours
-   - **Impact:** +1-2% accuracy
-   - **Reference:** Section 4.6.2
+
+---
+
+## 2026-01-11 Terminology + Response Schema Update (Mobile-safe framing)
+
+The mobile product is positioned as football intelligence and education (not a tipster/betting app). The underlying computations remain the same, but the **output schema and terminology** were updated for neutral, analytical framing:
+
+- **predictions → simulations**
+- **market → scenarioType**
+  - `BTTS` → `BothTeamsToScore`
+  - `OVER_UNDER_GOALS` → `TotalGoalsOverUnder` (includes `line`)
+  - `MATCH_RESULT` → `MatchOutcome`
+  - `FIRST_HALF` → `FirstHalfActivity`
+- **probabilities → probabilityDistribution**
+- **rating → signalStrength** (`Strong` | `Moderate` | `Balanced` | `Weak`)
+- **confidence → modelReliability** (`HIGH` | `MEDIUM` | `LOW`)
+- **recommendation → mostProbableOutcome** (neutral, analytical text)
+- **alternatives → relatedScenarios** (neutral reframing; derived from already computed simulations)
+
+### Model Reliability Transparency
+
+Each simulation can include `modelReliabilityBreakdown` to explain *why* reliability is `HIGH/MEDIUM/LOW`. Reasons are deterministic and come from:
+
+- **Data coverage** (limited baseline match history, limited head-to-head history)
+- **Context volatility** (derby, neutral venue, post-international-break, end-of-season, friendlies)
+- **Model stability signals** (caps hit, overcorrection warning, large adjustment swing)
 
 8. **Dynamic Home Advantage** (High Priority - Algorithm)
    - Calculate home advantage from team records, not fixed

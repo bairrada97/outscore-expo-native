@@ -4,7 +4,7 @@
 
 ## Overview
 
-Phase 5 implements the main API endpoint that exposes betting insights predictions. This phase integrates all previous phases into a single, well-structured API endpoint with proper caching, error handling, and response formatting.
+Phase 5 implements the main API endpoint that exposes betting insights simulations. This phase integrates all previous phases into a single, well-structured API endpoint with proper caching, error handling, and response formatting.
 
 ## Dependencies
 
@@ -12,7 +12,7 @@ Phase 5 implements the main API endpoint that exposes betting insights predictio
 - **Phase 2:** Pattern Detection (Patterns)
 - **Phase 3:** Insight Generation (Insights)
 - **Phase 3.5:** Match Type Detection (Match type)
-- **Phase 4:** Market Predictions (Predictions)
+- **Phase 4:** Scenario Simulations (Simulations)
 - **Phase 4.5:** Probability Caps (Caps)
 - **Phase 4.6:** Algorithm Refinements (Refinements)
 
@@ -57,17 +57,17 @@ Phase 5 implements the main API endpoint that exposes betting insights predictio
    - Generate insights for away team
    - Generate H2H insights
 
-7. **Market Predictions**
-   - Generate BTTS prediction
-   - Generate Over 2.5 prediction
-   - Generate Match Result prediction
-   - Generate First Half prediction
+7. **Scenario Simulations**
+   - Generate BothTeamsToScore simulation
+   - Generate TotalGoalsOverUnder simulations (0.5..5.5)
+   - Generate MatchOutcome simulation
+   - Generate FirstHalfActivity simulation
 
 8. **Response Building**
    - Build structured response
    - Include match context
    - Include team context
-   - Include predictions
+   - Include simulations
    - Include insights
 
 #### Files to Create:
@@ -160,9 +160,10 @@ Phase 5 implements the main API endpoint that exposes betting insights predictio
    - Round, early season flag, formations, formation stability
    - H2H match count, safety flags
 
-4. **Predictions**
-   - All market predictions with probabilities, confidence, insights
-   - Alternative bet suggestions
+4. **Simulations**
+   - All scenario simulations with probabilityDistribution, modelReliability, signalStrength, and mostProbableOutcome
+   - Related scenarios (derived only from already computed simulations)
+   - Optional: modelReliabilityBreakdown for transparency
 
 5. **Insights**
    - Top 5 home team insights
@@ -322,7 +323,7 @@ interface InsightsResponse {
       away: SafetyFlags;
     };
   };
-  predictions: MarketPrediction[];
+  simulations: Simulation[];
   insights: {
     home: Insight[];
     away: Insight[];
@@ -349,7 +350,7 @@ interface InsightsResponse {
 - [ ] Implement team data fetching
 - [ ] Implement pattern detection
 - [ ] Implement insight generation
-- [ ] Implement market predictions
+- [ ] Implement scenario simulations
 - [ ] Implement response building
 
 ### Caching Strategy
@@ -434,7 +435,7 @@ meta: {
 - [ ] **Rate limit handling tested** - 429 returned appropriately
 
 ### Monitoring & Kill-Switch
-- [ ] **Logging enabled** - All predictions logged with fixtureId, predictions, adjustments
+- [ ] **Logging enabled** - All simulations logged with fixtureId, simulations, adjustments
 - [ ] **Metrics endpoint available** - Brier score, ECE, cap-hit rate, error rate
 - [ ] **Kill-switch documented** - Procedure to disable insights endpoint without affecting fixtures
 
@@ -484,7 +485,7 @@ GET /api/fixtures/1234567/insights
     }
   },
   "context": { /* ... */ },
-  "predictions": [ /* ... */ ],
+  "simulations": [ /* ... */ ],
   "insights": { /* ... */ },
   "meta": {
     "generatedAt": "2026-01-03T12:00:00.000Z",

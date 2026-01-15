@@ -4,6 +4,7 @@ import {
 	fixtureByIdQuery,
 	getFixtureRefetchInterval,
 } from "@/queries/fixture-by-id";
+import { insightsByFixtureIdQuery } from "@/queries/insights-by-fixture-id";
 import { FIFTEEN_SECONDS_CACHE } from "@/utils/constants";
 import { parseFixtureSlug } from "@/utils/fixture-slug";
 import {
@@ -45,6 +46,9 @@ export default function FixtureDetailScreen() {
 					queryClient.invalidateQueries({
 						queryKey: ["fixture", String(fixtureId)],
 					});
+					queryClient.invalidateQueries({
+						queryKey: ["fixture-insights", String(fixtureId)],
+					});
 				}
 			}
 		},
@@ -72,6 +76,22 @@ export default function FixtureDetailScreen() {
 			}
 
 			return interval;
+		},
+	});
+
+	const {
+		data: insightsData,
+		isLoading: isInsightsLoading,
+		error: insightsError,
+	} = useQuery({
+		...insightsByFixtureIdQuery({ fixtureId }),
+		// Keep insights refresh cadence aligned with fixture polling
+		refetchInterval: (query) => {
+			const fixtureData = data;
+			if (!fixtureData) {
+				return FIFTEEN_SECONDS_CACHE + 2000;
+			}
+			return getFixtureRefetchInterval(fixtureData);
 		},
 	});
 
@@ -149,6 +169,49 @@ export default function FixtureDetailScreen() {
 							{fixture.fixture.venue.city && `, ${fixture.fixture.venue.city}`}
 						</Text>
 					)}
+
+					{/* Insights */}
+					<View className="mt-6">
+						<Text className="text-neu-10 dark:text-neu-06 mb-2">
+							Insights
+						</Text>
+
+						{isInsightsLoading && (
+							<View className="py-4">
+								<ActivityIndicator />
+							</View>
+						)}
+
+						{insightsError && (
+							<Text className="text-red">
+								Insights error: {insightsError.message}
+							</Text>
+						)}
+
+						{insightsData && (
+							<View className="gap-2">
+								{insightsData.overallConfidence && (
+									<Text className="text-neu-06 dark:text-neu-07">
+										Overall confidence: {insightsData.overallConfidence}
+									</Text>
+								)}
+
+								{insightsData.predictions
+									?.filter((p) => p.market === "OVER_UNDER_GOALS")
+									?.sort((a, b) => (a.line ?? 0) - (b.line ?? 0))
+									?.map((p) => (
+										<Text
+											key={`ou-${p.line ?? "na"}`}
+											className="text-neu-06 dark:text-neu-07"
+										>
+											Over/Under {p.line}: O {Math.round((p.probabilities.over ?? 0) * 10) / 10}% / U{" "}
+											{Math.round((p.probabilities.under ?? 0) * 10) / 10}%{" "}
+											{p.confidence ? `(${p.confidence})` : ""}
+										</Text>
+									))}
+							</View>
+						)}
+					</View>
 				</View>
 			</View>
 		</>

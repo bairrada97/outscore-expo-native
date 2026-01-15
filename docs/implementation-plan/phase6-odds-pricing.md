@@ -2,22 +2,22 @@
 
 ## Overview
 
-Phase 6 is a **deferred phase** that will add odds integration, value/edge computation, and market coherence constraints. This phase is explicitly **not part of the MVP** and is documented here to ensure the architecture remains ready for future implementation.
+Phase 6 is a **deferred phase** that will add market price integration, value/edge computation, and coherence constraints. This phase is explicitly **not part of the MVP** and is documented here to ensure the architecture remains ready for future implementation.
 
 **Status:** DEFERRED (not blocking Phases 1-5)
 
 ## Why Deferred?
 
-- MVP focuses on probability predictions and insights
-- Odds integration requires a reliable odds feed at runtime
+- MVP focuses on probability simulations and insights
+- Market price integration requires a reliable price feed at runtime
 - Market coherence constraints add complexity not needed for initial launch
-- Kelly/value features require odds data to be meaningful
+- Kelly/value features require price data to be meaningful
 
 ## Future Scope
 
-### 6.1 Odds Ingestion & Normalization
+### 6.1 Market Price Ingestion & Normalization
 
-**Goal:** Ingest and normalize odds from external feed(s)
+**Goal:** Ingest and normalize market prices from external feed(s)
 
 #### Sub-tasks:
 
@@ -41,7 +41,8 @@ Phase 6 is a **deferred phase** that will add odds integration, value/edge compu
 ```typescript
 interface OddsData {
   fixtureId: number;
-  market: 'MATCH_RESULT' | 'BTTS' | 'OVER_2_5' | string;
+  market: 'MATCH_RESULT' | 'BTTS' | 'OVER_UNDER_GOALS' | string;
+  line?: 0.5 | 1.5 | 2.5 | 3.5 | 4.5 | 5.5; // Only for OVER_UNDER_GOALS
   bookmaker?: string;
   odds: {
     home?: number; // Decimal odds
@@ -49,6 +50,8 @@ interface OddsData {
     away?: number;
     yes?: number;
     no?: number;
+    over?: number;  // Used by OVER_UNDER_GOALS
+    under?: number; // Used by OVER_UNDER_GOALS
   };
   impliedProbabilities: {
     home?: number;
@@ -161,47 +164,47 @@ interface ValueAnalysis {
 
 ---
 
-### 6.5 Odds Staleness & Fallback
+### 6.5 Price Staleness & Fallback
 
-**Goal:** Handle stale odds and feed failures gracefully
+**Goal:** Handle stale prices and feed failures gracefully
 
 #### Sub-tasks:
 
 1. **Staleness Detection**
-   - Define staleness threshold (e.g., odds > 30 min old)
-   - Flag stale odds in response
+   - Define staleness threshold (e.g., prices > 30 min old)
+   - Flag stale prices in response
 
 2. **Fallback Behavior**
-   - If odds unavailable: disable value/edge features, show predictions only
-   - If odds stale: downgrade confidence, show warning
+   - If prices unavailable: disable value/edge features, show simulations only
+   - If prices stale: downgrade reliability, show warning
 
 ---
 
 ## Integration Points
 
-- **Phase 4.5:** Kelly-aware confidence already exists; odds data enables it
-- **Phase 5:** API response can include value/edge fields when odds available
-- **ML Phase 6:** Risk-adjusted predictions can use real odds
+- **Phase 4.5:** Kelly-aware confidence already exists; price data enables it
+- **Phase 5:** API response can include value/edge fields when prices are available
+- **ML Phase 6:** Risk-adjusted simulations can use real prices
 
 ## Dependencies
 
-- Reliable odds feed provider
+- Reliable price feed provider
 - Phases 1-5 complete (MVP stable)
 
 ## Architecture Readiness
 
-The following should be kept in mind during MVP development to ease future odds integration:
+The following should be kept in mind during MVP development to ease future price integration:
 
 1. **Response structure:** Reserve fields for future value/edge data in Phase 5 response
 2. **Configuration:** Keep Kelly thresholds configurable even if not used
-3. **Adjustment system:** Phase 4.5 unified helper should support odds-aware adjustments
-4. **Caching:** Design cache keys to accommodate odds versioning
+3. **Adjustment system:** Phase 4.5 unified helper should support price-aware adjustments
+4. **Caching:** Design cache keys to accommodate price versioning
 
 ## Implementation Checklist (Future)
 
-### Odds Ingestion
-- [ ] Select odds feed provider
-- [ ] Implement odds fetch and caching
+### Price Ingestion
+- [ ] Select price feed provider
+- [ ] Implement price fetch and caching
 - [ ] Implement de-juicing logic
 - [ ] Handle multiple bookmakers
 

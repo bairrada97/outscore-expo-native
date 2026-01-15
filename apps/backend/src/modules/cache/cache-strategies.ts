@@ -158,6 +158,71 @@ export const getFixtureDetailTTL = (
 };
 
 /**
+ * Dynamic TTL for betting insights based on match status and time until match.
+ *
+ * Strategy mirrors fixture detail TTL behavior but reads from BettingInsightsResponse shape.
+ *
+ * Expected data shape:
+ * { match: { status: string; date: string } }
+ */
+export const getInsightsTTL = (
+  params: Record<string, string>,
+  data?: unknown,
+): number => {
+  const insightsData = data as { match?: { status?: string; date?: string } } | undefined;
+
+  const status = insightsData?.match?.status || params.status;
+  const matchDate = insightsData?.match?.date || params.dateTime;
+
+  if (!status) return TTL.SHORT;
+
+  // LIVE matches: 15 seconds for real-time updates
+  if (LIVE_STATUSES.includes(status)) {
+    return TTL.LIVE;
+  }
+
+  // FINISHED matches: cache long
+  if (FINISHED_STATUSES.includes(status)) {
+    return TTL.INDEFINITE;
+  }
+
+  // Upcoming matches: dynamic TTL based on time until match
+  if (!matchDate) {
+    return TTL.MEDIUM;
+  }
+
+  const matchTimestamp = Math.floor(new Date(matchDate).getTime() / 1000);
+  if (!Number.isFinite(matchTimestamp) || matchTimestamp <= 0) {
+    return TTL.MEDIUM;
+  }
+
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const timeUntilMatch = matchTimestamp - nowSeconds;
+
+  if (timeUntilMatch <= 0) {
+    return TTL.SHORT;
+  }
+
+  // 45 minutes before: lineups appear / pre-match volatility
+  if (timeUntilMatch <= 45 * 60) {
+    return TTL.SHORT;
+  }
+
+  // 8 hours before: 1 hour cache
+  if (timeUntilMatch <= 8 * 60 * 60) {
+    return TTL.STANDARD;
+  }
+
+  // 7 days before: 6 hour cache
+  if (timeUntilMatch <= 7 * 24 * 60 * 60) {
+    return TTL.SIX_HOURS;
+  }
+
+  // Further future: 24 hour cache
+  return TTL.LONG;
+};
+
+/**
  * Check if date is "hot" (should be in KV for fast access)
  */
 export const isHotDate = (date: string): boolean => {
@@ -203,13 +268,24 @@ export const CACHE_STRATEGIES: Record<ResourceType, CacheStrategyConfig> = {
     },
   },
 
+  insights: {
+    resourceType: 'insights',
+    ttlMode: 'dynamic',
+    dynamicTTL: getInsightsTTL,
+    swr: SWR.SHORT,
+    useKV: false,
+    useR2: true,
+    useEdge: true,
+    keyGenerator: (params) => `insights/${params.fixtureId}.json`,
+  },
+
   teams: {
     resourceType: 'teams',
     ttlMode: 'static',
     staticTTL: TTL.LONG, // 24 hours
-    useKV: false, // Not needed for static data
-    useR2: true,
-    useEdge: true,
+    useKV: false,
+    useR2: false, // D1 is the canonical store for teams (not R2)
+    useEdge: true, // Edge Cache for fast reads; D1 is the origin
     keyGenerator: (params) => `teams:${params.teamId}`,
   },
 
@@ -218,8 +294,8 @@ export const CACHE_STRATEGIES: Record<ResourceType, CacheStrategyConfig> = {
     ttlMode: 'static',
     staticTTL: TTL.LONG, // 24 hours
     useKV: false,
-    useR2: true,
-    useEdge: true,
+    useR2: false, // D1 is the canonical store for leagues (not R2)
+    useEdge: true, // Edge Cache for fast reads; D1 is the origin
     keyGenerator: (params) => `leagues:${params.leagueId}`,
   },
 
@@ -228,8 +304,8 @@ export const CACHE_STRATEGIES: Record<ResourceType, CacheStrategyConfig> = {
     ttlMode: 'static',
     staticTTL: TTL.STANDARD, // 1 hour
     useKV: false,
-    useR2: true,
-    useEdge: true,
+    useR2: false, // D1 is the canonical store for standings (not R2)
+    useEdge: true, // Edge Cache for fast reads; D1 is the origin
     keyGenerator: (params) => `standings:${params.leagueId}:${params.season}`,
   },
 };

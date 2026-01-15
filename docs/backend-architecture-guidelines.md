@@ -6,16 +6,17 @@
 2. [Tech Stack](#tech-stack)
 3. [Architecture Diagram](#architecture-diagram)
 4. [Multi-Layer Caching Strategy](#multi-layer-caching-strategy)
-5. [Module Structure](#module-structure)
-6. [API Endpoints](#api-endpoints)
-7. [Data Flow](#data-flow)
-8. [Security](#security)
-9. [Scheduled Tasks & Background Refresh](#scheduled-tasks--background-refresh)
-10. [Quota Management](#quota-management)
-11. [Data Transformation Pipeline](#data-transformation-pipeline)
-12. [Date Transition Management](#date-transition-management)
-13. [Cloudflare Configuration](#cloudflare-configuration)
-14. [Metrics & Monitoring](#metrics--monitoring)
+5. [D1 Database Layer](#d1-database-layer)
+6. [Module Structure](#module-structure)
+7. [API Endpoints](#api-endpoints)
+8. [Data Flow](#data-flow)
+9. [Security](#security)
+10. [Scheduled Tasks & Background Refresh](#scheduled-tasks--background-refresh)
+11. [Quota Management](#quota-management)
+12. [Data Transformation Pipeline](#data-transformation-pipeline)
+13. [Date Transition Management](#date-transition-management)
+14. [Cloudflare Configuration](#cloudflare-configuration)
+15. [Metrics & Monitoring](#metrics--monitoring)
 
 ---
 
@@ -42,6 +43,7 @@ The Outscore backend is a high-performance API built on **Cloudflare Workers** u
 | Caching (L1) | Cloudflare Cache API | Edge cache, fastest layer (<10ms) |
 | Caching (L2) | Cloudflare KV | Hot data store (currently disabled due to 60s min TTL) |
 | Caching (L3) | Cloudflare R2 | Cold storage, persistent cache |
+| Database | Cloudflare D1 | SQLite at the edge for structured data |
 | State | Durable Objects | Atomic counters, alarm scheduling |
 | Validation | Zod | Request parameter validation |
 | Date Handling | date-fns, date-fns-tz | Timezone transformations |
@@ -198,6 +200,161 @@ const CACHE_STRATEGIES = {
 
 ---
 
+## D1 Database Layer
+
+### Overview
+
+The backend uses **Cloudflare D1** (SQLite at the edge) for persistent storage of betting insights data. D1 provides durable, relational storage with ACID transactions, ideal for structured data like teams, leagues, and standings.
+
+### Tables
+
+| Table | Purpose | TTL |
+|-------|---------|-----|
+| `leagues` | League metadata (name, country, logo) | Permanent |
+| `teams` | Team metadata (name, logo, country) | Permanent |
+| `external_ids` | Provider ID mappings (api_football, sportmonks) | Permanent |
+| `team_season_context` | Mind/Mood/DNA per team/season | Per-season |
+| `standings_current` | Latest standings metadata | Updated daily |
+| `standings_current_row` | Individual standings entries | Updated daily |
+| `insights_snapshot` | Frozen fixture context at generation | Permanent |
+| `h2h_cache` | H2H match history | 2-day TTL |
+| `injuries_cache` | Injury data | 24-hour TTL |
+
+### Entity Relationships
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         D1 ENTITY STRUCTURE                              │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌──────────────┐     ┌─────────────────┐     ┌──────────────────────┐ │
+│  │   leagues    │     │  external_ids   │     │       teams          │ │
+│  │──────────────│     │─────────────────│     │──────────────────────│ │
+│  │ id (PK)      │◄────│ entity_type     │────►│ id (PK)              │ │
+│  │ name         │     │ entity_id (FK)  │     │ name                 │ │
+│  │ country      │     │ provider        │     │ country              │ │
+│  │ logo         │     │ external_id     │     │ logo                 │ │
+│  └──────────────┘     └─────────────────┘     └───────────┬──────────┘ │
+│                                                           │            │
+│                       ┌───────────────────────────────────┘            │
+│                       │                                                │
+│                       ▼                                                │
+│  ┌────────────────────────────────┐     ┌────────────────────────────┐ │
+│  │     team_season_context        │     │     standings_current      │ │
+│  │────────────────────────────────│     │────────────────────────────│ │
+│  │ team_id (FK)                   │     │ league_id (FK)             │ │
+│  │ season                         │     │ season                     │ │
+│  │ tier / form / position         │     │ updated_at                 │ │
+│  │ mind_score / mood_score        │     │ signature                  │ │
+│  │ dna_score                      │     └─────────────┬──────────────┘ │
+│  └────────────────────────────────┘                   │                │
+│                                                       │                │
+│                                                       ▼                │
+│                       ┌────────────────────────────────────────────┐   │
+│                       │         standings_current_row              │   │
+│                       │────────────────────────────────────────────│   │
+│                       │ standings_id (FK) / team_id (FK)           │   │
+│                       │ position / points / form                   │   │
+│                       │ goals_for / goals_against                  │   │
+│                       └────────────────────────────────────────────┘   │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Access Layer
+
+**Location:** `modules/entities/d1-access.ts`
+
+Key functions:
+
+```typescript
+// Entity resolution
+resolveExternalId(provider, externalId, entityType)  // Provider ID → Internal ID
+
+// Upsert operations
+upsertTeam(team)                    // Team with external ID mapping
+upsertLeague(league)                // League with external ID mapping
+upsertStandings(standings)          // Bulk standings (full table replacement)
+upsertTeamSeasonContext(context)    // Mind/Mood/DNA layers
+
+// Snapshot operations (immutable)
+hasInsightsSnapshot(fixtureId)      // Check if snapshot exists
+insertInsightsSnapshot(snapshot)    // Store frozen context
+
+// Cache operations (with TTL)
+getH2HCache(homeTeamId, awayTeamId) // H2H with 2-day TTL
+upsertH2HCache(h2h)                 // Store H2H matches
+getInjuriesCache(fixtureId)         // Injuries with 24-hour TTL
+upsertInjuriesCache(injuries)       // Store injury data
+```
+
+### Migrations
+
+**Location:** `apps/backend/migrations/`
+
+Run migrations:
+```bash
+# Apply to local D1
+wrangler d1 migrations apply ENTITIES_DB --local
+
+# Apply to remote D1
+wrangler d1 migrations apply ENTITIES_DB --remote
+```
+
+### TTL Enforcement
+
+D1 doesn't have native TTL support, so expiration is enforced at query time:
+
+```typescript
+// H2H cache with 2-day TTL
+const h2hCache = await db.prepare(`
+  SELECT * FROM h2h_cache
+  WHERE home_team_id = ? AND away_team_id = ?
+  AND updated_at > datetime('now', '-2 days')
+`).bind(homeTeamId, awayTeamId).first();
+
+// Injuries cache with 24-hour TTL
+const injuries = await db.prepare(`
+  SELECT * FROM injuries_cache
+  WHERE fixture_id = ?
+  AND updated_at > datetime('now', '-24 hours')
+`).bind(fixtureId).first();
+```
+
+### Usage Pattern
+
+```typescript
+// In insights service
+const { ENTITIES_DB } = env;
+
+// Resolve API-Football team ID to internal ID
+const homeTeamId = await resolveExternalId(
+  ENTITIES_DB,
+  'api_football',
+  fixture.teams.home.id,
+  'team'
+);
+
+// Upsert team if not found
+if (!homeTeamId) {
+  const newId = await upsertTeam(ENTITIES_DB, {
+    name: fixture.teams.home.name,
+    logo: fixture.teams.home.logo,
+    externalIds: { api_football: fixture.teams.home.id }
+  });
+}
+
+// Store standings with signature for change detection
+await upsertStandings(ENTITIES_DB, {
+  leagueId,
+  season,
+  rows: standings,
+  signature: computeSignature(standings)
+});
+```
+
+---
+
 ## Module Structure
 
 ```
@@ -224,6 +381,37 @@ apps/backend/
 │   │   │   ├── utils.ts              # Filtering and formatting utilities
 │   │   │   ├── timezone.utils.ts     # Timezone transformation helpers
 │   │   │   └── date.utils.ts         # Date manipulation utilities
+│   │   │
+│   │   ├── betting-insights/
+│   │   │   ├── routes/
+│   │   │   │   └── insights.routes.ts # GET /fixtures/:id/insights endpoint
+│   │   │   ├── services/
+│   │   │   │   └── insights.service.ts # Orchestrates insights generation
+│   │   │   ├── simulations/
+│   │   │   │   ├── simulate-btts.ts   # Both Teams To Score simulation
+│   │   │   │   ├── simulate-match-outcome.ts # 1X2 simulation
+│   │   │   │   ├── simulate-first-half-activity.ts
+│   │   │   │   └── simulate-total-goals-over-under.ts
+│   │   │   ├── patterns/
+│   │   │   │   ├── team-patterns.ts   # Team pattern detection
+│   │   │   │   └── h2h-patterns.ts    # Head-to-head patterns
+│   │   │   ├── match-context/
+│   │   │   │   ├── match-type-detector.ts
+│   │   │   │   ├── derby-detector.ts
+│   │   │   │   └── end-of-season-detector.ts
+│   │   │   ├── insights/
+│   │   │   │   └── insight-generator.ts # Text insight generation
+│   │   │   ├── utils/                 # Factor calculations
+│   │   │   │   ├── form-score.ts
+│   │   │   │   ├── home-advantage.ts
+│   │   │   │   ├── motivation-score.ts
+│   │   │   │   ├── injury-adjustments.ts
+│   │   │   │   └── capped-adjustments.ts
+│   │   │   └── types.ts               # BettingInsightsResponse types
+│   │   │
+│   │   ├── entities/
+│   │   │   ├── index.ts               # Entity module exports
+│   │   │   └── d1-access.ts           # D1 database access layer
 │   │   │
 │   │   ├── scheduler/
 │   │   │   ├── index.ts              # Scheduler exports
@@ -854,6 +1042,12 @@ binding = "FOOTBALL_KV"
 id = "bd0f2fadda52416db9ba5ce58974f6b4"
 preview_id = "058faa4190274550bf7edabe699718f1"
 
+# D1 database for structured data (teams, leagues, standings)
+[[d1_databases]]
+binding = "ENTITIES_DB"
+database_name = "outscore-entities"
+database_id = "<your-database-id>"
+
 # Durable Objects
 [[durable_objects.bindings]]
 name = "QUOTA_DO"
@@ -896,6 +1090,7 @@ head_sampling_rate = 0.1
 |---------|------|-------------|
 | `FOOTBALL_CACHE` | R2 Bucket | Cold storage for fixtures |
 | `FOOTBALL_KV` | KV Namespace | Hot data, state tracking |
+| `ENTITIES_DB` | D1 Database | Structured data (teams, leagues, standings) |
 | `QUOTA_DO` | Durable Object | Atomic quota tracking |
 | `REFRESH_SCHEDULER_DO` | Durable Object | 15-second refresh scheduling |
 | `FOOTBALL_API_URL` | Env Var | Third-party API base URL |

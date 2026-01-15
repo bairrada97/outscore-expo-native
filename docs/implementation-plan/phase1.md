@@ -146,7 +146,7 @@ Phase 1 establishes the foundation for all subsequent phases by implementing dat
    - Helper: `calculateFormationStability()`
 
 6. **Stats Aggregation**
-   - Calculate under25Percentage, over25Percentage
+   - Calculate `goalLineOverPct` for lines: 0.5, 1.5, 2.5, 3.5, 4.5, 5.5
    - Calculate cleanSheetPercentage, failedToScorePercentage
    - Aggregate goal minutes data
    - Calculate formation frequency
@@ -208,8 +208,7 @@ interface TeamData {
   dna: {
     mostPlayedFormation: string;
     formationFrequency: Record<string, number>;
-    under25Percentage: number;
-    over25Percentage: number;
+      goalLineOverPct: Record<string, number>; // keys: "0.5"|"1.5"|...|"5.5"
     cleanSheetPercentage: number;
     failedToScorePercentage: number;
     lateStarter: boolean;
@@ -232,8 +231,8 @@ interface H2HData {
   draws: number;
   bttsCount: number;
   bttsPercentage: number;
-  over25Count: number;
-  over25Percentage: number;
+  goalLineOverCount: Record<string, number>; // keys: "0.5"|"1.5"|...|"5.5"
+  goalLineOverPct: Record<string, number>;   // keys: "0.5"|"1.5"|...|"5.5"
   avgGoals: number;
 }
 ```

@@ -4,11 +4,11 @@
 
 ## Overview
 
-Phase 4.7 integrates injury data into the betting insights predictions. It uses pre-implemented API endpoints to fetch injury data and squad statistics, calculates player importance scores, and applies market-specific adjustments to predictions.
+Phase 4.7 integrates injury data into the betting insights simulations. It uses pre-implemented API endpoints to fetch injury data and squad statistics, calculates player importance scores, and applies scenario-specific adjustments to simulations.
 
 ## Dependencies
 
-- **Phase 4:** Market Predictions (Prediction functions)
+- **Phase 4:** Scenario Simulations (Simulation functions)
 - **Phase 4.5:** Probability Caps & Asymmetric Weighting (Unified adjustment function)
 - **Phase 4.6:** Algorithm Refinements (Rest advantage, opponent quality)
 - **Pre-implemented Endpoints:**
@@ -202,11 +202,11 @@ interface PlayerStatistics {
   - Example: 60 importance defender out = +4% BTTS
 - **Cap:** ±15%
 
-#### Over/Under 2.5 Adjustments:
+#### Over/Under Goals (multi-line) Adjustments:
 
-- **Missing attackers:** Reduce Over 2.5 probability
+- **Missing attackers:** Reduce Over \(line\) probability
   - Adjustment: `-(totalAttackerImportance / 12)`
-- **Missing defenders:** Increase Over 2.5 probability
+- **Missing defenders:** Increase Over \(line\) probability
   - Adjustment: `+(totalDefenderImportance / 18)`
 - **Cap:** ±12%
 
@@ -222,7 +222,7 @@ interface PlayerStatistics {
 ```typescript
 interface InjuryAdjustments {
   bttsAdjustment: number; // -15 to +15
-  over25Adjustment: number; // -12 to +12
+  overUnderGoalsAdjustmentByLine: Record<string, number>; // keys: "0.5"|"1.5"|...|"5.5" (each -12 to +12)
   matchResultHomeAdjustment: number; // -10 to +10
   matchResultAwayAdjustment: number; // -10 to +10
   insights: Insight[];
@@ -267,9 +267,9 @@ interface InjuryAdjustments {
 
 #### Files to Modify:
 
-- `apps/backend/src/modules/betting-insights/predictions/predict-btts.ts` - Add injury adjustment
-- `apps/backend/src/modules/betting-insights/predictions/predict-over25.ts` - Add injury adjustment
-- `apps/backend/src/modules/betting-insights/predictions/predict-match-result.ts` - Add injury adjustment
+- `apps/backend/src/modules/betting-insights/simulations/simulate-btts.ts` - Add injury adjustment
+- `apps/backend/src/modules/betting-insights/simulations/simulate-total-goals-over-under.ts` - Add injury adjustment
+- `apps/backend/src/modules/betting-insights/simulations/simulate-match-outcome.ts` - Add injury adjustment
 
 #### Validation Criteria:
 
@@ -329,7 +329,7 @@ interface InjuryAdjustments {
 - Injury adjustments go through the unified `applyCappedAsymmetricAdjustments()` helper (Phase 4.5)
 - Cumulative caps prevent same-type adjustments from stacking excessively
 - The adjustment type for injuries should be `'INJURY'` with a cumulative cap of ±15%
-- Graceful fallback: if injuries endpoint fails, predictions should continue without injury adjustments
+- Graceful fallback: if injuries endpoint fails, simulations should continue without injury adjustments
 - Importance calculation uses statistics when available, fallback when not
-- Only "Out" status injuries should significantly impact predictions
+- Only "Out" status injuries should significantly impact simulations
 

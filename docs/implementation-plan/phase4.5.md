@@ -392,7 +392,7 @@ const SAFE_LAUNCH_CONFIG = {
   },
   asymmetricWeighting: {
     btts: { upMax: 12, downMax: 20 },
-    over25: { upMax: 18, downMax: 15 },
+    overUnderGoals: { upMax: 18, downMax: 15 },
     matchResult: { upMax: 10, downMax: 25 },
     firstHalf: { upMax: 15, downMax: 18 },
   },
