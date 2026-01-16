@@ -416,7 +416,7 @@ function detectPerformancePatterns(
       type: 'HIGH_SCORING_FORM',
       severity,
       priority: PATTERN_PRIORITIES.HIGH_SCORING_FORM,
-      description: `${teamName} is averaging ${avgGoalsScored.toFixed(1)} goals per game`,
+      description: `${teamName} have averaged ${avgGoalsScored.toFixed(1)} goals per game in their last ${recentMatches.length}.`,
       data: {
         avgGoalsScored: Math.round(avgGoalsScored * 100) / 100,
         matchCount: recentMatches.length,
@@ -434,7 +434,7 @@ function detectPerformancePatterns(
       type: 'DEFENSIVE_WEAKNESS',
       severity,
       priority: PATTERN_PRIORITIES.DEFENSIVE_WEAKNESS,
-      description: `${teamName} is conceding ${avgGoalsConceded.toFixed(1)} goals per game`,
+      description: `${teamName} have conceded ${avgGoalsConceded.toFixed(1)} goals per game in their last ${recentMatches.length}.`,
       data: {
         avgGoalsConceded: Math.round(avgGoalsConceded * 100) / 100,
         matchCount: recentMatches.length,

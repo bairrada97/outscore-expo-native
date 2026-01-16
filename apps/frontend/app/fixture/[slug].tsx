@@ -1,5 +1,8 @@
 import { FixtureEventsBlock } from "@/components/fixture-events-block";
 import { FixtureInfoHeader } from "@/components/fixture-info-header";
+import { InsightsSectionHeader } from "@/components/insights/insights-section-header";
+import { KeyInsightsList } from "@/components/insights/key-insights-list";
+import { MatchFactsGrid } from "@/components/insights/match-facts-grid";
 import { Tabs } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/text";
 import { useSelectedDate } from "@/context/selected-date-context";
@@ -317,11 +320,7 @@ export default function FixtureDetailScreen() {
 							key: "insights",
 							title: "INSIGHTS",
 							render: () => (
-								<View className="p-16">
-									<Text className="text-neu-10 dark:text-neu-06 mb-2">
-										Insights
-									</Text>
-
+								<View className="p-16 gap-y-8">
 									{isInsightsLoading && (
 										<View className="py-4">
 											<ActivityIndicator />
@@ -334,31 +333,34 @@ export default function FixtureDetailScreen() {
 										</Text>
 									)}
 
-									{insightsData && (
-										<View className="gap-2">
-											{insightsData.overallConfidence && (
-												<Text className="text-neu-06 dark:text-neu-07">
-													Overall confidence: {insightsData.overallConfidence}
-												</Text>
-											)}
+									{insightsData ? (
+										<View className="gap-y-8">
+											<InsightsSectionHeader title="Match Facts" />
+											<MatchFactsGrid facts={insightsData.matchFacts ?? []} />
 
-											{insightsData.predictions
-												?.filter((p) => p.market === "OVER_UNDER_GOALS")
-												?.sort((a, b) => (a.line ?? 0) - (b.line ?? 0))
-												?.map((p) => (
-													<Text
-														key={`ou-${p.line ?? "na"}`}
-														className="text-neu-06 dark:text-neu-07"
-													>
-														Over/Under {p.line}: O{" "}
-														{Math.round((p.probabilities.over ?? 0) * 10) / 10}%
-														/ U{" "}
-														{Math.round((p.probabilities.under ?? 0) * 10) / 10}
-														% {p.confidence ? `(${p.confidence})` : ""}
-													</Text>
-												))}
+											<InsightsSectionHeader title="Key Insights" />
+											<View className="gap-y-24">
+												<KeyInsightsList
+													title={`${insightsData.match.homeTeam} (HOME) INSIGHTS`}
+													insights={(insightsData.keyInsights?.home ?? []).map(
+														(insight) => ({
+															text: insight.text,
+															category: insight.category,
+														}),
+													)}
+												/>
+												<KeyInsightsList
+													title={`${insightsData.match.awayTeam} (AWAY) INSIGHTS`}
+													insights={(insightsData.keyInsights?.away ?? []).map(
+														(insight) => ({
+															text: insight.text,
+															category: insight.category,
+														}),
+													)}
+												/>
+											</View>
 										</View>
-									)}
+									) : null}
 								</View>
 							),
 						},

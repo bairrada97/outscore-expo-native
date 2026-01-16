@@ -14,15 +14,30 @@ export type BettingInsightsResponse = {
     date: string;
     status: string;
   };
-  predictions: Array<{
-    market: string;
+  simulations?: Array<{
+    scenarioType: string;
     line?: number;
-    probabilities: Record<string, number | undefined>;
-    confidence?: "HIGH" | "MEDIUM" | "LOW";
+    probabilityDistribution: Record<string, number | undefined>;
+    signalStrength?: "Strong" | "Moderate" | "Balanced" | "Weak";
+    modelReliability?: "HIGH" | "MEDIUM" | "LOW";
+    insights?: Array<{ text: string }>;
+    mostProbableOutcome?: string;
   }>;
-  homeInsights?: Array<{ text: string }>;
-  awayInsights?: Array<{ text: string }>;
-  h2hInsights?: Array<{ text: string }>;
+  homeInsights?: Array<{ text: string; category?: string; severity?: string }>;
+  awayInsights?: Array<{ text: string; category?: string; severity?: string }>;
+  h2hInsights?: Array<{ text: string; category?: string; severity?: string }>;
+  matchFacts?: Array<{
+    id: string;
+    title: string;
+    value: string;
+    subtitle?: string;
+    side?: "HOME" | "AWAY" | "BOTH";
+    icon?: string;
+  }>;
+  keyInsights?: {
+    home: Array<{ text: string; category?: string; severity?: string }>;
+    away: Array<{ text: string; category?: string; severity?: string }>;
+  };
   overallConfidence?: "HIGH" | "MEDIUM" | "LOW";
   generatedAt?: string;
 };

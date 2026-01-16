@@ -11,48 +11,50 @@
 import type { Fixture } from "@outscore/shared-types";
 import type { CacheEnv } from "../../cache";
 import {
-    cacheGet,
-    cacheSet,
-    getCacheKey,
-    isStale,
-    withDeduplication,
+	cacheGet,
+	cacheSet,
+	getCacheKey,
+	isStale,
+	withDeduplication,
 } from "../../cache";
 import {
-    createInputsSnapshotJson,
-    getH2HCache,
-    getInjuriesCache,
-    H2H_CACHE_TTL_MS,
-    hasInsightsSnapshot,
-    type InputsSnapshotData,
-    insertInsightsSnapshot,
-    makeH2HPairKey,
-    type StandingsCurrentRowInsert,
-    type TeamSeasonContextInsert,
-    upsertH2HCache,
-    upsertInjuriesCache,
-    upsertLeague,
-    upsertStandings,
-    upsertTeam,
-    upsertTeamSeasonContext,
+	createInputsSnapshotJson,
+	getH2HCache,
+	getInjuriesCache,
+	H2H_CACHE_TTL_MS,
+	hasInsightsSnapshot,
+	type InputsSnapshotData,
+	insertInsightsSnapshot,
+	makeH2HPairKey,
+	type StandingsCurrentRowInsert,
+	type TeamSeasonContextInsert,
+	upsertH2HCache,
+	upsertInjuriesCache,
+	upsertLeague,
+	upsertStandings,
+	upsertTeam,
+	upsertTeamSeasonContext,
 } from "../../entities";
 import {
-    fetchInjuriesForFixture,
-    type FixtureInjuries,
-    processInjuries,
+	fetchInjuriesForFixture,
+	type FixtureInjuries,
+	processInjuries,
 } from "../data/injuries";
 import {
-    generateInsights,
-    getTopInsights,
+	generateInsights,
+	getTopInsights,
 } from "../insights/insight-generator";
 import type { MatchContext as PredictionMatchContext } from "../match-context/context-adjustments";
 import { buildMatchContext } from "../match-context/context-adjustments";
 import { detectH2HPatterns } from "../patterns/h2h-patterns";
 import {
-    detectTeamPatterns,
-    getTopPatterns,
-    type Pattern,
+	detectTeamPatterns,
+	getTopPatterns,
+	type Pattern,
 } from "../patterns/team-patterns";
 import { enrichInsights } from "../presentation/insight-enricher";
+import { buildKeyInsights } from "../presentation/key-insights-builder";
+import { buildMatchFacts } from "../presentation/match-facts-builder";
 import { buildModelReliabilityBreakdown } from "../presentation/simulation-presenter";
 import { attachRelatedScenarios } from "../simulations/related-scenarios";
 import { simulateBTTS } from "../simulations/simulate-btts";
@@ -60,43 +62,43 @@ import { simulateFirstHalfActivity } from "../simulations/simulate-first-half-ac
 import { simulateMatchOutcome } from "../simulations/simulate-match-outcome";
 import { simulateTotalGoalsOverUnder } from "../simulations/simulate-total-goals-over-under";
 import type {
-    MatchContext as ApiMatchContext,
-    BettingInsightsResponse,
-    ConfidenceLevel,
-    DataQuality,
-    DNALayer,
-    GoalLineKey,
-    GoalLineOverPctMap,
-    H2HData,
-    Insight,
-    MatchType,
-    ProcessedMatch,
-    Simulation,
-    TeamContext,
-    TeamData,
-    TeamStatistics,
+	MatchContext as ApiMatchContext,
+	BettingInsightsResponse,
+	ConfidenceLevel,
+	DataQuality,
+	DNALayer,
+	GoalLineKey,
+	GoalLineOverPctMap,
+	H2HData,
+	Insight,
+	MatchType,
+	ProcessedMatch,
+	Simulation,
+	TeamContext,
+	TeamData,
+	TeamStatistics,
 } from "../types";
 import { DEFAULT_GOAL_LINES } from "../types";
 import { calculateFormationStabilityContext } from "../utils/formation-helpers";
 import { processH2HData } from "../utils/h2h-helpers";
 import {
-    calculateDaysSinceLastMatch,
-    determineMatchResult,
-    extractRoundNumber,
-    filterNonFriendlyMatches,
+	calculateDaysSinceLastMatch,
+	determineMatchResult,
+	extractRoundNumber,
+	filterNonFriendlyMatches,
 } from "../utils/helpers";
 import {
-    calculateInjuryAdjustments,
-    getInjurySituationSummary,
+	calculateInjuryAdjustments,
+	getInjurySituationSummary,
 } from "../utils/injury-adjustments";
 import {
-    calculateDNALayer,
-    calculateSafetyFlags,
+	calculateDNALayer,
+	calculateSafetyFlags,
 } from "../utils/stats-calculator";
 import {
-    assessMindDataQuality,
-    calculateMindLayer,
-    calculateMoodLayer,
+	assessMindDataQuality,
+	calculateMindLayer,
+	calculateMoodLayer,
 } from "../utils/tier-helpers";
 
 // ============================================================================
@@ -318,6 +320,22 @@ interface StandingsData {
 		goalDiff: number;
 		form: string | null;
 		description: string | null;
+		home: {
+			played: number;
+			win: number;
+			draw: number;
+			loss: number;
+			goalsFor: number;
+			goalsAgainst: number;
+		};
+		away: {
+			played: number;
+			win: number;
+			draw: number;
+			loss: number;
+			goalsFor: number;
+			goalsAgainst: number;
+		};
 	}>;
 	// First place points (for distance calculation)
 	firstPlacePoints: number;
@@ -625,6 +643,27 @@ export const insightsService = {
 				match: matchContext,
 			});
 
+			const matchFacts = buildMatchFacts({
+				homeTeam: homeTeamData,
+				awayTeam: awayTeamData,
+				homeContext: homeTeamContext,
+				awayContext: awayTeamContext,
+				h2h: h2hData,
+				matchContext,
+				injuries,
+			});
+
+			const keyInsights = buildKeyInsights({
+				homeInsights: enrichedHomeInsights,
+				awayInsights: enrichedAwayInsights,
+				homeContext: homeTeamContext,
+				awayContext: awayTeamContext,
+				homeTeam: homeTeamData,
+				awayTeam: awayTeamData,
+				leagueName: fixture.league.name,
+				standingsRows: standings?.rows ?? null,
+			});
+
 			const simulationsWithReliability = simulations.map((sim) => ({
 				...sim,
 				modelReliabilityBreakdown: buildModelReliabilityBreakdown({
@@ -674,6 +713,8 @@ export const insightsService = {
 				homeInsights: enrichedHomeInsights,
 				awayInsights: enrichedAwayInsights,
 				h2hInsights: enrichedH2HInsights,
+				matchFacts,
+				keyInsights,
 				dataQuality,
 				overallConfidence,
 				generatedAt,
@@ -1164,6 +1205,22 @@ export const insightsService = {
 				goalDiff: row.goalsDiff,
 				form: row.form,
 				description: row.description,
+				home: {
+					played: row.home.played,
+					win: row.home.win,
+					draw: row.home.draw,
+					loss: row.home.lose,
+					goalsFor: row.home.goals.for,
+					goalsAgainst: row.home.goals.against,
+				},
+				away: {
+					played: row.away.played,
+					win: row.away.win,
+					draw: row.away.draw,
+					loss: row.away.lose,
+					goalsFor: row.away.goals.for,
+					goalsAgainst: row.away.goals.against,
+				},
 			}));
 
 			console.log(
@@ -1488,6 +1545,7 @@ export const insightsService = {
 				pointsFromRelegation,
 				pointsFromFirst,
 				gamesPlayed: standingsData?.played ?? 0,
+				cleanSheetsTotal: 0,
 			};
 		}
 
@@ -1533,6 +1591,7 @@ export const insightsService = {
 			pointsFromRelegation,
 			pointsFromFirst,
 			gamesPlayed: playedTotal,
+			cleanSheetsTotal: stats.clean_sheet.total ?? 0,
 		};
 	},
 
