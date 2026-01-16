@@ -1,4 +1,5 @@
 import { API_BASE_URL, FIFTEEN_SECONDS_CACHE, ONE_WEEK_CACHE } from "@/utils/constants";
+import { FetchError, fetchJsonWithTimeout } from "@/utils/fetch-with-timeout";
 
 /**
  * Minimal typing for the insights response we render in the fixture screen.
@@ -33,16 +34,6 @@ export function createFixtureInsightsQueryKey(fixtureId: number): string[] {
   return ["fixture-insights", String(fixtureId)];
 }
 
-class FetchError extends Error {
-  constructor(
-    message: string,
-    public status: number,
-  ) {
-    super(message);
-    this.name = "FetchError";
-  }
-}
-
 async function fetchFixtureInsights({
   fixtureId,
   signal,
@@ -52,40 +43,16 @@ async function fetchFixtureInsights({
   signal?: AbortSignal;
   timeoutMs?: number;
 }): Promise<BettingInsightsResponse> {
-  const controller = signal ? null : new AbortController();
-  const abortSignal = signal ?? controller?.signal;
+  const url = new URL(`/fixtures/${fixtureId}/insights`, API_BASE_URL);
 
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
-  if (!signal && timeoutMs > 0 && controller) {
-    timeoutId = setTimeout(() => {
-      controller.abort();
-    }, timeoutMs);
-  }
+  const json = await fetchJsonWithTimeout<{ data: BettingInsightsResponse }>({
+    url: url.toString(),
+    signal,
+    timeoutMs,
+    errorMessage: "Failed to fetch fixture insights",
+  });
 
-  try {
-    const url = new URL(`/fixtures/${fixtureId}/insights`, API_BASE_URL);
-    const response = await fetch(url.toString(), {
-      signal: abortSignal as RequestInit["signal"],
-    });
-
-    if (timeoutId) clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      throw new FetchError(
-        `Failed to fetch fixture insights: ${response.statusText}`,
-        response.status,
-      );
-    }
-
-    const json = (await response.json()) as { data: BettingInsightsResponse };
-    return json.data;
-  } catch (error) {
-    if (timeoutId) clearTimeout(timeoutId);
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new FetchError("Request timeout or aborted", 408);
-    }
-    throw error;
-  }
+  return json.data;
 }
 
 export interface FixtureInsightsQueryParams {

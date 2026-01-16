@@ -92,11 +92,8 @@ export function FixturesList({
 	}
 
 	// On native, use LegendList for virtualization
-	// Force complete remount by using resetKey + countries count in key
-	// This ensures scroll position and content height reset when switching tabs
-	const uniqueKey = resetKey
-		? `${resetKey}-${countries.length}`
-		: `fallback-${countries.length}`;
+	// Force remount only when switching tabs (resetKey changes)
+	const uniqueKey = resetKey ?? "fallback";
 
 	return (
 		<View key={`wrapper-${uniqueKey}`} className="flex-1">

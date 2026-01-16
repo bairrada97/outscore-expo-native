@@ -1,6 +1,10 @@
+import { fixtureByIdQuery } from "@/queries/fixture-by-id";
+import { insightsByFixtureIdQuery } from "@/queries/insights-by-fixture-id";
 import { generateFixtureSlug } from "@/utils/fixture-slug";
 import type { FormattedCountry, FormattedLeague } from "@outscore/shared-types";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "expo-router";
+import { useCallback } from "react";
 import { View } from "react-native";
 import { CardsBlock } from "./cards-block";
 import { FixtureCard } from "./fixture-card";
@@ -11,6 +15,16 @@ interface FavoriteLeaguesListProps {
 }
 
 function FavoriteLeaguesList({ data }: FavoriteLeaguesListProps) {
+	const queryClient = useQueryClient();
+
+	const prefetchFixture = useCallback(
+		(fixtureId: number) => {
+			queryClient.prefetchQuery(fixtureByIdQuery({ fixtureId }));
+			queryClient.prefetchQuery(insightsByFixtureIdQuery({ fixtureId }));
+		},
+		[queryClient],
+	);
+
 	return (
 		<View className="px-8">
 			{data.map((league, index) => (
@@ -31,6 +45,7 @@ function FavoriteLeaguesList({ data }: FavoriteLeaguesListProps) {
 							<FixtureCard
 								fixture={match}
 								isLastMatch={matchIndex === league.matches.length - 1}
+								onPressIn={() => prefetchFixture(match.id)}
 							/>
 						</Link>
 					))}

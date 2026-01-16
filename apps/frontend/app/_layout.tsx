@@ -9,6 +9,7 @@ import { AppState, type AppStateStatus, Platform, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { TimeZoneProvider } from "@/context/timezone-context";
+import { SelectedDateProvider } from "@/context/selected-date-context";
 import {
 	createPersistOptions,
 	createQueryClient,
@@ -123,21 +124,23 @@ export default function RootLayout() {
 		>
 			<GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
 				<TimeZoneProvider>
-					<StatusBar style="auto" />
-					<View
-						style={{
-							flex: 1,
-							width: "100%",
-							maxWidth: isWeb ? 800 : undefined,
-							alignSelf: "center",
-						}}
-					>
-						<Stack
-							screenOptions={{
-								headerShown: false,
+					<SelectedDateProvider>
+						<StatusBar style="auto" />
+						<View
+							style={{
+								flex: 1,
+								width: "100%",
+								maxWidth: isWeb ? 800 : undefined,
+								alignSelf: "center",
 							}}
-						/>
-					</View>
+						>
+							<Stack
+								screenOptions={{
+									headerShown: false,
+								}}
+							/>
+						</View>
+					</SelectedDateProvider>
 				</TimeZoneProvider>
 			</GestureHandlerRootView>
 		</PersistQueryClientProvider>

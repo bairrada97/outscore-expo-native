@@ -24,6 +24,7 @@ interface FixtureCardProps {
 	fixture: ExtendedFormattedMatch;
 	isLastMatch?: boolean;
 	onPress?: () => void;
+	onPressIn?: () => void;
 }
 
 // Compute status text directly without hooks
@@ -60,6 +61,7 @@ export function FixtureCard({
 	fixture,
 	isLastMatch = false,
 	onPress,
+	onPressIn,
 }: FixtureCardProps) {
 	const { status, teams, score, goals, type = null } = fixture;
 
@@ -87,7 +89,11 @@ export function FixtureCard({
 	);
 
 	return (
-		<Pressable onPress={onPress} className="relative h-64 px-16">
+		<Pressable
+			onPress={onPress}
+			onPressIn={onPressIn}
+			className="relative h-64 px-16"
+		>
 			<View className="relative flex h-full flex-row items-center gap-x-[14px]">
 				{/* Live indicator bar */}
 				{matchIsLive && (
