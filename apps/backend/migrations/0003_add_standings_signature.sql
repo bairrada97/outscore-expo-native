@@ -12,3 +12,4 @@ ALTER TABLE insights_snapshot ADD COLUMN standings_signature TEXT;
 CREATE INDEX IF NOT EXISTS idx_insights_snapshot_signature ON insights_snapshot(fixture_id, standings_signature);
 
 
+
