@@ -218,3 +218,4 @@ CREATE INDEX IF NOT EXISTS idx_insights_snapshot_generated ON insights_snapshot(
 
 
 
+

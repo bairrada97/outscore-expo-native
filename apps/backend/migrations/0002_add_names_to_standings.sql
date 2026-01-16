@@ -13,3 +13,4 @@ ALTER TABLE standings_current_row ADD COLUMN league_name TEXT;
 
 
 
+

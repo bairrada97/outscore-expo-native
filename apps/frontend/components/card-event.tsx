@@ -91,6 +91,8 @@ function formatDetailLine(event: FixtureEvent): string | null {
 
 function ScorePill({ score }: { score: RunningScore }) {
 	const isHome = score.whoScored === "home";
+	const homeScoreClass = isHome ? "text-neu-01" : "text-neu-01/60";
+	const awayScoreClass = isHome ? "text-neu-01/60" : "text-neu-01";
 
 	return (
 		<View
@@ -101,13 +103,13 @@ function ScorePill({ score }: { score: RunningScore }) {
 			}
 		>
 			<View className="flex-row items-center gap-x-4">
-				<Text variant="body-02--semi" className="text-neu-01">
+				<Text variant="body-02--semi" className={homeScoreClass}>
 					{score.home}
 				</Text>
 				<Text variant="body-02--semi" className="text-neu-01/60">
 					-
 				</Text>
-				<Text variant="body-02--semi" className="text-neu-01">
+				<Text variant="body-02--semi" className={awayScoreClass}>
 					{score.away}
 				</Text>
 			</View>

@@ -128,9 +128,9 @@ export function FixtureEventsBlock({ fixture }: { fixture: Fixture }) {
 
   return (
     <View className="mt-16">
-      <CardsBlock title="Second Half" cardsClassName="px-0 pb-0">
-        {secondHalf.length ? (
-          secondHalf.map((e) => (
+      {secondHalf.length > 0 && (
+        <CardsBlock title="Second Half" cardsClassName="px-0 pb-0">
+          {secondHalf.map((e) => (
             <CardEvent
               key={eventStableKey(e)}
               event={e}
@@ -139,17 +139,13 @@ export function FixtureEventsBlock({ fixture }: { fixture: Fixture }) {
               extraLabel={e.__extraLabel}
               runningScore={e.__runningScore}
             />
-          ))
-        ) : (
-          <View className="px-16 py-12">
-            {/* keep empty state simple for now */}
-          </View>
-        )}
-      </CardsBlock>
+          ))}
+        </CardsBlock>
+      )}
 
-      <CardsBlock title="First Half" cardsClassName="px-0 pb-0">
-        {firstHalf.length ? (
-          firstHalf.map((e) => (
+      {firstHalf.length > 0 && (
+        <CardsBlock title="First Half" cardsClassName="px-0 pb-0">
+          {firstHalf.map((e) => (
             <CardEvent
               key={eventStableKey(e)}
               event={e}
@@ -158,13 +154,9 @@ export function FixtureEventsBlock({ fixture }: { fixture: Fixture }) {
               extraLabel={e.__extraLabel}
               runningScore={e.__runningScore}
             />
-          ))
-        ) : (
-          <View className="px-16 py-12">
-            {/* keep empty state simple for now */}
-          </View>
-        )}
-      </CardsBlock>
+          ))}
+        </CardsBlock>
+      )}
     </View>
   );
 }
