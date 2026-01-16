@@ -19,7 +19,8 @@ interface ScoreDisplayProps {
 
 function formatTime(dateString: string): string {
 	const date = new Date(dateString);
-	return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+	// Force 24h display regardless of device locale (e.g. avoid "09 PM")
+	return format(date, "HH:mm");
 }
 
 function formatNotStartedLabel(dateString: string): string {
