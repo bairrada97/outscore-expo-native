@@ -1,7 +1,7 @@
 import { LegendList, type LegendListRenderItemProps } from "@legendapp/list";
 import { type FormattedCountry, isLiveStatus } from "@outscore/shared-types";
 import type { ReactNode } from "react";
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, Text, View } from "react-native";
 import { CountryItem } from "./country-item";
 import { Accordion } from "./ui/accordion";
@@ -44,6 +44,16 @@ export function FixturesList({
 	listHeader,
 	resetKey,
 }: FixturesListProps) {
+	const listRef = useRef<any>(null);
+	const [expandedCountries, setExpandedCountries] = useState<string[]>([]);
+
+	useEffect(() => {
+		// Reset accordion expansion + scroll position when switching date/live tabs.
+		// This is much cheaper than remounting the entire list tree.
+		setExpandedCountries([]);
+		listRef.current?.scrollToOffset?.({ offset: 0, animated: false });
+	}, [resetKey]);
+
 	const renderItem = useCallback(
 		({ item }: LegendListRenderItemProps<FormattedCountry>) => (
 			<Item item={item} />
@@ -92,19 +102,18 @@ export function FixturesList({
 	}
 
 	// On native, use LegendList for virtualization
-	// Force remount only when switching tabs (resetKey changes)
-	const uniqueKey = resetKey ?? "fallback";
-
 	return (
-		<View key={`wrapper-${uniqueKey}`} className="flex-1">
+		<View className="flex-1">
 			<Accordion
-				key={`accordion-${uniqueKey}`}
 				type="multiple"
-				defaultValue={[]}
+				value={expandedCountries}
+				onValueChange={(value) =>
+					setExpandedCountries(Array.isArray(value) ? value : [])
+				}
 				className="w-full flex-1"
 			>
 				<LegendList
-					key={`legend-${uniqueKey}`}
+					ref={listRef}
 					data={countries}
 					renderItem={renderItem}
 					keyExtractor={keyExtractor}
