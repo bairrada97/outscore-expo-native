@@ -49,7 +49,7 @@ export function buildMostProbableOutcome(params: {
       const no = d.no ?? 0;
       const pick = yes >= no ? "Yes" : "No";
       const prefix = isSlightLean([yes, no]) ? "Slight lean: " : "";
-      return `Both Teams To Score: ${prefix}${pick} (highest probability based on historical patterns)`;
+      return `Both Teams To Score: ${prefix}${pick}`;
     }
     case "TotalGoalsOverUnder": {
       const over = d.over ?? 0;
@@ -57,7 +57,7 @@ export function buildMostProbableOutcome(params: {
       const pick = over >= under ? "Over" : "Under";
       const lineText = typeof line === "number" ? String(line) : "—";
       const prefix = isSlightLean([over, under]) ? "Slight lean: " : "";
-      return `Total Goals (line ${lineText}): ${prefix}${pick} (highest probability based on historical patterns)`;
+      return `Total Goals (line ${lineText}): ${prefix}${pick}`;
     }
     case "MatchOutcome": {
       const home = d.home ?? 0;
@@ -69,18 +69,18 @@ export function buildMostProbableOutcome(params: {
       else if (away >= draw) pick = "Away side";
 
       const prefix = isSlightLean([home, draw, away]) ? "Slight lean: " : "";
-      return `Match Outcome: ${prefix}${pick} (highest probability based on historical patterns)`;
+      return `${prefix}${pick}`;
     }
     case "FirstHalfActivity": {
       const yes = d.yes ?? 0;
       const no = d.no ?? 0;
       const pick = yes >= no ? "Yes" : "No";
       const prefix = isSlightLean([yes, no]) ? "Slight lean: " : "";
-      return `First Half Activity: Goals in first half — ${prefix}${pick} (highest probability based on historical patterns)`;
+      return `First Half Activity: Goals in first half — ${prefix}${pick}`;
     }
     default: {
       // Exhaustiveness fallback
-      return "Most probable outcome (highest probability based on historical patterns)";
+      return "Most probable outcome";
     }
   }
 }

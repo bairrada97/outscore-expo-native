@@ -256,6 +256,9 @@ interface RawStandingsResponse {
 					draw: number;
 					lose: number;
 					goals: { for: number; against: number };
+					// API-Football can include clean sheets in standings rows.
+					// Shape varies by league/season: sometimes a number, sometimes { home, away, total }.
+					clean_sheet?: number | { home: number; away: number; total: number };
 				};
 				home: {
 					played: number;
@@ -314,6 +317,8 @@ interface StandingsData {
 		goalsFor: number;
 		goalsAgainst: number;
 		goalDiff: number;
+		// null means "not provided by the standings endpoint for this league/season"
+		cleanSheets: number | null;
 		form: string | null;
 		description: string | null;
 		home: {
@@ -958,9 +963,12 @@ export const insightsService = {
 			const data = (await response.json()) as { response: RawMatchData[] };
 			const rawMatches = data.response ?? [];
 
-			// Filter to finished matches only
-			const finishedMatches = rawMatches.filter(
-				(m) => m.fixture.status.short === "FT",
+			// Filter to finished matches only.
+			// API-Football can mark completed matches as FT (full-time), AET (after extra time),
+			// or PEN (penalties). We want to include all of these as "finished" for H2H.
+			const FINISHED_STATUSES = new Set(["FT", "AET", "PEN"]);
+			const finishedMatches = rawMatches.filter((m) =>
+				FINISHED_STATUSES.has(m.fixture.status.short),
 			);
 
 			// Convert to ProcessedMatch format (from home team's perspective)
@@ -1195,37 +1203,48 @@ export const insightsService = {
 			const relegationPoints =
 				standingsRows[relegationPosition - 1]?.points ?? 0;
 
-			const rows = standingsRows.map((row) => ({
-				teamId: row.team.id,
-				teamName: row.team.name,
-				rank: row.rank,
-				points: row.points,
-				played: row.all.played,
-				win: row.all.win,
-				draw: row.all.draw,
-				loss: row.all.lose,
-				goalsFor: row.all.goals.for,
-				goalsAgainst: row.all.goals.against,
-				goalDiff: row.goalsDiff,
-				form: row.form,
-				description: row.description,
-				home: {
-					played: row.home.played,
-					win: row.home.win,
-					draw: row.home.draw,
-					loss: row.home.lose,
-					goalsFor: row.home.goals.for,
-					goalsAgainst: row.home.goals.against,
-				},
-				away: {
-					played: row.away.played,
-					win: row.away.win,
-					draw: row.away.draw,
-					loss: row.away.lose,
-					goalsFor: row.away.goals.for,
-					goalsAgainst: row.away.goals.against,
-				},
-			}));
+			const rows = standingsRows.map((row) => {
+				const rawCleanSheet = row.all.clean_sheet;
+				const cleanSheets =
+					rawCleanSheet == null
+						? null
+						: typeof rawCleanSheet === "number"
+							? rawCleanSheet
+							: (rawCleanSheet.total ?? 0);
+
+				return {
+					cleanSheets,
+					teamId: row.team.id,
+					teamName: row.team.name,
+					rank: row.rank,
+					points: row.points,
+					played: row.all.played,
+					win: row.all.win,
+					draw: row.all.draw,
+					loss: row.all.lose,
+					goalsFor: row.all.goals.for,
+					goalsAgainst: row.all.goals.against,
+					goalDiff: row.goalsDiff,
+					form: row.form,
+					description: row.description,
+					home: {
+						played: row.home.played,
+						win: row.home.win,
+						draw: row.home.draw,
+						loss: row.home.lose,
+						goalsFor: row.home.goals.for,
+						goalsAgainst: row.home.goals.against,
+					},
+					away: {
+						played: row.away.played,
+						win: row.away.win,
+						draw: row.away.draw,
+						loss: row.away.lose,
+						goalsFor: row.away.goals.for,
+						goalsAgainst: row.away.goals.against,
+					},
+				};
+			});
 
 			console.log(
 				`✅ [Insights] Fetched standings: ${rows.length} teams for league ${leagueId}`,

@@ -5,6 +5,7 @@ export type LeagueStandingsRow = {
   teamName: string;
   rank: number;
   points: number;
+  cleanSheets: number | null;
   goalsFor: number;
   goalsAgainst: number;
   goalDiff: number;
@@ -148,6 +149,29 @@ export function buildLeagueRelativeInsightsForTeam({
   if (!row) return [];
 
   const insights: Insight[] = [];
+
+  // --- Clean sheets leader (ONLY when rank #1 / tied #1)
+  const csRows = standingsRows.filter((r) => typeof r.cleanSheets === "number");
+  const csMax =
+    csRows.length > 0 ? Math.max(...csRows.map((r) => r.cleanSheets as number)) : 0;
+  if (csRows.length >= Math.max(8, Math.floor(standingsRows.length * 0.6)) && csMax > 0) {
+    const csRank = rankByValue(
+      csRows.map((r) => ({ teamId: r.teamId, value: r.cleanSheets as number })),
+      { direction: "desc" },
+    ).get(teamId);
+    if (csRank && csRank.rank === 1) {
+      insights.push(
+        makeInsight({
+          text: `${teamName} have the most clean sheets in the league (${csRank.value})${rankSuffix(
+            csRank.tied,
+          )}.`,
+          category: "DEFENSIVE",
+          severity: "MEDIUM",
+          priority: 90,
+        }),
+      );
+    }
+  }
 
   // --- Attack rank (GF)
   const gfRank = rankByValue(

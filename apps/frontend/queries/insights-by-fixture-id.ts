@@ -20,7 +20,13 @@ export type BettingInsightsResponse = {
     probabilityDistribution: Record<string, number | undefined>;
     signalStrength?: "Strong" | "Moderate" | "Balanced" | "Weak";
     modelReliability?: "HIGH" | "MEDIUM" | "LOW";
-    insights?: Array<{ text: string }>;
+    insights?: Array<{
+      text: string;
+      parts?: Array<{ text: string; bold?: boolean }>;
+      emoji?: string;
+      category?: string;
+      severity?: string;
+    }>;
     mostProbableOutcome?: string;
   }>;
   homeInsights?: Array<{

@@ -3,6 +3,7 @@ import { FixtureInfoHeader } from "@/components/fixture-info-header";
 import { InsightsSectionHeader } from "@/components/insights/insights-section-header";
 import { KeyInsightsList } from "@/components/insights/key-insights-list";
 import { MatchFactsGrid } from "@/components/insights/match-facts-grid";
+import { MatchOutcomeCard } from "@/components/insights/match-outcome-card";
 import { Tabs } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/text";
 import { useSelectedDate } from "@/context/selected-date-context";
@@ -251,6 +252,10 @@ export default function FixtureDetailScreen() {
 		},
 	});
 
+	const matchOutcomeSimulation = insightsData?.simulations?.find(
+		(simulation) => simulation.scenarioType === "MatchOutcome",
+	);
+
 	if (isLoading && !data) {
 		return (
 			<>
@@ -361,6 +366,34 @@ export default function FixtureDetailScreen() {
 													)}
 												/>
 											</View>
+
+											<InsightsSectionHeader title="Match Outcome" />
+											{matchOutcomeSimulation ? (
+												<MatchOutcomeCard
+													homeTeam={insightsData.match.homeTeam}
+													awayTeam={insightsData.match.awayTeam}
+													probabilityDistribution={
+														matchOutcomeSimulation.probabilityDistribution ?? {}
+													}
+													signalStrength={matchOutcomeSimulation.signalStrength}
+													modelReliability={
+														matchOutcomeSimulation.modelReliability
+													}
+													mostProbableOutcome={
+														matchOutcomeSimulation.mostProbableOutcome
+													}
+													insights={matchOutcomeSimulation.insights ?? []}
+												/>
+											) : (
+												<View className="bg-neu-01 dark:bg-neu-11 shadow-sha-01 dark:shadow-sha-06 rounded-lg px-16 py-12">
+													<Text
+														variant="body-02"
+														className="text-neu-07 dark:text-neu-06"
+													>
+														Match outcome signals are not available yet.
+													</Text>
+												</View>
+											)}
 										</View>
 									) : null}
 								</View>

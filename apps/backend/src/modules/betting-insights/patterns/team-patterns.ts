@@ -24,7 +24,6 @@ import {
   countConsecutiveCleanSheets,
   countConsecutiveMatchesWithoutCleanSheet,
   countConsecutiveMultiGoalsConceded,
-  countConsecutiveBTTS,
   countConsecutiveOver25,
   countConsecutiveUnder25,
 } from '../utils/streak-helpers';
@@ -200,9 +199,6 @@ export function detectTeamPatterns(
 
   // Detect first half patterns
   patterns.push(...detectFirstHalfPatterns(matches, teamName));
-
-  // Detect BTTS patterns
-  patterns.push(...detectBTTSPatterns(matches, teamName));
 
   // Detect over/under patterns
   patterns.push(...detectOverUnderPatterns(matches, teamName));
@@ -499,59 +495,6 @@ function detectFirstHalfPatterns(
         matchCount: matchesWithFHData.length,
       },
     });
-  }
-
-  return patterns;
-}
-
-// ============================================================================
-// BTTS PATTERN DETECTION
-// ============================================================================
-
-/**
- * Detect BTTS patterns
- */
-function detectBTTSPatterns(
-  matches: ProcessedMatch[],
-  teamName: string,
-): Pattern[] {
-  const patterns: Pattern[] = [];
-
-  // BTTS streak
-  const bttsStreak = countConsecutiveBTTS(matches);
-  if (bttsStreak >= STREAK_THRESHOLDS.bttsMedium) {
-    const severity =
-      bttsStreak >= STREAK_THRESHOLDS.bttsHigh ? 'HIGH' : 'MEDIUM';
-    patterns.push({
-      type: 'BTTS_STREAK',
-      severity,
-      priority: PATTERN_PRIORITIES.BTTS_STREAK,
-      description: `${teamName}'s matches have seen both teams score in ${bttsStreak} consecutive games`,
-      data: { streak: bttsStreak },
-    });
-  }
-
-  // Calculate overall BTTS rate
-  const recentMatches = matches.slice(0, 10);
-  if (recentMatches.length >= 5) {
-    const bttsCount = recentMatches.filter(
-      (m) => m.goalsScored > 0 && m.goalsConceded > 0,
-    ).length;
-    const bttsRate = bttsCount / recentMatches.length;
-
-    // High BTTS rate (even without streak)
-    if (bttsRate >= 0.7 && bttsStreak < STREAK_THRESHOLDS.bttsMedium) {
-      patterns.push({
-        type: 'BTTS_STREAK',
-        severity: 'MEDIUM',
-        priority: PATTERN_PRIORITIES.BTTS_STREAK - 5,
-        description: `${teamName}'s matches see both teams score ${Math.round(bttsRate * 100)}% of the time`,
-        data: {
-          bttsRate: Math.round(bttsRate * 100),
-          matchCount: recentMatches.length,
-        },
-      });
-    }
   }
 
   return patterns;

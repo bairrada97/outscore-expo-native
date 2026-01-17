@@ -4,6 +4,19 @@ import { buildLeagueRelativeInsightsForTeam, type LeagueStandingsRow } from "./l
 const MAX_KEY_INSIGHTS = 3;
 const MIN_LEAGUE_RELATIVE_PRIORITY_TO_FORCE = 80;
 
+function isBttsLikeInsight(text: string): boolean {
+  const t = (text ?? "").toLowerCase();
+  return (
+    t.includes("btts") ||
+    t.includes("both teams") ||
+    t.includes("both sides")
+  );
+}
+
+function stripBttsInsights(insights: Insight[]): Insight[] {
+  return insights.filter((i) => !isBttsLikeInsight(i.text));
+}
+
 function buildFallbackInsight(
   text: string,
   category: Insight["category"] = "CONTEXT",
@@ -101,6 +114,9 @@ function maybeInjectLeagueRelativeInsight({
     return;
   }
 
+  const isCleanSheetsLeader =
+    typeof candidate.text === "string" && /most clean sheets/i.test(candidate.text);
+
   // Replace the weakest insight if the league insight is stronger.
   let weakestIdx = -1;
   let weakestPriority = Number.POSITIVE_INFINITY;
@@ -112,7 +128,12 @@ function maybeInjectLeagueRelativeInsight({
     }
   }
 
-  if (weakestIdx >= 0 && candidate.priority > weakestPriority) {
+  // If this is a "league leader" insight (e.g., most clean sheets), force it in even on ties.
+  if (
+    weakestIdx >= 0 &&
+    (candidate.priority > weakestPriority ||
+      (isCleanSheetsLeader && candidate.priority >= weakestPriority))
+  ) {
     usedTexts.delete(selected[weakestIdx].text);
     selected[weakestIdx] = candidate;
     usedTexts.add(candidate.text);
@@ -138,8 +159,11 @@ export function buildKeyInsights({
   leagueName: string;
   standingsRows?: LeagueStandingsRow[] | null;
 }): { home: Insight[]; away: Insight[] } {
-  const homeSelected = homeInsights.slice(0, MAX_KEY_INSIGHTS);
-  const awaySelected = awayInsights.slice(0, MAX_KEY_INSIGHTS);
+  const homePool = stripBttsInsights(homeInsights);
+  const awayPool = stripBttsInsights(awayInsights);
+
+  const homeSelected = homePool.slice(0, MAX_KEY_INSIGHTS);
+  const awaySelected = awayPool.slice(0, MAX_KEY_INSIGHTS);
 
   const usedHomeTexts = new Set(homeSelected.map((insight) => insight.text));
   const usedAwayTexts = new Set(awaySelected.map((insight) => insight.text));
@@ -147,26 +171,30 @@ export function buildKeyInsights({
   // Always try to include at least one league-relative insight when available.
   // If we already have 3, replace the weakest when the league insight is strong (top/bottom-3 type).
   if (standingsRows && standingsRows.length > 0) {
-    const homeLeagueInsights = buildLeagueRelativeInsightsForTeam({
+    const homeLeagueInsights = stripBttsInsights(
+      buildLeagueRelativeInsightsForTeam({
       teamId: homeTeam.id,
       teamName: homeContext.name,
       leagueName,
       standingsRows,
       teamRole: "HOME",
-    });
+      }),
+    );
     maybeInjectLeagueRelativeInsight({
       selected: homeSelected,
       usedTexts: usedHomeTexts,
       leagueInsights: homeLeagueInsights,
     });
 
-    const awayLeagueInsights = buildLeagueRelativeInsightsForTeam({
+    const awayLeagueInsights = stripBttsInsights(
+      buildLeagueRelativeInsightsForTeam({
       teamId: awayTeam.id,
       teamName: awayContext.name,
       leagueName,
       standingsRows,
       teamRole: "AWAY",
-    });
+      }),
+    );
     maybeInjectLeagueRelativeInsight({
       selected: awaySelected,
       usedTexts: usedAwayTexts,
@@ -175,7 +203,7 @@ export function buildKeyInsights({
   }
 
   if (homeSelected.length < MAX_KEY_INSIGHTS) {
-    const fallbacks = buildFallbacksForTeam(homeContext, homeTeam);
+    const fallbacks = stripBttsInsights(buildFallbacksForTeam(homeContext, homeTeam));
     homeSelected.push(
       ...takeTop(
         fallbacks,
@@ -186,7 +214,7 @@ export function buildKeyInsights({
   }
 
   if (awaySelected.length < MAX_KEY_INSIGHTS) {
-    const fallbacks = buildFallbacksForTeam(awayContext, awayTeam);
+    const fallbacks = stripBttsInsights(buildFallbacksForTeam(awayContext, awayTeam));
     awaySelected.push(
       ...takeTop(
         fallbacks,

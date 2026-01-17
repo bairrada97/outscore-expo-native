@@ -114,9 +114,6 @@ export function detectH2HPatterns(
 		return patterns;
 	}
 
-	// Detect BTTS patterns
-	patterns.push(...detectH2HBTTSPatterns(h2hData, homeTeamName, awayTeamName));
-
 	// Detect dominance patterns
 	patterns.push(
 		...detectH2HDominancePatterns(h2hData, homeTeamName, awayTeamName),

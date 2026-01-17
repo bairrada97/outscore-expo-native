@@ -166,7 +166,7 @@ export function createMockInsightsResponse(
 		],
 		h2hInsights: [
 			{
-				text: "Both teams have scored in 4 of their last 5 meetings",
+				text: "The last 5 H2H meetings have produced goals",
 				emoji: "🤝",
 				category: "H2H",
 				severity: "MEDIUM",
