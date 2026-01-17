@@ -13,8 +13,29 @@ function isBttsLikeInsight(text: string): boolean {
   );
 }
 
-function stripBttsInsights(insights: Insight[]): Insight[] {
-  return insights.filter((i) => !isBttsLikeInsight(i.text));
+function isOverUnderLikeInsight(text: string): boolean {
+  const t = (text ?? "").toLowerCase();
+  return (
+    /over\s*\d/.test(t) ||
+    /under\s*\d/.test(t) ||
+    t.includes("3+ goals") ||
+    t.includes("under 3 goals") ||
+    t.includes("over 3 goals")
+  );
+}
+
+function stripMarketInsights(insights: Insight[]): Insight[] {
+  return insights.filter(
+    (i) => !isBttsLikeInsight(i.text) && !isOverUnderLikeInsight(i.text),
+  );
+}
+
+function stripInternalInsights(insights: Insight[]): Insight[] {
+  return insights.filter(
+    (i) =>
+      !i.text.includes("Value Alert:") &&
+      !i.text.includes("Regression Risk:"),
+  );
 }
 
 function buildFallbackInsight(
@@ -159,11 +180,14 @@ export function buildKeyInsights({
   leagueName: string;
   standingsRows?: LeagueStandingsRow[] | null;
 }): { home: Insight[]; away: Insight[] } {
-  const homePool = stripBttsInsights(homeInsights);
-  const awayPool = stripBttsInsights(awayInsights);
+  const homePool = stripMarketInsights(homeInsights);
+  const awayPool = stripMarketInsights(awayInsights);
 
-  const homeSelected = homePool.slice(0, MAX_KEY_INSIGHTS);
-  const awaySelected = awayPool.slice(0, MAX_KEY_INSIGHTS);
+  const filteredHomePool = stripInternalInsights(homePool);
+  const filteredAwayPool = stripInternalInsights(awayPool);
+
+  const homeSelected = filteredHomePool.slice(0, MAX_KEY_INSIGHTS);
+  const awaySelected = filteredAwayPool.slice(0, MAX_KEY_INSIGHTS);
 
   const usedHomeTexts = new Set(homeSelected.map((insight) => insight.text));
   const usedAwayTexts = new Set(awaySelected.map((insight) => insight.text));
@@ -171,7 +195,7 @@ export function buildKeyInsights({
   // Always try to include at least one league-relative insight when available.
   // If we already have 3, replace the weakest when the league insight is strong (top/bottom-3 type).
   if (standingsRows && standingsRows.length > 0) {
-    const homeLeagueInsights = stripBttsInsights(
+    const homeLeagueInsights = stripMarketInsights(
       buildLeagueRelativeInsightsForTeam({
       teamId: homeTeam.id,
       teamName: homeContext.name,
@@ -186,7 +210,7 @@ export function buildKeyInsights({
       leagueInsights: homeLeagueInsights,
     });
 
-    const awayLeagueInsights = stripBttsInsights(
+    const awayLeagueInsights = stripMarketInsights(
       buildLeagueRelativeInsightsForTeam({
       teamId: awayTeam.id,
       teamName: awayContext.name,
@@ -203,7 +227,9 @@ export function buildKeyInsights({
   }
 
   if (homeSelected.length < MAX_KEY_INSIGHTS) {
-    const fallbacks = stripBttsInsights(buildFallbacksForTeam(homeContext, homeTeam));
+    const fallbacks = stripMarketInsights(
+      buildFallbacksForTeam(homeContext, homeTeam),
+    );
     homeSelected.push(
       ...takeTop(
         fallbacks,
@@ -214,7 +240,9 @@ export function buildKeyInsights({
   }
 
   if (awaySelected.length < MAX_KEY_INSIGHTS) {
-    const fallbacks = stripBttsInsights(buildFallbacksForTeam(awayContext, awayTeam));
+    const fallbacks = stripMarketInsights(
+      buildFallbacksForTeam(awayContext, awayTeam),
+    );
     awaySelected.push(
       ...takeTop(
         fallbacks,

@@ -415,16 +415,6 @@ export function generateInsight(
   pattern: Pattern,
   teamName?: string,
 ): Insight | null {
-  // Hide algorithm-internal / non-user-friendly insights from UI.
-  // These are useful for debugging and model reasoning, but not for end-user narrative.
-  if (
-    pattern.type === "SLEEPING_GIANT" ||
-    pattern.type === "OVER_PERFORMER" ||
-    pattern.type === "REGRESSION_RISK"
-  ) {
-    return null;
-  }
-
   // Check for H2H template first
   const h2hTemplate = H2H_INSIGHT_TEMPLATES[pattern.type];
   if (h2hTemplate) {

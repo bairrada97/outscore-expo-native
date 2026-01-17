@@ -24,6 +24,8 @@ import {
   countConsecutiveCleanSheets,
   countConsecutiveMatchesWithoutCleanSheet,
   countConsecutiveMultiGoalsConceded,
+  countConsecutiveBTTS,
+  countConsecutiveNoBTTS,
   countConsecutiveOver25,
   countConsecutiveUnder25,
 } from '../utils/streak-helpers';
@@ -364,6 +366,33 @@ function detectStreakPatterns(
       priority: PATTERN_PRIORITIES.DEFENSIVE_COLLAPSE,
       description: `${teamName} has conceded 2+ goals in ${defensiveCollapse} consecutive matches`,
       data: { streak: defensiveCollapse },
+    });
+  }
+
+  // BTTS streak
+  const bttsStreak = countConsecutiveBTTS(matches);
+  if (bttsStreak >= STREAK_THRESHOLDS.bttsMedium) {
+    const severity = bttsStreak >= STREAK_THRESHOLDS.bttsHigh ? 'HIGH' : 'MEDIUM';
+    patterns.push({
+      type: 'BTTS_STREAK',
+      severity,
+      priority: PATTERN_PRIORITIES.BTTS_STREAK,
+      description: `Both teams have scored in ${bttsStreak} consecutive matches for ${teamName}`,
+      data: { streak: bttsStreak },
+    });
+  }
+
+  // No BTTS streak
+  const noBttsStreak = countConsecutiveNoBTTS(matches);
+  if (noBttsStreak >= STREAK_THRESHOLDS.bttsMedium) {
+    const severity =
+      noBttsStreak >= STREAK_THRESHOLDS.bttsHigh ? 'HIGH' : 'MEDIUM';
+    patterns.push({
+      type: 'NO_BTTS_STREAK',
+      severity,
+      priority: PATTERN_PRIORITIES.NO_BTTS_STREAK,
+      description: `At least one team failed to score in ${noBttsStreak} consecutive matches for ${teamName}`,
+      data: { streak: noBttsStreak },
     });
   }
 

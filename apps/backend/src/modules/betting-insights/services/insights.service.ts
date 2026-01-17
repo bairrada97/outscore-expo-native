@@ -1614,7 +1614,7 @@ export const insightsService = {
 			pointsFromRelegation,
 			pointsFromFirst,
 			gamesPlayed: playedTotal,
-			cleanSheetsTotal: stats.clean_sheet.total ?? 0,
+			cleanSheetsTotal: stats.clean_sheet?.total ?? 0,
 		};
 	},
 

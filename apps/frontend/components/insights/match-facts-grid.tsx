@@ -7,11 +7,11 @@ type MatchFactsGridProps = {
 
 export function MatchFactsGrid({ facts }: MatchFactsGridProps) {
 	return (
-		<View className="flex-row flex-wrap gap-8">
+		<View className="flex-row flex-wrap -mx-4">
 			{facts.map((fact) => (
 				<View
 					key={fact.id}
-					className="flex-1 min-w-0 basis-[calc((100%-16px)/2)] xs:basis-[calc((100%-16px)/3)]"
+					className="min-w-0 w-1/2 xs:w-1/3 px-4 mb-8"
 				>
 					<MatchFactCard fact={fact} />
 				</View>
