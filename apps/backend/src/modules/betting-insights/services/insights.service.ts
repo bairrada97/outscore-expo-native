@@ -11,48 +11,51 @@
 import type { Fixture } from "@outscore/shared-types";
 import type { CacheEnv } from "../../cache";
 import {
-    cacheGet,
-    cacheSet,
-    getCacheKey,
-    isStale,
-    withDeduplication,
+	cacheGet,
+	cacheSet,
+	getCacheKey,
+	isStale,
+	withDeduplication,
 } from "../../cache";
 import {
-    createInputsSnapshotJson,
-    getH2HCache,
-    getInjuriesCache,
-    H2H_CACHE_TTL_MS,
-    hasInsightsSnapshot,
-    type InputsSnapshotData,
-    insertInsightsSnapshot,
-    makeH2HPairKey,
-    type StandingsCurrentRowInsert,
-    type TeamSeasonContextInsert,
-    upsertH2HCache,
-    upsertInjuriesCache,
-    upsertLeague,
-    upsertStandings,
-    upsertTeam,
-    upsertTeamSeasonContext,
+	createInputsSnapshotJson,
+	getH2HCache,
+	getInjuriesCache,
+	H2H_CACHE_TTL_MS,
+	hasInsightsSnapshot,
+	type InputsSnapshotData,
+	insertInsightsSnapshot,
+	makeH2HPairKey,
+	type StandingsCurrentRowInsert,
+	type TeamSeasonContextInsert,
+	upsertH2HCache,
+	upsertInjuriesCache,
+	upsertLeague,
+	upsertStandings,
+	upsertTeam,
+	upsertTeamSeasonContext,
 } from "../../entities";
 import {
-    fetchInjuriesForFixture,
-    type FixtureInjuries,
-    processInjuries,
+	fetchInjuriesForFixture,
+	type FixtureInjuries,
+	processInjuries,
 } from "../data/injuries";
 import {
-    generateInsights,
-    getTopInsights,
+	generateInsights,
+	getTopInsights,
 } from "../insights/insight-generator";
 import type { MatchContext as PredictionMatchContext } from "../match-context/context-adjustments";
 import { buildMatchContext } from "../match-context/context-adjustments";
 import { detectH2HPatterns } from "../patterns/h2h-patterns";
 import {
-    detectTeamPatterns,
-    getTopPatterns,
-    type Pattern,
+	detectTeamPatterns,
+	getTopPatterns,
+	type Pattern,
 } from "../patterns/team-patterns";
 import { enrichInsights } from "../presentation/insight-enricher";
+import { attachInsightPartsToList } from "../presentation/insight-parts";
+import { buildKeyInsights } from "../presentation/key-insights-builder";
+import { buildMatchFacts } from "../presentation/match-facts-builder";
 import { buildModelReliabilityBreakdown } from "../presentation/simulation-presenter";
 import { attachRelatedScenarios } from "../simulations/related-scenarios";
 import { simulateBTTS } from "../simulations/simulate-btts";
@@ -60,43 +63,43 @@ import { simulateFirstHalfActivity } from "../simulations/simulate-first-half-ac
 import { simulateMatchOutcome } from "../simulations/simulate-match-outcome";
 import { simulateTotalGoalsOverUnder } from "../simulations/simulate-total-goals-over-under";
 import type {
-    MatchContext as ApiMatchContext,
-    BettingInsightsResponse,
-    ConfidenceLevel,
-    DataQuality,
-    DNALayer,
-    GoalLineKey,
-    GoalLineOverPctMap,
-    H2HData,
-    Insight,
-    MatchType,
-    ProcessedMatch,
-    Simulation,
-    TeamContext,
-    TeamData,
-    TeamStatistics,
+	MatchContext as ApiMatchContext,
+	BettingInsightsResponse,
+	ConfidenceLevel,
+	DataQuality,
+	DNALayer,
+	GoalLineKey,
+	GoalLineOverPctMap,
+	H2HData,
+	Insight,
+	MatchType,
+	ProcessedMatch,
+	Simulation,
+	TeamContext,
+	TeamData,
+	TeamStatistics,
 } from "../types";
 import { DEFAULT_GOAL_LINES } from "../types";
 import { calculateFormationStabilityContext } from "../utils/formation-helpers";
 import { processH2HData } from "../utils/h2h-helpers";
 import {
-    calculateDaysSinceLastMatch,
-    determineMatchResult,
-    extractRoundNumber,
-    filterNonFriendlyMatches,
+	calculateDaysSinceLastMatch,
+	determineMatchResult,
+	extractRoundNumber,
+	filterNonFriendlyMatches,
 } from "../utils/helpers";
 import {
-    calculateInjuryAdjustments,
-    getInjurySituationSummary,
+	calculateInjuryAdjustments,
+	getInjurySituationSummary,
 } from "../utils/injury-adjustments";
 import {
-    calculateDNALayer,
-    calculateSafetyFlags,
+	calculateDNALayer,
+	calculateSafetyFlags,
 } from "../utils/stats-calculator";
 import {
-    assessMindDataQuality,
-    calculateMindLayer,
-    calculateMoodLayer,
+	assessMindDataQuality,
+	calculateMindLayer,
+	calculateMoodLayer,
 } from "../utils/tier-helpers";
 
 // ============================================================================
@@ -156,12 +159,7 @@ export interface InsightsServiceResult {
 /**
  * Extended Fixture type with optional lineups (available in fixture detail responses)
  */
-interface FixtureWithLineups extends Fixture {
-	lineups?: Array<{
-		team: { id: number; name: string; logo: string };
-		formation: string | null;
-	}>;
-}
+type FixtureWithLineups = Fixture;
 
 interface RawTeamStats {
 	team: { id: number; name: string };
@@ -258,6 +256,9 @@ interface RawStandingsResponse {
 					draw: number;
 					lose: number;
 					goals: { for: number; against: number };
+					// API-Football can include clean sheets in standings rows.
+					// Shape varies by league/season: sometimes a number, sometimes { home, away, total }.
+					clean_sheet?: number | { home: number; away: number; total: number };
 				};
 				home: {
 					played: number;
@@ -316,8 +317,26 @@ interface StandingsData {
 		goalsFor: number;
 		goalsAgainst: number;
 		goalDiff: number;
+		// null means "not provided by the standings endpoint for this league/season"
+		cleanSheets: number | null;
 		form: string | null;
 		description: string | null;
+		home: {
+			played: number;
+			win: number;
+			draw: number;
+			loss: number;
+			goalsFor: number;
+			goalsAgainst: number;
+		};
+		away: {
+			played: number;
+			win: number;
+			draw: number;
+			loss: number;
+			goalsFor: number;
+			goalsAgainst: number;
+		};
 	}>;
 	// First place points (for distance calculation)
 	firstPlacePoints: number;
@@ -615,15 +634,44 @@ export const insightsService = {
 
 			const enrichedHomeInsights = enrichInsights(homeInsights, {
 				team: homeTeamContext,
-				match: matchContext,
 			});
 			const enrichedAwayInsights = enrichInsights(awayInsights, {
 				team: awayTeamContext,
-				match: matchContext,
 			});
-			const enrichedH2HInsights = enrichInsights(h2hInsights, {
-				match: matchContext,
+			const enrichedH2HInsights = enrichInsights(h2hInsights, {});
+
+			const homeInsightsWithParts =
+				attachInsightPartsToList(enrichedHomeInsights);
+			const awayInsightsWithParts =
+				attachInsightPartsToList(enrichedAwayInsights);
+			const h2hInsightsWithParts =
+				attachInsightPartsToList(enrichedH2HInsights);
+
+			const matchFacts = buildMatchFacts({
+				homeTeam: homeTeamData,
+				awayTeam: awayTeamData,
+				homeContext: homeTeamContext,
+				awayContext: awayTeamContext,
+				h2h: h2hData,
+				matchContext,
+				injuries,
 			});
+
+			const keyInsights = buildKeyInsights({
+				homeInsights: homeInsightsWithParts,
+				awayInsights: awayInsightsWithParts,
+				homeContext: homeTeamContext,
+				awayContext: awayTeamContext,
+				homeTeam: homeTeamData,
+				awayTeam: awayTeamData,
+				leagueName: fixture.league.name,
+				standingsRows: standings?.rows ?? null,
+			});
+
+			const keyInsightsWithParts = {
+				home: attachInsightPartsToList(keyInsights.home),
+				away: attachInsightPartsToList(keyInsights.away),
+			};
 
 			const simulationsWithReliability = simulations.map((sim) => ({
 				...sim,
@@ -671,9 +719,11 @@ export const insightsService = {
 				awayTeamContext,
 				matchContext,
 				simulations: simulationsWithReliability,
-				homeInsights: enrichedHomeInsights,
-				awayInsights: enrichedAwayInsights,
-				h2hInsights: enrichedH2HInsights,
+				homeInsights: homeInsightsWithParts,
+				awayInsights: awayInsightsWithParts,
+				h2hInsights: h2hInsightsWithParts,
+				matchFacts,
+				keyInsights: keyInsightsWithParts,
 				dataQuality,
 				overallConfidence,
 				generatedAt,
@@ -913,9 +963,12 @@ export const insightsService = {
 			const data = (await response.json()) as { response: RawMatchData[] };
 			const rawMatches = data.response ?? [];
 
-			// Filter to finished matches only
-			const finishedMatches = rawMatches.filter(
-				(m) => m.fixture.status.short === "FT",
+			// Filter to finished matches only.
+			// API-Football can mark completed matches as FT (full-time), AET (after extra time),
+			// or PEN (penalties). We want to include all of these as "finished" for H2H.
+			const FINISHED_STATUSES = new Set(["FT", "AET", "PEN"]);
+			const finishedMatches = rawMatches.filter((m) =>
+				FINISHED_STATUSES.has(m.fixture.status.short),
 			);
 
 			// Convert to ProcessedMatch format (from home team's perspective)
@@ -1150,21 +1203,48 @@ export const insightsService = {
 			const relegationPoints =
 				standingsRows[relegationPosition - 1]?.points ?? 0;
 
-			const rows = standingsRows.map((row) => ({
-				teamId: row.team.id,
-				teamName: row.team.name,
-				rank: row.rank,
-				points: row.points,
-				played: row.all.played,
-				win: row.all.win,
-				draw: row.all.draw,
-				loss: row.all.lose,
-				goalsFor: row.all.goals.for,
-				goalsAgainst: row.all.goals.against,
-				goalDiff: row.goalsDiff,
-				form: row.form,
-				description: row.description,
-			}));
+			const rows = standingsRows.map((row) => {
+				const rawCleanSheet = row.all.clean_sheet;
+				const cleanSheets =
+					rawCleanSheet == null
+						? null
+						: typeof rawCleanSheet === "number"
+							? rawCleanSheet
+							: (rawCleanSheet.total ?? 0);
+
+				return {
+					cleanSheets,
+					teamId: row.team.id,
+					teamName: row.team.name,
+					rank: row.rank,
+					points: row.points,
+					played: row.all.played,
+					win: row.all.win,
+					draw: row.all.draw,
+					loss: row.all.lose,
+					goalsFor: row.all.goals.for,
+					goalsAgainst: row.all.goals.against,
+					goalDiff: row.goalsDiff,
+					form: row.form,
+					description: row.description,
+					home: {
+						played: row.home.played,
+						win: row.home.win,
+						draw: row.home.draw,
+						loss: row.home.lose,
+						goalsFor: row.home.goals.for,
+						goalsAgainst: row.home.goals.against,
+					},
+					away: {
+						played: row.away.played,
+						win: row.away.win,
+						draw: row.away.draw,
+						loss: row.away.lose,
+						goalsFor: row.away.goals.for,
+						goalsAgainst: row.away.goals.against,
+					},
+				};
+			});
 
 			console.log(
 				`✅ [Insights] Fetched standings: ${rows.length} teams for league ${leagueId}`,
@@ -1488,6 +1568,7 @@ export const insightsService = {
 				pointsFromRelegation,
 				pointsFromFirst,
 				gamesPlayed: standingsData?.played ?? 0,
+				cleanSheetsTotal: 0,
 			};
 		}
 
@@ -1533,6 +1614,7 @@ export const insightsService = {
 			pointsFromRelegation,
 			pointsFromFirst,
 			gamesPlayed: playedTotal,
+			cleanSheetsTotal: stats.clean_sheet?.total ?? 0,
 		};
 	},
 

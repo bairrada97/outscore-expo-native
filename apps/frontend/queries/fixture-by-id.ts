@@ -6,6 +6,7 @@ import {
 	ONE_WEEK_CACHE,
 	SIX_HOURS_CACHE,
 } from "@/utils/constants";
+import { FetchError, fetchJsonWithTimeout } from "@/utils/fetch-with-timeout";
 import {
 	FIXTURE_IS_FINISHED_STATUS,
 	FIXTURE_IS_LIVE_STATUS,
@@ -18,19 +19,6 @@ import { format } from "date-fns";
  */
 export function createFixtureQueryKey(fixtureId: number): string[] {
 	return ["fixture", String(fixtureId)];
-}
-
-/**
- * Custom error class to include HTTP status for retry logic
- */
-class FetchError extends Error {
-	constructor(
-		message: string,
-		public status: number,
-	) {
-		super(message);
-		this.name = "FetchError";
-	}
 }
 
 /**
@@ -48,44 +36,17 @@ async function fetchFixtureDetail({
 	const params = new URLSearchParams();
 	params.set("id", String(fixtureId));
 
-	// Create AbortController for timeout if no signal provided
-	const controller = signal ? null : new AbortController();
-	const abortSignal = signal ?? controller?.signal;
+	const url = new URL("/fixtures", API_BASE_URL);
+	url.search = params.toString();
 
-	// Set up timeout if no external signal provided
-	let timeoutId: ReturnType<typeof setTimeout> | null = null;
-	if (!signal && timeoutMs > 0 && controller) {
-		timeoutId = setTimeout(() => {
-			controller.abort();
-		}, timeoutMs);
-	}
+	const json = await fetchJsonWithTimeout<{ data: FixturesResponse }>({
+		url: url.toString(),
+		signal,
+		timeoutMs,
+		errorMessage: "Failed to fetch fixture detail",
+	});
 
-	try {
-		const url = new URL("/fixtures", API_BASE_URL);
-		url.search = params.toString();
-		const fetchOptions: RequestInit = {
-			signal: abortSignal as RequestInit["signal"],
-		};
-		const response = await fetch(url.toString(), fetchOptions);
-
-		if (timeoutId) clearTimeout(timeoutId);
-
-		if (!response.ok) {
-			throw new FetchError(
-				`Failed to fetch fixture detail: ${response.statusText}`,
-				response.status,
-			);
-		}
-
-		const json = (await response.json()) as { data: FixturesResponse };
-		return json.data;
-	} catch (error) {
-		if (timeoutId) clearTimeout(timeoutId);
-		if (error instanceof Error && error.name === "AbortError") {
-			throw new FetchError("Request timeout or aborted", 408);
-		}
-		throw error;
-	}
+	return json.data;
 }
 
 /**

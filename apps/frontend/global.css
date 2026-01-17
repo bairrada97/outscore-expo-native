@@ -99,6 +99,7 @@
   --shadow-sha-06: 0px 5px 18px rgba(19, 20, 19, 0.3);
   --shadow-sha-07: -2px 2px 3px -1px rgba(19, 20, 19, 0.32);
 
+  --breakpoint-xs: 37.5rem;
   /* App size */
   --app-size: 800px;
 }
@@ -136,13 +137,5 @@
 
   .dark .fixture-card:not(:last-of-type)::after {
     background: var(--color-neu-12);
-  }
-}
-
-@layer utilities {
-  .flex-center {
-    display: flex;
-    align-items: center;
-    justify-content: center;
   }
 }

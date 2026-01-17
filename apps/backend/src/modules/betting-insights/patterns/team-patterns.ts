@@ -25,6 +25,7 @@ import {
   countConsecutiveMatchesWithoutCleanSheet,
   countConsecutiveMultiGoalsConceded,
   countConsecutiveBTTS,
+  countConsecutiveNoBTTS,
   countConsecutiveOver25,
   countConsecutiveUnder25,
 } from '../utils/streak-helpers';
@@ -201,9 +202,6 @@ export function detectTeamPatterns(
   // Detect first half patterns
   patterns.push(...detectFirstHalfPatterns(matches, teamName));
 
-  // Detect BTTS patterns
-  patterns.push(...detectBTTSPatterns(matches, teamName));
-
   // Detect over/under patterns
   patterns.push(...detectOverUnderPatterns(matches, teamName));
 
@@ -371,6 +369,33 @@ function detectStreakPatterns(
     });
   }
 
+  // BTTS streak
+  const bttsStreak = countConsecutiveBTTS(matches);
+  if (bttsStreak >= STREAK_THRESHOLDS.bttsMedium) {
+    const severity = bttsStreak >= STREAK_THRESHOLDS.bttsHigh ? 'HIGH' : 'MEDIUM';
+    patterns.push({
+      type: 'BTTS_STREAK',
+      severity,
+      priority: PATTERN_PRIORITIES.BTTS_STREAK,
+      description: `Both teams have scored in ${bttsStreak} consecutive matches for ${teamName}`,
+      data: { streak: bttsStreak },
+    });
+  }
+
+  // No BTTS streak
+  const noBttsStreak = countConsecutiveNoBTTS(matches);
+  if (noBttsStreak >= STREAK_THRESHOLDS.bttsMedium) {
+    const severity =
+      noBttsStreak >= STREAK_THRESHOLDS.bttsHigh ? 'HIGH' : 'MEDIUM';
+    patterns.push({
+      type: 'NO_BTTS_STREAK',
+      severity,
+      priority: PATTERN_PRIORITIES.NO_BTTS_STREAK,
+      description: `At least one team failed to score in ${noBttsStreak} consecutive matches for ${teamName}`,
+      data: { streak: noBttsStreak },
+    });
+  }
+
   return patterns;
 }
 
@@ -416,7 +441,7 @@ function detectPerformancePatterns(
       type: 'HIGH_SCORING_FORM',
       severity,
       priority: PATTERN_PRIORITIES.HIGH_SCORING_FORM,
-      description: `${teamName} is averaging ${avgGoalsScored.toFixed(1)} goals per game`,
+      description: `${teamName} have averaged ${avgGoalsScored.toFixed(1)} goals per game in their last ${recentMatches.length}.`,
       data: {
         avgGoalsScored: Math.round(avgGoalsScored * 100) / 100,
         matchCount: recentMatches.length,
@@ -434,7 +459,7 @@ function detectPerformancePatterns(
       type: 'DEFENSIVE_WEAKNESS',
       severity,
       priority: PATTERN_PRIORITIES.DEFENSIVE_WEAKNESS,
-      description: `${teamName} is conceding ${avgGoalsConceded.toFixed(1)} goals per game`,
+      description: `${teamName} have conceded ${avgGoalsConceded.toFixed(1)} goals per game in their last ${recentMatches.length}.`,
       data: {
         avgGoalsConceded: Math.round(avgGoalsConceded * 100) / 100,
         matchCount: recentMatches.length,
@@ -499,59 +524,6 @@ function detectFirstHalfPatterns(
         matchCount: matchesWithFHData.length,
       },
     });
-  }
-
-  return patterns;
-}
-
-// ============================================================================
-// BTTS PATTERN DETECTION
-// ============================================================================
-
-/**
- * Detect BTTS patterns
- */
-function detectBTTSPatterns(
-  matches: ProcessedMatch[],
-  teamName: string,
-): Pattern[] {
-  const patterns: Pattern[] = [];
-
-  // BTTS streak
-  const bttsStreak = countConsecutiveBTTS(matches);
-  if (bttsStreak >= STREAK_THRESHOLDS.bttsMedium) {
-    const severity =
-      bttsStreak >= STREAK_THRESHOLDS.bttsHigh ? 'HIGH' : 'MEDIUM';
-    patterns.push({
-      type: 'BTTS_STREAK',
-      severity,
-      priority: PATTERN_PRIORITIES.BTTS_STREAK,
-      description: `${teamName}'s matches have seen both teams score in ${bttsStreak} consecutive games`,
-      data: { streak: bttsStreak },
-    });
-  }
-
-  // Calculate overall BTTS rate
-  const recentMatches = matches.slice(0, 10);
-  if (recentMatches.length >= 5) {
-    const bttsCount = recentMatches.filter(
-      (m) => m.goalsScored > 0 && m.goalsConceded > 0,
-    ).length;
-    const bttsRate = bttsCount / recentMatches.length;
-
-    // High BTTS rate (even without streak)
-    if (bttsRate >= 0.7 && bttsStreak < STREAK_THRESHOLDS.bttsMedium) {
-      patterns.push({
-        type: 'BTTS_STREAK',
-        severity: 'MEDIUM',
-        priority: PATTERN_PRIORITIES.BTTS_STREAK - 5,
-        description: `${teamName}'s matches see both teams score ${Math.round(bttsRate * 100)}% of the time`,
-        data: {
-          bttsRate: Math.round(bttsRate * 100),
-          matchCount: recentMatches.length,
-        },
-      });
-    }
   }
 
   return patterns;

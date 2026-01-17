@@ -217,3 +217,5 @@ CREATE INDEX IF NOT EXISTS idx_insights_snapshot_fixture ON insights_snapshot(fi
 CREATE INDEX IF NOT EXISTS idx_insights_snapshot_generated ON insights_snapshot(generated_at);
 
 
+
+

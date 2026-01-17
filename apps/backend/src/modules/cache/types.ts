@@ -48,7 +48,11 @@ export type ResourceType =
   | 'insights'
   | 'teams'
   | 'leagues'
-  | 'standings';
+  | 'standings'
+  | 'teamFixtures'
+  | 'teamStatistics'
+  | 'h2hFixtures'
+  | 'injuries';
 
 
 export type TTLMode = 'static' | 'dynamic';

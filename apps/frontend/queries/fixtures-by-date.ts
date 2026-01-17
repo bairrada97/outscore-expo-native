@@ -1,3 +1,4 @@
+import { mergeFixturesByDate } from "@/queries/fixtures-merge";
 import {
 	API_BASE_URL,
 	FIFTEEN_SECONDS_CACHE,
@@ -5,6 +6,7 @@ import {
 	ONE_HOUR_CACHE,
 	ONE_WEEK_CACHE,
 } from "@/utils/constants";
+import { FetchError, fetchJsonWithTimeout } from "@/utils/fetch-with-timeout";
 import type { FormattedCountry } from "@outscore/shared-types";
 import { isBefore, isSameDay } from "date-fns";
 
@@ -16,19 +18,6 @@ export function createFixturesQueryKey(
 	timezone?: string,
 ): string[] {
 	return ["fixtures-by-date", date, timezone || "UTC"];
-}
-
-/**
- * Custom error class to include HTTP status for retry logic
- */
-class FetchError extends Error {
-	constructor(
-		message: string,
-		public status: number,
-	) {
-		super(message);
-		this.name = "FetchError";
-	}
 }
 
 /**
@@ -53,44 +42,17 @@ async function fetchFixtures({
 	if (timezone) params.set("timezone", timezone);
 	if (live) params.set("live", live);
 
-	// Create AbortController for timeout if no signal provided
-	const controller = signal ? null : new AbortController();
-	const abortSignal = signal ?? controller!.signal;
+	const url = new URL("/fixtures", API_BASE_URL);
+	url.search = params.toString();
 
-	// Set up timeout if no external signal provided
-	let timeoutId: ReturnType<typeof setTimeout> | null = null;
-	if (!signal && timeoutMs > 0) {
-		timeoutId = setTimeout(() => {
-			controller!.abort();
-		}, timeoutMs);
-	}
+	const json = await fetchJsonWithTimeout<{ data: FormattedCountry[] }>({
+		url: url.toString(),
+		signal,
+		timeoutMs,
+		errorMessage: "Failed to fetch fixtures",
+	});
 
-	try {
-		const url = new URL("/fixtures", API_BASE_URL);
-		url.search = params.toString();
-		const fetchOptions: RequestInit = {
-			signal: abortSignal as any,
-		};
-		const response = await fetch(url.toString(), fetchOptions);
-
-		if (timeoutId) clearTimeout(timeoutId);
-
-		if (!response.ok) {
-			throw new FetchError(
-				`Failed to fetch fixtures: ${response.statusText}`,
-				response.status,
-			);
-		}
-
-		const json = (await response.json()) as { data: FormattedCountry[] };
-		return json.data as FormattedCountry[];
-	} catch (error) {
-		if (timeoutId) clearTimeout(timeoutId);
-		if (error instanceof Error && error.name === "AbortError") {
-			throw new FetchError("Request timeout or aborted", 408);
-		}
-		throw error;
-	}
+	return json.data as FormattedCountry[];
 }
 
 /**
@@ -139,7 +101,7 @@ export function fixturesByDateQuery({
 		// Refetch interval is 17s (15s + 2s buffer) to avoid Edge Cache race
 		staleTime = FIFTEEN_SECONDS_CACHE;
 		refetchInterval = FIFTEEN_SECONDS_CACHE + 2000; // 17s to avoid Edge Cache race
-		gcTime = FIFTEEN_SECONDS_CACHE * 4; // Keep in memory for 1 minute
+		gcTime = ONE_DAY_CACHE; // Keep in memory for session-long navigation
 		refetchOnMount = true; // Only refetch if stale
 		refetchOnWindowFocus = true;
 	} else if (isSameDay(requestDate, yesterday)) {
@@ -177,6 +139,10 @@ export function fixturesByDateQuery({
 		gcTime,
 		refetchOnMount,
 		refetchOnWindowFocus,
+		structuralSharing: (
+			oldData: FormattedCountry[] | undefined,
+			newData: FormattedCountry[],
+		) => mergeFixturesByDate(oldData, newData),
 		// Retry configuration using React Query's built-in support
 		retry: (failureCount: number, error: Error) => {
 			// Only retry on 503 (Service Unavailable) or 429 (Rate Limited)

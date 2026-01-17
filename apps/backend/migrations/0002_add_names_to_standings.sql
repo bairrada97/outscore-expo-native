@@ -12,3 +12,5 @@ ALTER TABLE standings_current_row ADD COLUMN league_name TEXT;
 -- New standings inserts will populate these fields
 
 
+
+

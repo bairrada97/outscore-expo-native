@@ -166,13 +166,78 @@ export function createMockInsightsResponse(
 		],
 		h2hInsights: [
 			{
-				text: "Both teams have scored in 4 of their last 5 meetings",
+				text: "The last 5 H2H meetings have produced goals",
 				emoji: "🤝",
 				category: "H2H",
 				severity: "MEDIUM",
 				priority: 85,
 			},
 		],
+		matchFacts: [
+			{
+				id: "home_form_last5_home",
+				title: "Home Form",
+				value: "4W-1D-0L",
+				subtitle: "Last 5 (Home)",
+				side: "HOME",
+			},
+			{
+				id: "away_form_last5_away",
+				title: "Away Form",
+				value: "3W-1D-1L",
+				subtitle: "Last 5 (Away)",
+				side: "AWAY",
+			},
+			{
+				id: "avg_goals_scored_season_each",
+				title: "Avg Scored",
+				value: "2.1 | 1.9",
+				subtitle: "Season",
+				side: "BOTH",
+			},
+			{
+				id: "avg_goals_conceded_season_each",
+				title: "Avg Conceded",
+				value: "0.9 | 1.1",
+				subtitle: "Season",
+				side: "BOTH",
+			},
+			{
+				id: "league_position_gap",
+				title: "League Position",
+				value: "2 | 1",
+				subtitle: "Standings",
+				side: "BOTH",
+				icon: "#",
+			},
+			{
+				id: "h2h_lastN_summary",
+				title: "H2H Record",
+				value: "2W-2D-1L",
+				subtitle: "Last 5 meetings",
+				side: "BOTH",
+			},
+		],
+		keyInsights: {
+			home: [
+				{
+					text: "Liverpool are on a 4-match winning streak",
+					emoji: "🔥",
+					category: "FORM",
+					severity: "HIGH",
+					priority: 95,
+				},
+			],
+			away: [
+				{
+					text: "Manchester City have scored in their last 10 matches",
+					emoji: "⚽",
+					category: "SCORING",
+					severity: "HIGH",
+					priority: 90,
+				},
+			],
+		},
 		dataQuality: {
 			mindDataQuality: "HIGH",
 			moodDataQuality: "HIGH",

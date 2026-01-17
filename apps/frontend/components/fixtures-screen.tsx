@@ -67,7 +67,6 @@ export function FixturesScreen({ date, live }: FixturesScreenProps) {
 	return (
 		<View className="mt-16 flex-1 bg-neu-02 dark:bg-neu-13">
 			<FixturesList
-				key={`fixtures-${date}-${live ? "live" : ""}`}
 				resetKey={`${date}-${live ? "live" : ""}`}
 				countries={data ?? []}
 				isLoading={isLoading}

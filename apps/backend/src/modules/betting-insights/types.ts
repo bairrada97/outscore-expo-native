@@ -324,6 +324,8 @@ export interface TeamStatistics {
   pointsFromFirst: number;
   /** Games played this season */
   gamesPlayed: number;
+  /** Total clean sheets this season (league stats) */
+  cleanSheetsTotal: number;
 }
 
 /**
@@ -414,6 +416,11 @@ export interface Adjustment {
 export interface Insight {
   /** Human-readable insight text */
   text: string;
+  /**
+   * Optional segmented text parts for rich rendering (e.g. bold numbers).
+   * When present, UI should render `parts` instead of `text`.
+   */
+  parts?: Array<{ text: string; bold?: boolean }>;
   /** Emoji for visual indication */
   emoji: string;
   /** Priority for sorting (higher = more important, 0-100) */
@@ -860,6 +867,24 @@ export interface TeamContext {
 }
 
 /**
+ * Match facts for UI (observational, non-predictive).
+ */
+export interface FactCard {
+  /** Stable identifier for client-side rendering */
+  id: string;
+  /** Short label for the fact */
+  title: string;
+  /** Primary value shown in the card */
+  value: string;
+  /** Optional supporting text (sample size, timeframe) */
+  subtitle?: string;
+  /** Which side the fact applies to */
+  side?: "HOME" | "AWAY" | "BOTH";
+  /** Optional icon hint for UI (e.g. '#') */
+  icon?: string;
+}
+
+/**
  * Complete betting insights API response
  */
 export interface BettingInsightsResponse {
@@ -886,6 +911,13 @@ export interface BettingInsightsResponse {
   awayInsights: Insight[];
   /** H2H insights */
   h2hInsights: Insight[];
+  /** Match facts (always 6) */
+  matchFacts?: FactCard[];
+  /** Key insights for UI (max 3 each) */
+  keyInsights?: {
+    home: Insight[];
+    away: Insight[];
+  };
   /** Data quality assessment */
   dataQuality: DataQuality;
   /** Overall confidence */

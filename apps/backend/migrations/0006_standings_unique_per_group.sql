@@ -67,3 +67,5 @@ CREATE INDEX IF NOT EXISTS idx_standings_row_group_rank ON standings_current_row
 
 
 
+
+

@@ -302,6 +302,62 @@ export const CACHE_STRATEGIES: Record<ResourceType, CacheStrategyConfig> = {
   standings: {
     resourceType: 'standings',
     ttlMode: 'static',
+    staticTTL: TTL.STANDARD, // 1 hour - matches API update frequency
+    useKV: false,
+    useR2: true,
+    useEdge: true,
+    keyGenerator: (params) => `leagues/${params.leagueId}/standings-season-${params.season}.json`,
+  },
+
+  h2hFixtures: {
+    resourceType: 'h2hFixtures',
+    ttlMode: 'static',
+    staticTTL: TTL.STANDARD, // 1 hour
+    swr: SWR.STANDARD, // allow SWR like routes Cache-Control
+    useKV: false,
+    useR2: true,
+    useEdge: true,
+    keyGenerator: (params) => {
+      // Canonicalize ordering so "33-34" and "34-33" share the same cache entry.
+      const a = Number(params.team1);
+      const b = Number(params.team2);
+      const t1 = Number.isFinite(a) ? a : params.team1;
+      const t2 = Number.isFinite(b) ? b : params.team2;
+      const [minTeam, maxTeam] =
+        typeof t1 === 'number' && typeof t2 === 'number'
+          ? t1 <= t2
+            ? [t1, t2]
+            : [t2, t1]
+          : [String(t1), String(t2)].sort((x, y) => x.localeCompare(y));
+      const last = params.last ?? '5';
+      return `h2h:${minTeam}-${maxTeam}:last=${last}`;
+    },
+  },
+
+  injuries: {
+    resourceType: 'injuries',
+    ttlMode: 'static',
+    staticTTL: TTL.STANDARD, // 1 hour (route uses max-age=3600)
+    swr: SWR.STANDARD,
+    useKV: false,
+    useR2: true,
+    useEdge: true,
+    keyGenerator: (params) => `injuries:${params.fixtureId}:season=${params.season}`,
+  },
+
+  teamFixtures: {
+    resourceType: 'teamFixtures',
+    ttlMode: 'static',
+    staticTTL: TTL.STANDARD, // 1 hour - invalidation handled in service layer
+    useKV: false,
+    useR2: true,
+    useEdge: true,
+    keyGenerator: (params) => `teams/${params.teamId}/fixtures-last-${params.last}.json`,
+  },
+
+  teamStatistics: {
+    resourceType: 'teamStatistics',
+    ttlMode: 'static',
     staticTTL: TTL.STANDARD, // 1 hour
     useKV: false,
     useR2: false, // D1 is the canonical store for standings (not R2)

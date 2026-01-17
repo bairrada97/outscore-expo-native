@@ -1,3 +1,4 @@
+import type { FixtureStatusShort } from "@outscore/shared-types";
 import { FIXTURE_STATUS } from "@outscore/shared-types";
 
 /**
@@ -32,3 +33,32 @@ export const FIXTURE_PENALTY_SHOOTOUT = "PEN";
 export const FIXTURE_PENALTY = "P";
 export const FIXTURE_BREAK_TIME = "BT";
 export const FIXTURE_INTERRUPTED = "INT";
+
+export const FIXTURE_STATUS_LABELS: Partial<
+	Record<FixtureStatusShort, string>
+> = {
+	HT: "Half Time",
+	BT: "Break",
+	INT: "Interrupted",
+	SUSP: "Suspended",
+	ET: "Extra Time",
+	P: "Penalties",
+	FT: "Full Time",
+	AET: "After Extra Time",
+	PEN: "Penalties",
+	AWD: "Awarded",
+	CANC: "Cancelled",
+	PST: "Postponed",
+	ABD: "Abandoned",
+	WO: "Walkover",
+	TBD: "TBD",
+};
+
+export const FIXTURE_HIDE_SCORE_STATUS: readonly FixtureStatusShort[] = [
+	"INT",
+	"SUSP",
+	"CANC",
+	"PST",
+	"ABD",
+	"WO",
+];

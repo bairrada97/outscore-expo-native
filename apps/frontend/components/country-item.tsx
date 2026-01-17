@@ -4,9 +4,13 @@ import {
 	AccordionTrigger,
 } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
+import { fixtureByIdQuery } from "@/queries/fixture-by-id";
+import { insightsByFixtureIdQuery } from "@/queries/insights-by-fixture-id";
 import { generateFixtureSlug } from "@/utils/fixture-slug";
 import type { FormattedCountry } from "@outscore/shared-types";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "expo-router";
+import { useCallback } from "react";
 import { View } from "react-native";
 import { CardsBlock } from "./cards-block";
 import { CountryDailyMatches } from "./country-daily-matches";
@@ -25,6 +29,16 @@ export function CountryItem({
 	totalMatches,
 	totalLiveMatches,
 }: CountryItemProps) {
+	const queryClient = useQueryClient();
+
+	const prefetchFixture = useCallback(
+		(fixtureId: number) => {
+			queryClient.prefetchQuery(fixtureByIdQuery({ fixtureId }));
+			queryClient.prefetchQuery(insightsByFixtureIdQuery({ fixtureId }));
+		},
+		[queryClient],
+	);
+
 	const leaguesContent = country.leagues.map((league, index) => (
 		<CardsBlock
 			key={`${league.id}-${index}`}
@@ -43,6 +57,7 @@ export function CountryItem({
 					<FixtureCard
 						fixture={match}
 						isLastMatch={matchIndex === league.matches.length - 1}
+						onPressIn={() => prefetchFixture(match.id)}
 					/>
 				</Link>
 			))}

@@ -42,22 +42,25 @@ export function FixtureProgressBar({
 	const progress = calculateProgress(elapsed, status);
 
 	return (
-		<View className="relative h-1 w-full rounded-[22px] bg-m-01-light-01">
+		<View className="relative w-full">
+			{/* Track */}
+			<View className="overflow-hidden relative h-4 w-full rounded-[22px] bg-m-01-light-01">
 			{/* Progress fill */}
-			<View
-				className="h-full rounded-[22px] bg-m-01-light-03"
-				style={{ width: `${progress}%` }}
-			/>
+				<View
+					className="h-full rounded-[22px] bg-linear-to-r from-m-02-dark-01 to-m-02-light-02"
+					style={{ width: `${progress}%` }}
+				/>
+			</View>
 
 			{/* Dots */}
 			{hasDots && (
 				<>
 					{/* Start dot */}
-					<View className="absolute -top-0.5 left-0 h-2 w-2 rounded-full bg-m-02-light-03" />
+					<View className="absolute -top-1/2 left-0 h-8 w-8 rounded-full bg-m-02-light-03" />
 					{/* Middle dot */}
-					<View className="absolute -top-0.5 left-1/2 -translate-x-1/2 h-2 w-2 rounded-full bg-m-02-light-03" />
+					<View className="absolute -top-1/2 left-1/2 h-8 w-8 -translate-x-1/2 rounded-full bg-m-02-light-03" />
 					{/* End dot */}
-					<View className="absolute -top-0.5 right-0 h-2 w-2 rounded-full bg-m-02-light-03" />
+					<View className="absolute -top-1/2 right-0 h-8 w-8 rounded-full bg-m-02-light-03" />
 				</>
 			)}
 		</View>

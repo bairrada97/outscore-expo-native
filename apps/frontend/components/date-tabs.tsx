@@ -1,3 +1,4 @@
+import { useSelectedDate } from "@/context/selected-date-context";
 import { usePrefetchFixtures } from "@/hooks/usePrefetchFixtures";
 import { cn } from "@/lib/utils";
 import { LIVE_BUTTON_LABEL } from "@/utils/constants";
@@ -327,6 +328,7 @@ export function DateTabs() {
 	const layout = useWindowDimensions();
 	const router = useRouter();
 	const params = useGlobalSearchParams<{ date?: string }>();
+	const { setSelectedDate } = useSelectedDate();
 
 	// Prefetch all date tabs in the background for instant tab switching
 	usePrefetchFixtures();
@@ -397,15 +399,21 @@ export function DateTabs() {
 			startTransition(() => {
 				setIndex(newIndex);
 
+				const route = routes[newIndex];
+				if (route) {
+					const selected =
+						route.key === "live" ? formatDateForApi(today) : route.key;
+					setSelectedDate(selected);
+				}
+
 				if (isWeb) {
-					const route = routes[newIndex];
 					if (route) {
 						router.setParams({ date: route.key });
 					}
 				}
 			});
 		},
-		[routes, router, webAnimatedPosition],
+		[routes, router, webAnimatedPosition, setSelectedDate, today],
 	);
 
 	const renderScene = useCallback(
@@ -449,6 +457,13 @@ export function DateTabs() {
 
 	// Get current route for web rendering
 	const currentRoute = routes[index];
+
+	useEffect(() => {
+		const route = routes[index];
+		if (!route) return;
+		const selected = route.key === "live" ? formatDateForApi(today) : route.key;
+		setSelectedDate(selected);
+	}, [index, routes, setSelectedDate, today]);
 
 	// On web, render tab bar and content directly (no pager = no fixed height issues)
 	if (isWeb) {

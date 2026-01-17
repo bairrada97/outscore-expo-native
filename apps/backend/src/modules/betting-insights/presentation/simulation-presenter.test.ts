@@ -7,7 +7,7 @@ describe("simulation-presenter: buildMostProbableOutcome", () => {
 			scenarioType: "MatchOutcome",
 			probabilityDistribution: { home: 33.2, draw: 30.5, away: 36.2 },
 		});
-		expect(text).toContain("Match Outcome: Slight lean:");
+		expect(text).toContain("Slight lean:");
 		expect(text).toContain("Away side");
 	});
 
@@ -16,7 +16,7 @@ describe("simulation-presenter: buildMostProbableOutcome", () => {
 			scenarioType: "MatchOutcome",
 			probabilityDistribution: { home: 55, draw: 25, away: 20 },
 		});
-		expect(text).toContain("Match Outcome:");
+		expect(text).toContain("Home side");
 		expect(text).not.toContain("Slight lean:");
 	});
 

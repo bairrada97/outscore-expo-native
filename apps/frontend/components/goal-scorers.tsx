@@ -1,3 +1,4 @@
+import { EventGoal } from "@/components/ui/SvgIcons";
 import { Text } from "@/components/ui/text";
 import type { FixtureEvent } from "@outscore/shared-types";
 import { View } from "react-native";
@@ -15,22 +16,30 @@ interface GoalInfo {
 	isPenalty: boolean;
 }
 
-function formatGoal(goal: GoalInfo): string {
-	let text = `${goal.playerName} ${goal.minute}'`;
-	if (goal.isOwnGoal) {
-		text += " (OG)";
-	} else if (goal.isPenalty) {
-		text += " (P)";
-	}
-	return text;
+type GroupedGoal = {
+	playerName: string;
+	minutes: number[];
+	suffix: "OG" | "P" | null;
+};
+
+function goalSuffix(goal: GoalInfo): GroupedGoal["suffix"] {
+	if (goal.isOwnGoal) return "OG";
+	if (goal.isPenalty) return "P";
+	return null;
+}
+
+function formatGroupedGoal(goal: GroupedGoal): string {
+	const minutesText = goal.minutes.map((m) => `${m}'`).join(", ");
+	return `${goal.playerName} ${minutesText}${
+		goal.suffix ? ` (${goal.suffix})` : ""
+	}`;
 }
 
 export function GoalScorers({
 	events,
 	homeTeamId,
-	awayTeamId,
+	awayTeamId: _awayTeamId,
 }: GoalScorersProps) {
-	// Filter only goal events
 	const goalEvents = events.filter((event) => event.type === "Goal");
 
 	if (goalEvents.length === 0) {
@@ -69,39 +78,64 @@ export function GoalScorers({
 		}
 	});
 
-	// Sort goals by minute
 	homeGoals.sort((a, b) => a.minute - b.minute);
 	awayGoals.sort((a, b) => a.minute - b.minute);
 
+	function groupGoals(goals: GoalInfo[]): GroupedGoal[] {
+		const map = new Map<string, GroupedGoal>();
+		for (const g of goals) {
+			const suffix = goalSuffix(g);
+			const key = `${g.playerName}__${suffix ?? "NONE"}`;
+			const existing = map.get(key);
+			if (existing) {
+				existing.minutes.push(g.minute);
+			} else {
+				map.set(key, { playerName: g.playerName, minutes: [g.minute], suffix });
+			}
+		}
+		const grouped = Array.from(map.values());
+		grouped.forEach((g) => {
+			g.minutes.sort((a, b) => a - b);
+		});
+		// Keep stable order by earliest minute per player group
+		grouped.sort((a, b) => (a.minutes[0] ?? 0) - (b.minutes[0] ?? 0));
+		return grouped;
+	}
+
+	const homeGrouped = groupGoals(homeGoals);
+	const awayGrouped = groupGoals(awayGoals);
+
 	return (
-		<View className="w-full flex-row items-start justify-center gap-4 px-8 mt-4">
+		<View className="w-full flex-row items-start justify-center gap-6 px-16 mt-6">
 			{/* Home goals */}
 			<View className="flex-1 items-end">
-				{homeGoals.map((goal, index) => (
+				{homeGrouped.map((goal, index) => (
 					<Text
-						key={`home-${index}`}
-						variant="caption-02"
+						key={`home-${goal.playerName}-${goal.suffix ?? "NONE"}-${goal.minutes.join("-")}`}
+						variant="caption-03"
 						className="text-neu-01/80"
 					>
-						{formatGoal(goal)}
+						{formatGroupedGoal(goal)}
+						{index < homeGrouped.length - 1 ? "," : ""}
 					</Text>
 				))}
 			</View>
 
 			{/* Goal icon in center */}
-			<View className="items-center justify-center">
-				{/* <Icon icon={Goal} size={16} className="text-m-01-light-03" /> */}
+			<View className="items-start justify-center">
+				<EventGoal width={16} height={16} color="#BFF37C" />
 			</View>
 
 			{/* Away goals */}
 			<View className="flex-1 items-start">
-				{awayGoals.map((goal, index) => (
+				{awayGrouped.map((goal, index) => (
 					<Text
-						key={`away-${index}`}
-						variant="caption-02"
+						key={`away-${goal.playerName}-${goal.suffix ?? "NONE"}-${goal.minutes.join("-")}`}
+						variant="caption-03"
 						className="text-neu-01/80"
 					>
-						{formatGoal(goal)}
+						{formatGroupedGoal(goal)}
+						{index < awayGrouped.length - 1 ? "," : ""}
 					</Text>
 				))}
 			</View>

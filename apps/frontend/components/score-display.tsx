@@ -4,9 +4,14 @@ import {
 	isLiveStatus,
 	isNotStartedStatus,
 } from "@outscore/shared-types";
+import { differenceInCalendarDays, format } from "date-fns";
 import { View } from "react-native";
 
 import { Text } from "@/components/ui/text";
+import {
+	FIXTURE_HIDE_SCORE_STATUS,
+	FIXTURE_STATUS_LABELS,
+} from "@/utils/fixtures-status-constants";
 
 interface ScoreDisplayProps {
 	homeScore: number | null;
@@ -18,7 +23,25 @@ interface ScoreDisplayProps {
 
 function formatTime(dateString: string): string {
 	const date = new Date(dateString);
-	return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+	// Force 24h display regardless of device locale (e.g. avoid "09 PM")
+	return format(date, "HH:mm");
+}
+
+function formatNotStartedLabel(dateString: string): string {
+	const kickoff = new Date(dateString);
+	const now = new Date();
+	const daysUntil = differenceInCalendarDays(kickoff, now);
+
+	// Today (or already started but still NS): show kickoff time
+	if (daysUntil <= 0) {
+		return formatTime(dateString);
+	}
+
+	if (daysUntil === 1) return "1 day left";
+	if (daysUntil <= 3) return `in ${daysUntil} days`;
+
+	// Beyond 3 days, show the date
+	return format(kickoff, "MMM d");
 }
 
 function getStatusText(
@@ -27,18 +50,20 @@ function getStatusText(
 	date: string,
 ): string {
 	if (isNotStartedStatus(status)) {
-		return formatTime(date);
+		return formatNotStartedLabel(date);
 	}
 
 	if (isLiveStatus(status)) {
-		return elapsed !== null ? `${elapsed}'` : "LIVE";
+		const label = FIXTURE_STATUS_LABELS[status];
+		if (label) return label;
+		return typeof elapsed === "number" ? `${elapsed}'` : "LIVE";
 	}
 
 	if (isFinishedStatus(status)) {
-		return "Fulltime";
+		return FIXTURE_STATUS_LABELS[status] ?? "Full Time";
 	}
 
-	return status;
+	return FIXTURE_STATUS_LABELS[status] ?? status;
 }
 
 export function ScoreDisplay({
@@ -50,21 +75,26 @@ export function ScoreDisplay({
 }: ScoreDisplayProps) {
 	const isNotStarted = isNotStartedStatus(status);
 	const statusText = getStatusText(status, elapsed, date);
+	const hideScore = FIXTURE_HIDE_SCORE_STATUS.includes(status);
 
 	return (
 		<View className="items-center justify-center">
-			{/* Score */}
-			<View className="flex-row items-center gap-8">
-				<Text variant="highlight-02" className="text-neu-01">
-					{isNotStarted ? "-" : (homeScore ?? 0)}
-				</Text>
-				<Text variant="highlight-02" className="text-neu-01">
-					{isNotStarted ? "-" : (awayScore ?? 0)}
-				</Text>
-			</View>
+			{!hideScore && (
+				<View className="flex-row items-center gap-x-32 gap-y-4">
+					<Text variant="highlight-02" className="text-neu-01 text-right">
+						{isNotStarted ? "-" : (homeScore ?? 0)}
+					</Text>
+					<Text variant="highlight-02" className="text-neu-01 text-left">
+						{isNotStarted ? "-" : (awayScore ?? 0)}
+					</Text>
+				</View>
+			)}
 
 			{/* Status text */}
-			<Text variant="body-01" className="mt-1 text-neu-01">
+			<Text
+				variant="body-01"
+				className={hideScore ? "text-neu-01" : "mt-1 text-neu-01"}
+			>
 				{statusText}
 			</Text>
 		</View>

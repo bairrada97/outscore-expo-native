@@ -786,4 +786,3 @@ export async function invalidateInjuriesCache(
     .bind(fixtureId)
     .run();
 }
-

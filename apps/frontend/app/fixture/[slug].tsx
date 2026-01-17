@@ -1,27 +1,175 @@
+import { FixtureEventsBlock } from "@/components/fixture-events-block";
 import { FixtureInfoHeader } from "@/components/fixture-info-header";
+import { InsightsSectionHeader } from "@/components/insights/insights-section-header";
+import { KeyInsightsList } from "@/components/insights/key-insights-list";
+import { MatchFactsGrid } from "@/components/insights/match-facts-grid";
+import { MatchOutcomeCard } from "@/components/insights/match-outcome-card";
+import { Tabs } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/text";
+import { useSelectedDate } from "@/context/selected-date-context";
+import { useTimeZone } from "@/context/timezone-context";
 import {
 	fixtureByIdQuery,
 	getFixtureRefetchInterval,
 } from "@/queries/fixture-by-id";
+import { createFixturesQueryKey } from "@/queries/fixtures-by-date";
 import { insightsByFixtureIdQuery } from "@/queries/insights-by-fixture-id";
 import { FIFTEEN_SECONDS_CACHE } from "@/utils/constants";
+import { getTodayFormatted } from "@/utils/date-utils";
 import { parseFixtureSlug } from "@/utils/fixture-slug";
 import {
 	FIXTURE_IS_FINISHED_STATUS,
 	FIXTURE_IS_LIVE_STATUS,
 } from "@/utils/fixtures-status-constants";
 import { isWeb } from "@/utils/platform";
+import type {
+	Fixture,
+	FixturesResponse,
+	FormattedCountry,
+	FormattedLeague,
+	FormattedMatch,
+} from "@outscore/shared-types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useRef } from "react";
 import { ActivityIndicator, View } from "react-native";
 
+const FIXTURE_TABS = [
+	{ key: "overview", title: "OVERVIEW" },
+	{ key: "insights", title: "INSIGHTS" },
+	{ key: "lineups", title: "LINEUPS" },
+	{ key: "statistics", title: "STATISTICS" },
+	{ key: "h2h", title: "H2H" },
+	{ key: "standings", title: "STANDINGS" },
+] as const;
+
+type FixtureTabKey = (typeof FIXTURE_TABS)[number]["key"];
+
+function normalizeFixtureTab(tabParam: unknown): FixtureTabKey {
+	const raw = typeof tabParam === "string" ? tabParam : undefined;
+	const match = FIXTURE_TABS.find((t) => t.key === raw)?.key;
+	return (match ?? "overview") as FixtureTabKey;
+}
+
+type CachedSummary = {
+	match: FormattedMatch;
+	league: FormattedLeague;
+	country: FormattedCountry;
+};
+
+function findMatchSummaryInFixturesByDateCache(
+	queryClient: ReturnType<typeof useQueryClient>,
+	fixtureId: number,
+	date: string | null,
+	timeZone: string,
+): CachedSummary | null {
+	if (date) {
+		const countries = queryClient.getQueryData<FormattedCountry[]>(
+			createFixturesQueryKey(date, timeZone),
+		);
+
+		if (countries) {
+			for (const country of countries) {
+				for (const league of country.leagues) {
+					const match = league.matches.find((item) => item.id === fixtureId);
+					if (match) return { match, league, country };
+				}
+			}
+		}
+
+		return null;
+	}
+
+	const allQueries = queryClient.getQueriesData<FormattedCountry[]>({
+		queryKey: ["fixtures-by-date"],
+	});
+
+	for (const [, countries] of allQueries) {
+		if (!countries) continue;
+
+		for (const country of countries) {
+			for (const league of country.leagues) {
+				const match = league.matches.find((item) => item.id === fixtureId);
+				if (match) return { match, league, country };
+			}
+		}
+	}
+
+	return null;
+}
+
+function placeholderFixtureResponseFromCache(
+	queryClient: ReturnType<typeof useQueryClient>,
+	fixtureId: number,
+	date: string | null,
+	timeZone: string,
+): FixturesResponse | undefined {
+	const summary = findMatchSummaryInFixturesByDateCache(
+		queryClient,
+		fixtureId,
+		date,
+		timeZone,
+	);
+	if (!summary) return undefined;
+
+	const { match, league, country } = summary;
+
+	const fixture: Fixture = {
+		fixture: {
+			id: match.id,
+			referee: null,
+			timezone: match.timezone,
+			// Include kickoff time to avoid local-midnight parsing (e.g. 01:00 flashes)
+			// match.time is already formatted (HH:mm) in fixtures-by-date.
+			date: `${match.date}T${match.time}:00`,
+			timestamp: match.timestamp,
+			periods: { first: null, second: null },
+			venue: { id: null, name: "", city: "" },
+			status: {
+				long: match.status.long,
+				short: match.status.short,
+				elapsed: match.status.elapsed,
+			},
+		},
+		league: {
+			id: league.id,
+			name: league.name,
+			country: country.name,
+			logo: league.logo,
+			flag: country.flag,
+			season: new Date(match.date).getFullYear(),
+			round: "",
+		},
+		teams: match.teams,
+		goals: match.goals,
+		score: {
+			halftime: { home: null, away: null },
+			fulltime: match.score.fulltime,
+			extratime: { home: null, away: null },
+			penalty: match.score.penalty,
+		},
+		events: [],
+	};
+
+	return {
+		get: "fixtures",
+		parameters: { id: String(fixtureId) },
+		errors: [],
+		results: 1,
+		paging: { current: 1, total: 1 },
+		response: [fixture],
+	};
+}
+
 export default function FixtureDetailScreen() {
-	const { slug } = useLocalSearchParams<{ slug: string }>();
+	const router = useRouter();
+	const { slug, tab } = useLocalSearchParams<{ slug: string; tab?: string }>();
 	const fixtureId = parseFixtureSlug(slug);
 	const queryClient = useQueryClient();
 	const previousStatusRef = useRef<string | null>(null);
+	const { timeZone } = useTimeZone();
+	const { selectedDate } = useSelectedDate();
+	const fallbackDate = selectedDate ?? getTodayFormatted();
 
 	// Callback to detect significant status changes and invalidate query
 	const handleStatusChange = useCallback(
@@ -57,6 +205,15 @@ export default function FixtureDetailScreen() {
 
 	const { data, isLoading, error } = useQuery({
 		...fixtureByIdQuery({ fixtureId }),
+		placeholderData: () =>
+			Number.isFinite(fixtureId)
+				? placeholderFixtureResponseFromCache(
+						queryClient,
+						fixtureId,
+						fallbackDate,
+						timeZone,
+					)
+				: undefined,
 		// Dynamic refetchInterval based on current fixture data
 		refetchInterval: (query) => {
 			const fixtureData = query.state.data;
@@ -86,7 +243,7 @@ export default function FixtureDetailScreen() {
 	} = useQuery({
 		...insightsByFixtureIdQuery({ fixtureId }),
 		// Keep insights refresh cadence aligned with fixture polling
-		refetchInterval: (query) => {
+		refetchInterval: (_query) => {
 			const fixtureData = data;
 			if (!fixtureData) {
 				return FIFTEEN_SECONDS_CACHE + 2000;
@@ -95,7 +252,11 @@ export default function FixtureDetailScreen() {
 		},
 	});
 
-	if (isLoading) {
+	const matchOutcomeSimulation = insightsData?.simulations?.find(
+		(simulation) => simulation.scenarioType === "MatchOutcome",
+	);
+
+	if (isLoading && !data) {
 		return (
 			<>
 				<Stack.Screen options={{ headerShown: false }} />
@@ -117,13 +278,11 @@ export default function FixtureDetailScreen() {
 		);
 	}
 
-	const fixture = data?.response?.[0];
-
-	if (!fixture) {
+	if (!data) {
 		return (
 			<>
 				<Stack.Screen options={{ headerShown: false }} />
-				<View className="flex-1 items-center justify-center bg-neu-02 dark:bg-neu-13">
+				<View className="flex-1 items-center justify-center pt-16 bg-neu-02 dark:bg-neu-13">
 					<Text className="text-neu-07">Fixture not found</Text>
 				</View>
 			</>
@@ -134,7 +293,7 @@ export default function FixtureDetailScreen() {
 		<>
 			<Stack.Screen
 				options={{
-					title: "FIXTURE DETAILS",
+					title: "MATCH INFO",
 					headerShown: true,
 				}}
 			/>
@@ -143,76 +302,149 @@ export default function FixtureDetailScreen() {
 					isWeb ? "bg-neu-02 dark:bg-neu-13" : "flex-1 bg-neu-02 dark:bg-neu-13"
 				}
 			>
-				<FixtureInfoHeader fixture={fixture} />
+				<FixtureInfoHeader fixture={data.response?.[0]} />
 
-				{/* Additional content area */}
-				<View className="p-4">
-					{/* League info */}
-					<Text className="text-neu-07 dark:text-neu-06 mb-4">
-						{fixture.league.name} - {fixture.league.round}
-					</Text>
+				<Tabs
+					activeKey={isWeb ? normalizeFixtureTab(tab) : undefined}
+					defaultKey="overview"
+					swipeEnabled
+					onChangeKey={(key: string) => {
+						if (isWeb) router.setParams({ tab: key });
+					}}
+					tabs={[
+						{
+							key: "overview",
+							title: "OVERVIEW",
+							render: () => (
+								<View className="p-16">
+									<FixtureEventsBlock fixture={data.response?.[0]} />
+								</View>
+							),
+						},
+						{
+							key: "insights",
+							title: "INSIGHTS",
+							render: () => (
+								<View className="p-16 gap-y-8">
+									{isInsightsLoading && (
+										<View className="py-4">
+											<ActivityIndicator />
+										</View>
+									)}
 
-					{/* Fixture status */}
-					<Text className="text-neu-07 dark:text-neu-06">
-						{fixture.fixture.status.long}
-					</Text>
-
-					{/* Fixture date/time */}
-					<Text className="text-neu-06 dark:text-neu-07 mt-2">
-						{new Date(fixture.fixture.date).toLocaleString()}
-					</Text>
-
-					{/* Venue */}
-					{fixture.fixture.venue?.name && (
-						<Text className="text-neu-06 dark:text-neu-07 mt-4">
-							{fixture.fixture.venue.name}
-							{fixture.fixture.venue.city && `, ${fixture.fixture.venue.city}`}
-						</Text>
-					)}
-
-					{/* Insights */}
-					<View className="mt-6">
-						<Text className="text-neu-10 dark:text-neu-06 mb-2">
-							Insights
-						</Text>
-
-						{isInsightsLoading && (
-							<View className="py-4">
-								<ActivityIndicator />
-							</View>
-						)}
-
-						{insightsError && (
-							<Text className="text-red">
-								Insights error: {insightsError.message}
-							</Text>
-						)}
-
-						{insightsData && (
-							<View className="gap-2">
-								{insightsData.overallConfidence && (
-									<Text className="text-neu-06 dark:text-neu-07">
-										Overall confidence: {insightsData.overallConfidence}
-									</Text>
-								)}
-
-								{insightsData.predictions
-									?.filter((p) => p.market === "OVER_UNDER_GOALS")
-									?.sort((a, b) => (a.line ?? 0) - (b.line ?? 0))
-									?.map((p) => (
-										<Text
-											key={`ou-${p.line ?? "na"}`}
-											className="text-neu-06 dark:text-neu-07"
-										>
-											Over/Under {p.line}: O {Math.round((p.probabilities.over ?? 0) * 10) / 10}% / U{" "}
-											{Math.round((p.probabilities.under ?? 0) * 10) / 10}%{" "}
-											{p.confidence ? `(${p.confidence})` : ""}
+									{insightsError && (
+										<Text className="text-red">
+											Insights error: {insightsError.message}
 										</Text>
-									))}
-							</View>
-						)}
-					</View>
-				</View>
+									)}
+
+									{insightsData ? (
+										<View className="gap-y-8">
+											<InsightsSectionHeader title="Match Facts" />
+											<MatchFactsGrid facts={insightsData.matchFacts ?? []} />
+
+											<InsightsSectionHeader title="Key Insights" />
+											<View className="gap-y-24">
+												<KeyInsightsList
+													title={`${insightsData.match.homeTeam} (HOME) INSIGHTS`}
+													insights={(insightsData.keyInsights?.home ?? []).map(
+														(insight) => ({
+															text: insight.text,
+															parts: insight.parts,
+															category: insight.category,
+														}),
+													)}
+												/>
+												<KeyInsightsList
+													title={`${insightsData.match.awayTeam} (AWAY) INSIGHTS`}
+													insights={(insightsData.keyInsights?.away ?? []).map(
+														(insight) => ({
+															text: insight.text,
+															parts: insight.parts,
+															category: insight.category,
+														}),
+													)}
+												/>
+											</View>
+
+											<InsightsSectionHeader title="Match Outcome" />
+											{matchOutcomeSimulation ? (
+												<MatchOutcomeCard
+													homeTeam={insightsData.match.homeTeam}
+													awayTeam={insightsData.match.awayTeam}
+													probabilityDistribution={
+														matchOutcomeSimulation.probabilityDistribution ?? {}
+													}
+													signalStrength={matchOutcomeSimulation.signalStrength}
+													modelReliability={
+														matchOutcomeSimulation.modelReliability
+													}
+													mostProbableOutcome={
+														matchOutcomeSimulation.mostProbableOutcome
+													}
+													insights={matchOutcomeSimulation.insights ?? []}
+												/>
+											) : (
+												<View className="bg-neu-01 dark:bg-neu-11 shadow-sha-01 dark:shadow-sha-06 rounded-lg px-16 py-12">
+													<Text
+														variant="body-02"
+														className="text-neu-07 dark:text-neu-06"
+													>
+														Match outcome signals are not available yet.
+													</Text>
+												</View>
+											)}
+										</View>
+									) : null}
+								</View>
+							),
+						},
+						{
+							key: "lineups",
+							title: "LINEUPS",
+							render: () => (
+								<View className="p-16">
+									<Text className="text-neu-07 dark:text-neu-06">
+										Coming soon
+									</Text>
+								</View>
+							),
+						},
+						{
+							key: "statistics",
+							title: "STATISTICS",
+							render: () => (
+								<View className="p-16">
+									<Text className="text-neu-07 dark:text-neu-06">
+										Coming soon
+									</Text>
+								</View>
+							),
+						},
+						{
+							key: "h2h",
+							title: "H2H",
+							render: () => (
+								<View className="p-16">
+									<Text className="text-neu-07 dark:text-neu-06">
+										Coming soon
+									</Text>
+								</View>
+							),
+						},
+						{
+							key: "standings",
+							title: "STANDINGS",
+							render: () => (
+								<View className="p-16">
+									<Text className="text-neu-07 dark:text-neu-06">
+										Coming soon
+									</Text>
+								</View>
+							),
+						},
+					]}
+				/>
 			</View>
 		</>
 	);

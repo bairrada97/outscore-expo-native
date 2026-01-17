@@ -1,9 +1,9 @@
 import { Hono } from "hono";
 import {
 	botProtection,
+	createCacheAdminRoutes,
 	createCors,
 	createFixturesRoutes,
-	createCacheAdminRoutes,
 	createInsightsRoutes,
 	type FixturesEnv,
 	handleScheduledEvent,
@@ -82,6 +82,22 @@ app.use(
 	}),
 );
 
+app.use(
+	"/teams*",
+	rateLimiter({
+		limit: 60,
+		windowSec: 60,
+	}),
+);
+
+app.use(
+	"/standings*",
+	rateLimiter({
+		limit: 60,
+		windowSec: 60,
+	}),
+);
+
 /**
  * Health check endpoint
  */
@@ -104,7 +120,7 @@ app.get("/metrics", (context) => {
 });
 
 /**
- * Fixtures routes
+ * Fixtures routes (includes /fixtures/injuries)
  */
 app.route("/fixtures", createFixturesRoutes());
 

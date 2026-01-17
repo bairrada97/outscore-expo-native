@@ -171,7 +171,7 @@ const INSIGHT_TEMPLATES: Record<PatternType, InsightTemplate> = {
     emoji: '🔥',
     category: 'SCORING',
     template: (data, teamName) =>
-      `${teamName} is averaging ${data.avgGoalsScored} goals per game (L${data.matchCount})`,
+      `${teamName} have averaged ${data.avgGoalsScored} goals per game in their last ${data.matchCount}.`,
   },
 
   // Defensive weakness
@@ -179,7 +179,7 @@ const INSIGHT_TEMPLATES: Record<PatternType, InsightTemplate> = {
     emoji: '⚠️',
     category: 'DEFENSIVE',
     template: (data, teamName) =>
-      `${teamName} is conceding ${data.avgGoalsConceded} goals per game (L${data.matchCount})`,
+      `${teamName} have conceded ${data.avgGoalsConceded} goals per game in their last ${data.matchCount}.`,
   },
 
   // First half weakness
@@ -305,7 +305,7 @@ const H2H_INSIGHT_TEMPLATES: Record<string, InsightTemplate> = {
     template: (data) =>
       `${data.homeTeamName} vs ${data.awayTeamName} H2H (${data.matchCount}): ` +
       `${data.homeWins}W-${data.draws}D-${data.awayWins}L, ` +
-      `BTTS ${data.bttsRate}%, Over 2.5 ${data.over25Rate}%`,
+      `Over 2.5 ${data.over25Rate}%`,
   },
   H2H_BTTS_STREAK: {
     emoji: '📊',

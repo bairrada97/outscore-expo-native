@@ -1,6 +1,10 @@
+import { fixtureByIdQuery } from "@/queries/fixture-by-id";
+import { insightsByFixtureIdQuery } from "@/queries/insights-by-fixture-id";
 import { generateFixtureSlug } from "@/utils/fixture-slug";
 import type { FormattedCountry, FormattedLeague } from "@outscore/shared-types";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "expo-router";
+import { useCallback, useMemo } from "react";
 import { View } from "react-native";
 import { CardsBlock } from "./cards-block";
 import { FixtureCard } from "./fixture-card";
@@ -10,7 +14,23 @@ interface FavoriteLeaguesListProps {
 	data: FormattedLeague[];
 }
 
+// TODO: Replace with real user preferences from context/store or API
+// Favorite league IDs - temporary dev data
+const DEFAULT_FAVORITE_LEAGUES_ID = [
+	1, 2, 3, 5, 94, 39, 88, 140, 135, 61, 78, 743, 960, 858, 10, 34,
+];
+
 function FavoriteLeaguesList({ data }: FavoriteLeaguesListProps) {
+	const queryClient = useQueryClient();
+
+	const prefetchFixture = useCallback(
+		(fixtureId: number) => {
+			queryClient.prefetchQuery(fixtureByIdQuery({ fixtureId }));
+			queryClient.prefetchQuery(insightsByFixtureIdQuery({ fixtureId }));
+		},
+		[queryClient],
+	);
+
 	return (
 		<View className="px-8">
 			{data.map((league, index) => (
@@ -31,6 +51,7 @@ function FavoriteLeaguesList({ data }: FavoriteLeaguesListProps) {
 							<FixtureCard
 								fixture={match}
 								isLastMatch={matchIndex === league.matches.length - 1}
+								onPressIn={() => prefetchFixture(match.id)}
 							/>
 						</Link>
 					))}
@@ -56,26 +77,26 @@ export function FavoritesFixtureList({
 	favoriteLeaguesID,
 	live = false,
 }: FavoritesFixtureListProps & { favoriteLeaguesID?: number[] }) {
-	// TODO: Replace with real user preferences from context/store or API
-	// Favorite league IDs - temporary dev data
-	const defaultFavoriteLeaguesID = [
-		1, 2, 3, 5, 94, 39, 88, 140, 135, 61, 78, 743, 960, 858, 10, 34,
-	];
-	const favoriteIds = favoriteLeaguesID ?? defaultFavoriteLeaguesID;
+	const favoriteIds = favoriteLeaguesID ?? DEFAULT_FAVORITE_LEAGUES_ID;
 
-	// Flatten all leagues from all countries and filter by favorite IDs
-	const formatFavoriteData: FormattedLeague[] = data
-		.flatMap((country) => country.leagues)
-		.filter((league: FormattedLeague) => favoriteIds.includes(league.id));
+	const formatFavoriteData: FormattedLeague[] = useMemo(() => {
+		// Flatten all leagues from all countries and filter by favorite IDs
+		return data
+			.flatMap((country) => country.leagues)
+			.filter((league: FormattedLeague) => favoriteIds.includes(league.id));
+	}, [data, favoriteIds]);
 
-	// Check if there are any matches in favorite leagues
-	const hasMatches = formatFavoriteData.some(
-		(league) => league.matches.length > 0,
+	const hasMatches = useMemo(
+		() => formatFavoriteData.some((league) => league.matches.length > 0),
+		[formatFavoriteData],
 	);
 
-	// Check if there are any ongoing matches (only relevant for live view)
-	const hasOngoingMatches = formatFavoriteData.some((league) =>
-		league.matches.some((match) => match.status?.elapsed !== null),
+	const hasOngoingMatches = useMemo(
+		() =>
+			formatFavoriteData.some((league) =>
+				league.matches.some((match) => match.status?.elapsed !== null),
+			),
+		[formatFavoriteData],
 	);
 
 	if (formatFavoriteData.length === 0) {
