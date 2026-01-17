@@ -1,3 +1,4 @@
+import { useSelectedDate } from "@/context/selected-date-context";
 import { usePrefetchFixtures } from "@/hooks/usePrefetchFixtures";
 import { cn } from "@/lib/utils";
 import { LIVE_BUTTON_LABEL } from "@/utils/constants";
@@ -23,7 +24,6 @@ import { CalendarButton } from "./calendar-button";
 import { FixturesScreen } from "./fixtures-screen";
 import SvgB021 from "./ui/SvgIcons/B021";
 import { Text } from "./ui/text";
-import { useSelectedDate } from "@/context/selected-date-context";
 
 interface DateRoute {
 	key: string;

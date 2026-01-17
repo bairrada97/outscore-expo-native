@@ -38,24 +38,37 @@ const normalizeLabel = (value?: string) => {
 const titleCase = (value: string) =>
 	value.replace(/\b\w/g, (char) => char.toUpperCase());
 
-const getOutcomeEdgeLabel = ({
-	strength,
-	outcome,
-}: {
-	strength?: string;
-	outcome?: string;
+const getOutcomeEdgeLabel = (probabilityDistribution: {
+	home?: number;
+	draw?: number;
+	away?: number;
 }) => {
-	const normalizedStrength = strength
-		? titleCase(normalizeLabel(strength))
-		: "Balanced";
-	const normalizedOutcome = outcome ? normalizeLabel(outcome) : "outcome";
-	if (normalizedStrength.toLowerCase() === "balanced") {
+	const home = probabilityDistribution.home ?? 0;
+	const draw = probabilityDistribution.draw ?? 0;
+	const away = probabilityDistribution.away ?? 0;
+	const ordered = [
+		{ key: "home", value: home },
+		{ key: "draw", value: draw },
+		{ key: "away", value: away },
+	].sort((a, b) => b.value - a.value);
+	const top = ordered[0];
+	const second = ordered[1];
+	const min = ordered[2];
+	const pick =
+		top.key === "home"
+			? "Favors Home Side"
+			: top.key === "away"
+				? "Favors Away Side"
+				: "Favors Draw";
+
+	const SLIGHT_LEAN_MARGIN_PCT = 5;
+	if (top.value - min.value <= SLIGHT_LEAN_MARGIN_PCT) {
 		return "Balanced outlook";
 	}
-	if (normalizedStrength.toLowerCase() === "weak") {
-		return `Slight lean: ${normalizedOutcome}`;
+	if (top.value - second.value <= SLIGHT_LEAN_MARGIN_PCT) {
+		return `Slight lean: ${pick}`;
 	}
-	return `${normalizedStrength} ${normalizedOutcome}`;
+	return pick;
 };
 
 const isWatchOutInsight = (insight: MatchOutcomeInsight) =>
@@ -86,7 +99,6 @@ export function MatchOutcomeCard({
 	probabilityDistribution,
 	signalStrength,
 	modelReliability,
-	mostProbableOutcome,
 	insights = [],
 }: MatchOutcomeCardProps) {
 	const homeValue = probabilityDistribution.home ?? 0;
@@ -113,10 +125,7 @@ export function MatchOutcomeCard({
 
 			<View className="gap-y-8">
 				<Text variant="highlight-02" className="text-neu-10 dark:text-neu-01">
-					{getOutcomeEdgeLabel({
-						strength: signalStrength,
-						outcome: mostProbableOutcome,
-					})}
+					{getOutcomeEdgeLabel(probabilityDistribution)}
 				</Text>
 
 				<View className="flex-row items-center gap-8">
@@ -149,7 +158,7 @@ export function MatchOutcomeCard({
 							Home
 						</Text>
 						<Text
-							variant="highlight-03"
+							variant={homeValue === maxSide ? "highlight-02" : "highlight-03"}
 							className={`${
 								homeValue === maxSide
 									? "text-m-01"
@@ -167,7 +176,7 @@ export function MatchOutcomeCard({
 							Draw
 						</Text>
 						<Text
-							variant="highlight-03"
+							variant={drawValue === maxSide ? "highlight-02" : "highlight-03"}
 							className={`${
 								drawValue === maxSide
 									? "text-m-01"
@@ -185,7 +194,7 @@ export function MatchOutcomeCard({
 							Away
 						</Text>
 						<Text
-							variant="highlight-02"
+							variant={awayValue === maxSide ? "highlight-02" : "highlight-03"}
 							className={`${
 								awayValue === maxSide
 									? "text-m-01"
@@ -200,15 +209,27 @@ export function MatchOutcomeCard({
 				<View className="h-8 bg-neu-03 dark:bg-neu-12 rounded-full overflow-hidden flex-row">
 					<View
 						style={{ flexGrow: homeValue / total }}
-						className="bg-neu-05 dark:bg-neu-10"
+						className={
+							homeValue === maxSide
+								? "bg-m-01-light-02 dark:bg-m-01-light-03"
+								: "bg-neu-05 dark:bg-neu-10"
+						}
 					/>
 					<View
 						style={{ flexGrow: drawValue / total }}
-						className="bg-neu-04 dark:bg-neu-09"
+						className={
+							drawValue === maxSide
+								? "bg-m-01-light-02 dark:bg-m-01-light-03"
+								: "bg-neu-04 dark:bg-neu-09"
+						}
 					/>
 					<View
 						style={{ flexGrow: awayValue / total }}
-						className="bg-m-01-light-02 dark:bg-m-01-light-03"
+						className={
+							awayValue === maxSide
+								? "bg-m-01-light-02 dark:bg-m-01-light-03"
+								: "bg-neu-05 dark:bg-neu-10"
+						}
 					/>
 				</View>
 			</View>

@@ -1,9 +1,10 @@
 import { Text } from "@/components/ui/text";
 import { cn } from "@/lib/utils";
+import { isWeb } from "@/utils/platform";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
-import { type SceneRendererProps, TabView } from "react-native-tab-view";
+import { TabView, type SceneRendererProps } from "react-native-tab-view";
 
 function clamp(n: number, min: number, max: number) {
 	return Math.max(min, Math.min(max, n));
@@ -14,6 +15,8 @@ export type TabsItem = {
 	title: string;
 	render: () => ReactNode;
 };
+
+const MIN_TAB_WIDTH_PX = 94;
 
 export interface TabsProps {
 	tabs: TabsItem[];
@@ -31,7 +34,7 @@ export function Tabs({
 	activeKey,
 	onChangeKey,
 	swipeEnabled = true,
-	minTabWidthPx = 110,
+	minTabWidthPx = MIN_TAB_WIDTH_PX,
 	containerClassName,
 }: TabsProps) {
 	const firstKey = tabs[0]?.key;
@@ -77,24 +80,27 @@ export function Tabs({
 	);
 	const [index, setIndex] = useState(selectedIndex);
 
-	// Keep TabView in sync when selection is controlled externally
+	// Keep TabView + header in sync when selection is controlled externally
 	useEffect(() => {
 		setIndex(selectedIndex);
 		scrollToActiveTab(selectedIndex);
 	}, [scrollToActiveTab, selectedIndex]);
 
-	function setKey(nextKey: string) {
-		if (!activeKey) setInternalKey(nextKey);
-		onChangeKey?.(nextKey);
-		const nextIndex = tabs.findIndex((t) => t.key === nextKey);
-		if (nextIndex >= 0) {
-			setIndex(nextIndex);
-			scrollToActiveTab(nextIndex);
-		}
-	}
+	const setKey = useCallback(
+		(nextKey: string) => {
+			if (!activeKey) setInternalKey(nextKey);
+			onChangeKey?.(nextKey);
+			const nextIndex = tabs.findIndex((t) => t.key === nextKey);
+			if (nextIndex >= 0) {
+				setIndex(nextIndex);
+				scrollToActiveTab(nextIndex);
+			}
+		},
+		[activeKey, onChangeKey, scrollToActiveTab, tabs],
+	);
 
-	const renderScene = useMemo(() => {
-		return ({ route }: SceneRendererProps & { route: { key: string } }) => {
+	const renderScene = useCallback(
+		({ route }: SceneRendererProps & { route: { key: string } }) => {
 			const tab = tabs.find((t) => t.key === route.key);
 			return (
 				<ScrollView
@@ -107,26 +113,24 @@ export function Tabs({
 					{tab?.render()}
 				</ScrollView>
 			);
-		};
-	}, [tabs]);
+		},
+		[tabs],
+	);
 
 	return (
-		<View className={cn("w-full flex-1", containerClassName)}>
+		<View className={cn("w-full", containerClassName, isWeb ? "" : "flex-1")}>
 			{/* Tab bar */}
 			<View
 				className="h-40 shadow-sha-01 bg-neu-01 dark:bg-neu-11"
 				onLayout={(e) => setTabBarWidth(e.nativeEvent.layout.width)}
 			>
 				{shouldFit ? (
-					<View className="flex-row h-40">
+					// Fit mode: equal widths, fill container (no scroll)
+					<View className="flex-row h-40 w-full">
 						{tabs.map((tab) => {
 							const isActive = tab.key === selectedKey;
 							return (
-								<View
-									key={tab.key}
-									className="h-40 flex-1"
-									style={{ minWidth: minTabWidthPx }}
-								>
+								<View key={tab.key} className="h-40 flex-1">
 									<Pressable
 										onPress={() => setKey(tab.key)}
 										className={cn(
@@ -136,11 +140,8 @@ export function Tabs({
 									>
 										<Text
 											variant="body-02--semi"
-											numberOfLines={1}
-											ellipsizeMode="tail"
-											style={{ width: "100%", flexShrink: 1 }}
 											className={cn(
-												"uppercase text-center",
+												"uppercase",
 												isActive
 													? "text-m-01 dark:text-m-01-light-04"
 													: "text-neu-09",
@@ -149,13 +150,7 @@ export function Tabs({
 											{tab.title}
 										</Text>
 										{isActive && (
-											<View
-												className="absolute bottom-0 left-8 right-8 h-1 bg-linear-to-r from-m-02 to-m-01-light-01"
-												style={{
-													borderTopLeftRadius: 26,
-													borderTopRightRadius: 42,
-												}}
-											/>
+											<View className="absolute bottom-0 left-8 right-8 h-1 bg-linear-to-r from-m-02 to-m-01-light-01 rounded-[26px_42px_0_0]" />
 										)}
 									</Pressable>
 								</View>
@@ -163,6 +158,7 @@ export function Tabs({
 						})}
 					</View>
 				) : (
+					// Overflow mode: lock to min width and enable horizontal scroll
 					<ScrollView
 						ref={scrollRef}
 						horizontal
@@ -186,11 +182,8 @@ export function Tabs({
 										>
 											<Text
 												variant="body-02--semi"
-												numberOfLines={1}
-												ellipsizeMode="tail"
-												style={{ width: "100%", flexShrink: 1 }}
 												className={cn(
-													"uppercase text-center",
+													"uppercase",
 													isActive
 														? "text-m-01 dark:text-m-01-light-04"
 														: "text-neu-09",
@@ -199,13 +192,7 @@ export function Tabs({
 												{tab.title}
 											</Text>
 											{isActive && (
-												<View
-													className="absolute bottom-0 left-8 right-8 h-1 bg-linear-to-r from-m-02 to-m-01-light-01"
-													style={{
-														borderTopLeftRadius: 26,
-														borderTopRightRadius: 42,
-													}}
-												/>
+												<View className="absolute bottom-0 left-8 right-8 h-1 bg-linear-to-r from-m-02 to-m-01-light-01 rounded-[26px_42px_0_0]" />
 											)}
 										</Pressable>
 									</View>
@@ -217,23 +204,27 @@ export function Tabs({
 			</View>
 
 			{/* Panels */}
-			<View className="flex-1">
-				<TabView
-					navigationState={{ index, routes }}
-					renderScene={renderScene}
-					onIndexChange={(newIndex) => {
-						setIndex(newIndex);
-						const nextKey = tabs[newIndex]?.key;
-						if (nextKey) {
-							if (!activeKey) setInternalKey(nextKey);
-							onChangeKey?.(nextKey);
-						}
-					}}
-					renderTabBar={() => null}
-					swipeEnabled={swipeEnabled}
-					style={{ flex: 1 }}
-				/>
-			</View>
+			{isWeb ? (
+				<View>{tabs[selectedIndex]?.render?.()}</View>
+			) : (
+				<View className="flex-1">
+					<TabView
+						navigationState={{ index, routes }}
+						renderScene={renderScene}
+						onIndexChange={(newIndex) => {
+							setIndex(newIndex);
+							const nextKey = tabs[newIndex]?.key;
+							if (nextKey) {
+								if (!activeKey) setInternalKey(nextKey);
+								onChangeKey?.(nextKey);
+							}
+						}}
+						renderTabBar={() => null}
+						swipeEnabled={swipeEnabled}
+						style={{ flex: 1 }}
+					/>
+				</View>
+			)}
 		</View>
 	);
 }
