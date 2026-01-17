@@ -53,6 +53,7 @@ import {
 	type Pattern,
 } from "../patterns/team-patterns";
 import { enrichInsights } from "../presentation/insight-enricher";
+import { attachInsightPartsToList } from "../presentation/insight-parts";
 import { buildKeyInsights } from "../presentation/key-insights-builder";
 import { buildMatchFacts } from "../presentation/match-facts-builder";
 import { buildModelReliabilityBreakdown } from "../presentation/simulation-presenter";
@@ -158,12 +159,7 @@ export interface InsightsServiceResult {
 /**
  * Extended Fixture type with optional lineups (available in fixture detail responses)
  */
-interface FixtureWithLineups extends Fixture {
-	lineups?: Array<{
-		team: { id: number; name: string; logo: string };
-		formation: string | null;
-	}>;
-}
+type FixtureWithLineups = Fixture;
 
 interface RawTeamStats {
 	team: { id: number; name: string };
@@ -633,15 +629,18 @@ export const insightsService = {
 
 			const enrichedHomeInsights = enrichInsights(homeInsights, {
 				team: homeTeamContext,
-				match: matchContext,
 			});
 			const enrichedAwayInsights = enrichInsights(awayInsights, {
 				team: awayTeamContext,
-				match: matchContext,
 			});
-			const enrichedH2HInsights = enrichInsights(h2hInsights, {
-				match: matchContext,
-			});
+			const enrichedH2HInsights = enrichInsights(h2hInsights, {});
+
+			const homeInsightsWithParts =
+				attachInsightPartsToList(enrichedHomeInsights);
+			const awayInsightsWithParts =
+				attachInsightPartsToList(enrichedAwayInsights);
+			const h2hInsightsWithParts =
+				attachInsightPartsToList(enrichedH2HInsights);
 
 			const matchFacts = buildMatchFacts({
 				homeTeam: homeTeamData,
@@ -654,8 +653,8 @@ export const insightsService = {
 			});
 
 			const keyInsights = buildKeyInsights({
-				homeInsights: enrichedHomeInsights,
-				awayInsights: enrichedAwayInsights,
+				homeInsights: homeInsightsWithParts,
+				awayInsights: awayInsightsWithParts,
 				homeContext: homeTeamContext,
 				awayContext: awayTeamContext,
 				homeTeam: homeTeamData,
@@ -663,6 +662,11 @@ export const insightsService = {
 				leagueName: fixture.league.name,
 				standingsRows: standings?.rows ?? null,
 			});
+
+			const keyInsightsWithParts = {
+				home: attachInsightPartsToList(keyInsights.home),
+				away: attachInsightPartsToList(keyInsights.away),
+			};
 
 			const simulationsWithReliability = simulations.map((sim) => ({
 				...sim,
@@ -710,11 +714,11 @@ export const insightsService = {
 				awayTeamContext,
 				matchContext,
 				simulations: simulationsWithReliability,
-				homeInsights: enrichedHomeInsights,
-				awayInsights: enrichedAwayInsights,
-				h2hInsights: enrichedH2HInsights,
+				homeInsights: homeInsightsWithParts,
+				awayInsights: awayInsightsWithParts,
+				h2hInsights: h2hInsightsWithParts,
 				matchFacts,
-				keyInsights,
+				keyInsights: keyInsightsWithParts,
 				dataQuality,
 				overallConfidence,
 				generatedAt,

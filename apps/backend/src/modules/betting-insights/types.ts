@@ -416,6 +416,11 @@ export interface Adjustment {
 export interface Insight {
   /** Human-readable insight text */
   text: string;
+  /**
+   * Optional segmented text parts for rich rendering (e.g. bold numbers).
+   * When present, UI should render `parts` instead of `text`.
+   */
+  parts?: Array<{ text: string; bold?: boolean }>;
   /** Emoji for visual indication */
   emoji: string;
   /** Priority for sorting (higher = more important, 0-100) */

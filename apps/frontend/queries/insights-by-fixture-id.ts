@@ -23,9 +23,24 @@ export type BettingInsightsResponse = {
     insights?: Array<{ text: string }>;
     mostProbableOutcome?: string;
   }>;
-  homeInsights?: Array<{ text: string; category?: string; severity?: string }>;
-  awayInsights?: Array<{ text: string; category?: string; severity?: string }>;
-  h2hInsights?: Array<{ text: string; category?: string; severity?: string }>;
+  homeInsights?: Array<{
+    text: string;
+    parts?: Array<{ text: string; bold?: boolean }>;
+    category?: string;
+    severity?: string;
+  }>;
+  awayInsights?: Array<{
+    text: string;
+    parts?: Array<{ text: string; bold?: boolean }>;
+    category?: string;
+    severity?: string;
+  }>;
+  h2hInsights?: Array<{
+    text: string;
+    parts?: Array<{ text: string; bold?: boolean }>;
+    category?: string;
+    severity?: string;
+  }>;
   matchFacts?: Array<{
     id: string;
     title: string;
@@ -35,8 +50,18 @@ export type BettingInsightsResponse = {
     icon?: string;
   }>;
   keyInsights?: {
-    home: Array<{ text: string; category?: string; severity?: string }>;
-    away: Array<{ text: string; category?: string; severity?: string }>;
+    home: Array<{
+      text: string;
+      parts?: Array<{ text: string; bold?: boolean }>;
+      category?: string;
+      severity?: string;
+    }>;
+    away: Array<{
+      text: string;
+      parts?: Array<{ text: string; bold?: boolean }>;
+      category?: string;
+      severity?: string;
+    }>;
   };
   overallConfidence?: "HIGH" | "MEDIUM" | "LOW";
   generatedAt?: string;

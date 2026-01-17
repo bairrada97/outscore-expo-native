@@ -345,6 +345,7 @@ export default function FixtureDetailScreen() {
 													insights={(insightsData.keyInsights?.home ?? []).map(
 														(insight) => ({
 															text: insight.text,
+															parts: insight.parts,
 															category: insight.category,
 														}),
 													)}
@@ -354,6 +355,7 @@ export default function FixtureDetailScreen() {
 													insights={(insightsData.keyInsights?.away ?? []).map(
 														(insight) => ({
 															text: insight.text,
+															parts: insight.parts,
 															category: insight.category,
 														}),
 													)}

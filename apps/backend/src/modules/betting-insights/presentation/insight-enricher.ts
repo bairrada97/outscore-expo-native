@@ -37,16 +37,6 @@ export function enrichInsights(
         "This can be influenced by late-starter DNA, meaning key moments tend to come later.";
     }
 
-    // Mood vs Mind conflicts
-    if (!extra && team?.mood?.isSleepingGiant) {
-      extra =
-        "Mood vs Mind gap suggests current form may understate baseline quality and confidence.";
-    }
-    if (!extra && team?.mood?.isOverPerformer) {
-      extra =
-        "Over-performance signals can regress as fixtures normalize and variance evens out.";
-    }
-
     // Match context
     if (!extra && match?.isDerby) {
       extra =

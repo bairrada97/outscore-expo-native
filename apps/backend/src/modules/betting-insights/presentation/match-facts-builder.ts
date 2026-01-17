@@ -16,6 +16,10 @@ type FactCandidate = {
 const MAX_FACTS = 6;
 const H2H_MIN_SAMPLE = 3;
 
+function formatPair(left: string, right: string): string {
+  return `${left} | ${right}`;
+}
+
 function formatPercent(value: number): string {
   const rounded = Math.round(value * 10) / 10;
   return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
@@ -87,10 +91,10 @@ function buildAvgGoalsScoredFact(home: TeamData, away: TeamData): FactCard | nul
   return {
     id: "avg_goals_scored_season_each",
     title: "Avg Scored",
-    value: `H ${formatFixed(home.stats.avgGoalsScored, 1)} / A ${formatFixed(
-      away.stats.avgGoalsScored,
-      1,
-    )}`,
+    value: formatPair(
+      formatFixed(home.stats.avgGoalsScored, 1),
+      formatFixed(away.stats.avgGoalsScored, 1),
+    ),
     subtitle: "Season",
     side: "BOTH",
   };
@@ -100,10 +104,10 @@ function buildAvgGoalsConcededFact(home: TeamData, away: TeamData): FactCard | n
   return {
     id: "avg_goals_conceded_season_each",
     title: "Avg Conceded",
-    value: `H ${formatFixed(home.stats.avgGoalsConceded, 1)} / A ${formatFixed(
-      away.stats.avgGoalsConceded,
-      1,
-    )}`,
+    value: formatPair(
+      formatFixed(home.stats.avgGoalsConceded, 1),
+      formatFixed(away.stats.avgGoalsConceded, 1),
+    ),
     subtitle: "Season",
     side: "BOTH",
   };
@@ -115,7 +119,7 @@ function buildAvgTotalGoalsFact(home: TeamData, away: TeamData): FactCard | null
   return {
     id: "avg_total_goals_season_each",
     title: "Avg Total Goals",
-    value: `H ${formatFixed(homeTotal, 1)} / A ${formatFixed(awayTotal, 1)}`,
+    value: formatPair(formatFixed(homeTotal, 1), formatFixed(awayTotal, 1)),
     subtitle: "Season",
     side: "BOTH",
   };
@@ -144,7 +148,7 @@ function buildLeaguePositionFact(
   return {
     id: "league_position_gap",
     title: "League Position",
-    value: `H ${homeContext.leaguePosition} / A ${awayContext.leaguePosition}`,
+    value: formatPair(`${homeContext.leaguePosition}`, `${awayContext.leaguePosition}`),
     subtitle: "Standings",
     side: "BOTH",
     icon: "#",
@@ -156,7 +160,7 @@ function buildInjuriesAbsencesFact(injuries: FixtureInjuries | null | undefined)
   return {
     id: "injury_absences_total_each",
     title: "Injuries",
-    value: `H ${injuries.homeInjuries.length} / A ${injuries.awayInjuries.length}`,
+    value: formatPair(`${injuries.homeInjuries.length}`, `${injuries.awayInjuries.length}`),
     subtitle: "Fixture absences",
     side: "BOTH",
   };
@@ -169,9 +173,10 @@ function buildCleanSheetFact(
   return {
     id: "clean_sheets_season_each",
     title: "Clean Sheets",
-    value: `H ${formatPercent(homeContext.dna.cleanSheetPercentage)} / A ${formatPercent(
-      awayContext.dna.cleanSheetPercentage,
-    )}`,
+    value: formatPair(
+      formatPercent(homeContext.dna.cleanSheetPercentage),
+      formatPercent(awayContext.dna.cleanSheetPercentage),
+    ),
     subtitle: "Season rate",
     side: "BOTH",
   };
@@ -181,7 +186,7 @@ function buildRestDaysFact(homeContext: TeamContext, awayContext: TeamContext): 
   return {
     id: "rest_days_each",
     title: "Rest Days",
-    value: `H ${homeContext.daysSinceLastMatch} / A ${awayContext.daysSinceLastMatch}`,
+    value: formatPair(`${homeContext.daysSinceLastMatch}`, `${awayContext.daysSinceLastMatch}`),
     subtitle: "Since last match",
     side: "BOTH",
   };
@@ -197,9 +202,10 @@ function buildMotivationFact(
   return {
     id: "motivation_each",
     title: "Motivation",
-    value: `H ${formatLabel(homeContext.motivation)} / A ${formatLabel(
-      awayContext.motivation,
-    )}`,
+    value: formatPair(
+      formatLabel(homeContext.motivation),
+      formatLabel(awayContext.motivation),
+    ),
     subtitle: "Season stakes",
     side: "BOTH",
   };
@@ -212,9 +218,10 @@ function buildLateStarterFact(
   return {
     id: "late_starter_each",
     title: "Late Starters",
-    value: `H ${homeContext.dna.isLateStarter ? "Yes" : "No"} / A ${
-      awayContext.dna.isLateStarter ? "Yes" : "No"
-    }`,
+    value: formatPair(
+      homeContext.dna.isLateStarter ? "Yes" : "No",
+      awayContext.dna.isLateStarter ? "Yes" : "No",
+    ),
     subtitle: "First 15 mins scoring",
     side: "BOTH",
   };
@@ -227,7 +234,7 @@ function buildOverallFormFact(
   return {
     id: "overall_form_each",
     title: "Recent Form",
-    value: `H ${homeContext.form || "—"} / A ${awayContext.form || "—"}`,
+    value: formatPair(homeContext.form || "—", awayContext.form || "—"),
     subtitle: "Overall last 5",
     side: "BOTH",
   };

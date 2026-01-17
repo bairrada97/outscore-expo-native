@@ -3,6 +3,7 @@ import { View } from "react-native";
 
 export type InsightItem = {
 	text: string;
+	parts?: Array<{ text: string; bold?: boolean }>;
 	category?: string;
 	emoji?: string;
 };
@@ -29,7 +30,18 @@ export function InsightRow({ insight }: InsightRowProps) {
 						variant="body-02"
 						className="text-neu-10 dark:text-neu-01 flex-1"
 					>
-						{insight.text}
+						{insight.parts && insight.parts.length > 0
+							? insight.parts.map((part, idx) => (
+									<Text
+										// eslint-disable-next-line react/no-array-index-key
+										key={`${idx}-${part.text}`}
+										variant={part.bold ? "body-02--semi" : "body-02"}
+										className="text-neu-10 dark:text-neu-01"
+									>
+										{part.text}
+									</Text>
+								))
+							: insight.text}
 					</Text>
 				</View>
 

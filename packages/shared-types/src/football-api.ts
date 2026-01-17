@@ -28,6 +28,52 @@ export interface FixtureEvent {
   comments: string | null;
 }
 
+export interface FixtureLineupTeamColors {
+  player?: {
+    primary?: string; // hex without '#', e.g. "187312"
+    number?: string;
+    border?: string;
+  };
+  goalkeeper?: {
+    primary?: string; // hex without '#'
+    number?: string;
+    border?: string;
+  };
+}
+
+export interface FixtureLineup {
+  team: {
+    id: number;
+    name: string;
+    logo: string;
+    colors?: FixtureLineupTeamColors;
+  };
+  formation: string | null;
+  startXI: Array<{
+    player: {
+      id: number;
+      name: string;
+      number: number;
+      pos: string;
+      grid: string | null;
+    };
+  }>;
+  substitutes: Array<{
+    player: {
+      id: number;
+      name: string;
+      number: number;
+      pos: string;
+      grid: string | null;
+    };
+  }>;
+  coach?: {
+    id: number;
+    name: string;
+    photo: string;
+  };
+}
+
 export interface Fixture {
   fixture: {
     id: number;
@@ -96,6 +142,7 @@ export interface Fixture {
     };
   };
   events?: FixtureEvent[];
+  lineups?: FixtureLineup[];
 }
 
 export interface FixturesResponse {
