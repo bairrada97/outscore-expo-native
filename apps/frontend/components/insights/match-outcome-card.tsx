@@ -309,7 +309,7 @@ export function MatchOutcomeCard({
 							</View>
 						</AccordionTrigger>
 						<AccordionContent className="pt-8">
-							<View className="gap-y-12">
+							<View className="gap-y-16">
 								<View className="gap-y-8">
 									<Text
 										variant="title-02"
