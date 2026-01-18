@@ -226,37 +226,6 @@ interface RawMatchData {
 	}>;
 }
 
-interface RawFixtureStatisticsEntry {
-	team: {
-		id: number;
-		name: string;
-	};
-	statistics: Array<{
-		type: string;
-		value: number | string | null;
-	}>;
-}
-
-function parseStatValue(
-	value: number | string | null | undefined,
-): number | null {
-	if (value === null || value === undefined) return null;
-	if (typeof value === "number") return Number.isFinite(value) ? value : null;
-	const trimmed = String(value).replace("%", "").trim();
-	const parsed = Number(trimmed);
-	return Number.isFinite(parsed) ? parsed : null;
-}
-
-function getStatisticValue(
-	entry: RawFixtureStatisticsEntry,
-	key: string,
-): number | null {
-	const match = entry.statistics.find(
-		(stat) => stat.type.toLowerCase() === key.toLowerCase(),
-	);
-	return match ? parseStatValue(match.value) : null;
-}
-
 /**
  * Raw standings data from API-Football /standings endpoint
  */
@@ -900,63 +869,10 @@ export const insightsService = {
 				.filter((m) => m.fixture.status.short === "FT") // Only finished matches
 				.map((m) => this.convertToProcessedMatch(m, teamId));
 
-			// Fetch expected_goals/goals_prevented for a small recent subset.
-			const statsLimit = Math.min(10, matches.length);
-			await Promise.all(
-				matches.slice(0, statsLimit).map(async (match) => {
-					const stats = await this.fetchFixtureStatistics(match.id, env);
-					if (!stats || stats.length === 0) return;
-					const entry = stats.find((s) => s.team.id === teamId);
-					if (!entry) return;
-					match.expectedGoals =
-						getStatisticValue(entry, "expected_goals") ?? undefined;
-					match.goalsPrevented =
-						getStatisticValue(entry, "goals_prevented") ?? undefined;
-				}),
-			);
-
 			return matches;
 		} catch (error) {
 			console.warn(
 				`⚠️ [Insights] Error fetching matches for team ${teamId}:`,
-				error,
-			);
-			return [];
-		}
-	},
-
-	/**
-	 * Fetch fixture statistics (expected_goals / goals_prevented) for a match
-	 */
-	async fetchFixtureStatistics(
-		fixtureId: number,
-		env: InsightsEnv,
-	): Promise<RawFixtureStatisticsEntry[]> {
-		const url = new URL(`${env.FOOTBALL_API_URL}/fixtures/statistics`);
-		url.searchParams.append("fixture", fixtureId.toString());
-
-		try {
-			const response = await fetch(url.toString(), {
-				headers: {
-					"x-rapidapi-host": "api-football-v1.p.rapidapi.com",
-					"x-rapidapi-key": env.RAPIDAPI_KEY,
-				},
-			});
-
-			if (!response.ok) {
-				console.warn(
-					`⚠️ [Insights] Failed to fetch statistics for fixture ${fixtureId}`,
-				);
-				return [];
-			}
-
-			const data = (await response.json()) as {
-				response: RawFixtureStatisticsEntry[];
-			};
-			return data.response ?? [];
-		} catch (error) {
-			console.warn(
-				`⚠️ [Insights] Error fetching statistics for fixture ${fixtureId}:`,
 				error,
 			);
 			return [];
@@ -1762,6 +1678,7 @@ export const insightsService = {
 			context,
 			homeTeam,
 			awayTeam,
+			h2h,
 			homeInjuryImpact: homeImpact,
 			awayInjuryImpact: awayImpact,
 		});

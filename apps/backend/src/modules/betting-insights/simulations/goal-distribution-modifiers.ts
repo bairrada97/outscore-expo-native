@@ -1,6 +1,7 @@
 import type { MatchContext } from "../match-context/context-adjustments";
-import type { TeamData } from "../types";
+import type { H2HData, TeamData } from "../types";
 import { calculateFormScore } from "../utils/form-score";
+import { calculateH2HScore } from "../utils/h2h-score";
 import { clamp } from "../utils/helpers";
 import { calculateHomeAdvantageScore } from "../utils/home-advantage";
 import type { InjuryImpactAssessment } from "../utils/injury-adjustments";
@@ -28,10 +29,20 @@ const MIN_MULTIPLIER = 0.85;
 const MAX_MULTIPLIER = 1.15;
 const MAX_BALANCE_SHIFT = 0.08; // max +/-8% shift in scoring balance
 
+const MATCH_RESULT_WEIGHTS = {
+	recentForm: 0.3,
+	h2h: 0.25,
+	homeAdvantage: 0.2,
+	motivation: 0.18,
+	rest: 0.12,
+	leaguePosition: 0.1,
+} as const;
+
 export function buildGoalDistributionModifiers(params: {
 	context?: MatchContext;
 	homeTeam?: TeamData;
 	awayTeam?: TeamData;
+	h2h?: H2HData;
 	homeInjuryImpact?: InjuryImpactAssessment | null;
 	awayInjuryImpact?: InjuryImpactAssessment | null;
 }): GoalDistributionModifiers {
@@ -43,7 +54,7 @@ export function buildGoalDistributionModifiers(params: {
 		params.homeInjuryImpact,
 		params.awayInjuryImpact,
 	);
-	applyBalanceShift(modifiers, params.homeTeam, params.awayTeam);
+	applyBalanceShift(modifiers, params.homeTeam, params.awayTeam, params.h2h);
 
 	return clampModifiers(modifiers);
 }
@@ -81,7 +92,8 @@ function applyInjuryImpact(
 	if (adjustmentValue === 0) return;
 
 	const attackMult = 1 + (adjustmentValue / 100) * 0.25;
-	const defensePenalty = 1 + (Math.abs(adjustmentValue) / 100) * 0.2;
+	// Negative adjustment means weaker (more goals conceded), positive means stronger.
+	const defensePenalty = 1 - (adjustmentValue / 100) * 0.2;
 
 	if (side === "home") {
 		modifiers.attackHomeMult *= attackMult;
@@ -96,25 +108,32 @@ function applyBalanceShift(
 	modifiers: GoalDistributionModifiers,
 	homeTeam?: TeamData,
 	awayTeam?: TeamData,
+	h2h?: H2HData,
 ): void {
 	if (!homeTeam || !awayTeam) return;
 
 	const formScore = calculateFormScore(homeTeam, awayTeam);
+	const h2hScore = calculateH2HScore(h2h);
 	const homeAdvantageScore = calculateHomeAdvantageScore(homeTeam, awayTeam);
 	const motivationScore = calculateMotivationScore(homeTeam, awayTeam);
 	const restScore = calculateRestScore(homeTeam, awayTeam);
 	const positionScore = calculatePositionScore(homeTeam, awayTeam);
 
 	// Weighted home advantage signal (-100..100-ish)
+	const weightSum = Object.values(MATCH_RESULT_WEIGHTS).reduce(
+		(sum, w) => sum + w,
+		0,
+	);
 	const weightedScore =
-		formScore * 0.3 +
-		homeAdvantageScore * 0.2 +
-		motivationScore * 0.18 +
-		restScore * 0.12 +
-		positionScore * 0.1;
+		formScore * MATCH_RESULT_WEIGHTS.recentForm +
+		h2hScore * MATCH_RESULT_WEIGHTS.h2h +
+		homeAdvantageScore * MATCH_RESULT_WEIGHTS.homeAdvantage +
+		motivationScore * MATCH_RESULT_WEIGHTS.motivation +
+		restScore * MATCH_RESULT_WEIGHTS.rest +
+		positionScore * MATCH_RESULT_WEIGHTS.leaguePosition;
 
 	// Convert to small balance shift without changing total goals
-	const normalized = clamp(weightedScore / 100, -1, 1);
+	const normalized = clamp(weightedScore / (weightSum * 100), -1, 1);
 	const balanceShift = clamp(
 		normalized * MAX_BALANCE_SHIFT,
 		-MAX_BALANCE_SHIFT,

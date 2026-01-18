@@ -191,7 +191,7 @@ export function GoalAnalysisCard({
 	bttsSimulation,
 }: GoalAnalysisCardProps) {
 	const [activeKey, setActiveKey] = useState<"over_under" | "btts">(
-		bttsSimulation ? "over_under" : "over_under",
+		"over_under",
 	);
 
 	const activeOverUnder = useMemo(() => {

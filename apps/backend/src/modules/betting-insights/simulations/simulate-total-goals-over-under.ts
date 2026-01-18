@@ -461,7 +461,7 @@ function buildInsights(
 				58,
 			);
 		}
-		if (!supporting.some((s) => s.text.includes("Defensive trends"))) {
+		if (!supporting.some((s) => s.category === "DEFENSIVE")) {
 			pushSupport(
 				`Defensive trends allow about ${combinedConceded.toFixed(
 					1,

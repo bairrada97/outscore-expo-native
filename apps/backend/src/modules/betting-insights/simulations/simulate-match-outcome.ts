@@ -73,7 +73,6 @@ const MATCH_RESULT_WEIGHTS = {
  */
 const BASE_PROBABILITIES = {
 	// Home advantage is real in most leagues; start closer to empirical priors.
-	// Draw is handled separately via calculateDrawProbability().
 	home: 45,
 	draw: 27,
 	away: 28,
@@ -344,32 +343,27 @@ export function simulateMatchOutcome(
 		addContextAdjustments(context, homeAdjustments, awayAdjustments);
 	}
 
-	const sumAdjustments = (adjustments: Adjustment[]) =>
-		adjustments.reduce((total, adj) => total + adj.value, 0);
-
 	const baseConfidence = calculateBaseConfidence(homeTeam, awayTeam);
 
-	const homeResult = {
-		finalProbability: distribution.probHomeWin,
-		confidenceLevel: baseConfidence,
-		cappedAdjustments: homeAdjustments,
-		totalAdjustment: sumAdjustments(homeAdjustments),
-		wasCapped: false,
-		overcorrectionWarning: undefined,
-	};
-	const awayResult = {
-		finalProbability: distribution.probAwayWin,
-		confidenceLevel: baseConfidence,
-		cappedAdjustments: awayAdjustments,
-		totalAdjustment: sumAdjustments(awayAdjustments),
-		wasCapped: false,
-		overcorrectionWarning: undefined,
-	};
+	const homeResult = applyCappedAsymmetricAdjustments(
+		distribution.probHomeWin,
+		homeAdjustments,
+		"MatchOutcome",
+		config,
+		baseConfidence,
+	);
+	const awayResult = applyCappedAsymmetricAdjustments(
+		distribution.probAwayWin,
+		awayAdjustments,
+		"MatchOutcome",
+		config,
+		baseConfidence,
+	);
 
 	const normalized = normalizeProbabilities(
-		distribution.probHomeWin,
+		homeResult.finalProbability,
 		distribution.probDraw,
-		distribution.probAwayWin,
+		awayResult.finalProbability,
 	);
 
 	return buildMatchResultPrediction(
@@ -392,52 +386,6 @@ export function simulateMatchOutcome(
 		},
 		[],
 	);
-}
-
-// ============================================================================
-// DRAW PROBABILITY
-// ============================================================================
-
-/**
- * Calculate draw probability
- *
- * Based on:
- * - Form similarity (close teams = more draws)
- * - H2H draw rate
- * - Tier similarity
- */
-function calculateDrawProbability(
-	homeTeam: TeamData,
-	awayTeam: TeamData,
-	h2h: H2HData | undefined,
-	homeProb: number,
-	awayProb: number,
-): number {
-	let drawProb = TYPICAL_DRAW_RATE;
-
-	// Factor 1: Form similarity (close home/away prob = more draws)
-	const probDiff = Math.abs(homeProb - awayProb);
-	if (probDiff < 10) {
-		drawProb += 5; // Close match
-	} else if (probDiff > 25) {
-		drawProb -= 3; // Clear favorite
-	}
-
-	// Factor 2: Tier similarity
-	const homeTier = homeTeam.mind?.tier ?? 3;
-	const awayTier = awayTeam.mind?.tier ?? 3;
-	if (homeTier === awayTier) {
-		drawProb += 3; // Same tier teams draw more
-	}
-
-	// Factor 3: H2H draw rate
-	if (h2h && h2h.h2hMatchCount >= 3) {
-		const h2hDrawRate = (h2h.draws / h2h.h2hMatchCount) * 100;
-		// Blend with base draw rate
-		drawProb = drawProb * 0.6 + h2hDrawRate * 0.4;
-	}
-
-	return clamp(drawProb, 15, 40);
 }
 
 // ============================================================================

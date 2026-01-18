@@ -96,6 +96,6 @@ export function getRestDescription(days: number): string {
   if (days < 3) return 'Fatigued (short turnaround)';
   if (days === 3) return 'Slightly short rest';
   if (days >= 4 && days <= 7) return 'Optimal rest';
-  if (days <= 9) return 'Slightly long rest';
+  if (days <= 10) return 'Slightly long rest';
   return 'Rusty (long break)';
 }
