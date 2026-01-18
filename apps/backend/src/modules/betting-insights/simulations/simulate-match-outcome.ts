@@ -299,8 +299,13 @@ export function simulateMatchOutcome(
 	homeProb += h2hAdjustment * MATCH_RESULT_WEIGHTS.h2h;
 
 	// Apply Factor 3: Home Advantage (max ±8 points based on 20% weight)
+	// Slightly amplify negative home advantage so "bad at home" is penalized more.
 	const homeAdvAdjustment = (homeAdvantageScore / 100) * 8;
-	homeProb += homeAdvAdjustment * MATCH_RESULT_WEIGHTS.homeAdvantage;
+	const homeAdvWeight =
+		homeAdvantageScore < 0
+			? MATCH_RESULT_WEIGHTS.homeAdvantage * 1.2
+			: MATCH_RESULT_WEIGHTS.homeAdvantage;
+	homeProb += homeAdvAdjustment * homeAdvWeight;
 
 	// Apply Factor 4: Motivation (max ±7 points based on 18% weight)
 	const motivationAdjustment = (motivationScore / 100) * 7;
@@ -317,7 +322,7 @@ export function simulateMatchOutcome(
 	// Away probability is inverse (mirror adjustments)
 	awayProb -= formAdjustment * MATCH_RESULT_WEIGHTS.recentForm;
 	awayProb -= h2hAdjustment * MATCH_RESULT_WEIGHTS.h2h;
-	awayProb -= homeAdvAdjustment * MATCH_RESULT_WEIGHTS.homeAdvantage;
+	awayProb -= homeAdvAdjustment * homeAdvWeight;
 	awayProb -= motivationAdjustment * MATCH_RESULT_WEIGHTS.motivation;
 	awayProb -= restAdjustment * MATCH_RESULT_WEIGHTS.rest;
 	awayProb -= positionAdjustment * MATCH_RESULT_WEIGHTS.leaguePosition;
@@ -1160,6 +1165,24 @@ function buildMatchOutcomeInsights(params: {
 		}
 	}
 
+	// Home struggles at home: if home is picked but home advantage is negative.
+	if (
+		pick === "home" &&
+		factorScores.homeAdvantageScore < 0 &&
+		!watchOuts.some((w) => w.insight.emoji === "🏠")
+	) {
+		watchOuts.push({
+			abs: Math.abs(factorScores.homeAdvantageScore),
+			insight: {
+				text: `${homeTeam.name} hasn’t shown a strong home edge lately, which can keep this tighter.`,
+				emoji: "🏠",
+				priority: 64,
+				category: "WARNING",
+				severity: "MEDIUM",
+			},
+		});
+	}
+
 	// Rest/rhythm watch-outs (aligned with rest quality, not "more days = fresher"):
 	// - Very short turnaround can bring fatigue/rotation risk
 	// - Very long break can disrupt rhythm (or help); we frame it as uncertainty
@@ -1169,11 +1192,11 @@ function buildMatchOutcomeInsights(params: {
 
 		const fatigueTeam =
 			homeDays < 3 ? homeTeam.name : awayDays < 3 ? awayTeam.name : null;
-		if (fatigueTeam) {
+		if (fatigueTeam && (pick === "draw" || fatigueTeam === pickTeam)) {
 			watchOuts.push({
 				abs: 24,
 				insight: {
-					text: `${fatigueTeam} are on a short turnaround — fatigue and rotation can be factors.`,
+					text: `${fatigueTeam} are on a short recovery. That can lead to fatigue and force rotation.`,
 					emoji: "🛌",
 					priority: 66,
 					category: "WARNING",

@@ -259,37 +259,211 @@ function buildInsights(
 	awayTeam: TeamData,
 	h2h?: H2HData,
 ) {
-	const insights: Insight[] = [];
-	const avgOver = (getTeamLineOverPct(homeTeam, line) + getTeamLineOverPct(awayTeam, line)) / 2;
-	insights.push({
-		text: `Avg Over ${line} DNA: ${avgOver.toFixed(0)}%`,
-		emoji: "📊",
-		priority: 70,
-		category: "SCORING",
-		severity: "MEDIUM",
-	});
+	const supporting: Insight[] = [];
+	const watchOuts: Insight[] = [];
 
-	if (h2h?.hasSufficientData) {
-		const key = String(line) as GoalLineKey;
-		const pct = h2h.goalLineOverPct?.[key] ?? 0;
-		insights.push({
-			text: `H2H Over ${line}: ${pct.toFixed(0)}%`,
-			emoji: "🤝",
-			priority: 60,
-			category: "H2H",
-			severity: "LOW",
+	const avgOver =
+		(getTeamLineOverPct(homeTeam, line) + getTeamLineOverPct(awayTeam, line)) /
+		2;
+	const underPct = 100 - avgOver;
+	const combinedScored =
+		(homeTeam.stats.avgGoalsScored ?? 0) +
+		(awayTeam.stats.avgGoalsScored ?? 0);
+	const combinedConceded =
+		(homeTeam.stats.avgGoalsConceded ?? 0) +
+		(awayTeam.stats.avgGoalsConceded ?? 0);
+
+	const hasH2H = Boolean(h2h?.hasSufficientData);
+	const key = String(line) as GoalLineKey;
+	const h2hOverPct = hasH2H ? h2h?.goalLineOverPct?.[key] ?? 0 : null;
+
+	const leansOver = overProb >= 50;
+
+	const pushSupport = (
+		text: string,
+		category: Insight["category"],
+		priority: number = 70,
+	) =>
+		supporting.push({
+			text,
+			emoji: "✅",
+			priority,
+			category,
+			severity: "MEDIUM",
 		});
+
+	const pushWatchOut = (text: string, priority: number = 70) =>
+		watchOuts.push({
+			text,
+			emoji: "⚠️",
+			priority,
+			category: "WARNING",
+			severity: "MEDIUM",
+		});
+
+	if (leansOver) {
+		if (avgOver >= 50) {
+			pushSupport(
+				`Matches involving ${homeTeam.name} and ${awayTeam.name} go over ${line} goals about ${avgOver.toFixed(
+					0,
+				)}% of the time.`,
+				"SCORING",
+			);
+		}
+		if (combinedScored >= 2.6) {
+			pushSupport(
+				`The two sides combine for around ${combinedScored.toFixed(
+					1,
+				)} goals scored per game, which keeps totals up.`,
+				"SCORING",
+				65,
+			);
+		}
+		if (combinedConceded >= 2.4) {
+			pushSupport(
+				`Their defenses allow roughly ${combinedConceded.toFixed(
+					1,
+				)} goals per game combined, which can open this up.`,
+				"DEFENSIVE",
+				60,
+			);
+		}
+		if (hasH2H && (h2hOverPct ?? 0) >= 55) {
+			pushSupport(
+				`Recent meetings have gone over ${line} goals in ${(
+					h2hOverPct ?? 0
+				).toFixed(0)}% of games.`,
+				"H2H",
+				60,
+			);
+		}
+
+		if (avgOver <= 45) {
+			pushWatchOut(
+				`The recent over-${line} rate is modest (${avgOver.toFixed(0)}%), which can keep the total down.`,
+				68,
+			);
+		}
+		if (combinedScored <= 2.2) {
+			pushWatchOut(
+				`Scoring trends are on the lower side (${combinedScored.toFixed(
+					1,
+				)} goals per game combined).`,
+				65,
+			);
+		}
+		if (combinedConceded <= 1.6) {
+			pushWatchOut(
+				`Both defenses can keep games tight (${combinedConceded.toFixed(
+					1,
+				)} conceded per game combined).`,
+				62,
+			);
+		}
+		if (hasH2H && (h2hOverPct ?? 0) <= 40) {
+			pushWatchOut(
+				`Recent head-to-heads often stay under ${line} goals (${(
+					h2hOverPct ?? 0
+				).toFixed(0)}% over).`,
+				62,
+			);
+		}
+	} else {
+		if (avgOver <= 50) {
+			pushSupport(
+				`These teams stay under ${line} goals in about ${underPct.toFixed(
+					0,
+				)}% of matches on average.`,
+				"SCORING",
+			);
+		}
+		if (combinedScored <= 2.2) {
+			pushSupport(
+				`Combined scoring is around ${combinedScored.toFixed(
+					1,
+				)} goals per game, which keeps totals down.`,
+				"SCORING",
+				65,
+			);
+		}
+		if (combinedConceded <= 1.8) {
+			pushSupport(
+				`They concede roughly ${combinedConceded.toFixed(
+					1,
+				)} goals per game combined, which leans under.`,
+				"DEFENSIVE",
+				60,
+			);
+		}
+		if (hasH2H && (h2hOverPct ?? 0) <= 45) {
+			pushSupport(
+				`Recent meetings have stayed under ${line} goals most of the time.`,
+				"H2H",
+				60,
+			);
+		}
+
+		if (avgOver >= 55) {
+			pushWatchOut(
+				`They still clear ${line} goals quite often (${avgOver.toFixed(0)}%).`,
+				68,
+			);
+		}
+		if (combinedScored >= 2.8) {
+			pushWatchOut(
+				`Combined scoring is still healthy (${combinedScored.toFixed(
+					1,
+				)} goals per game).`,
+				65,
+			);
+		}
+		if (combinedConceded >= 2.6) {
+			pushWatchOut(
+				`Defenses concede plenty (${combinedConceded.toFixed(
+					1,
+				)} per game combined), which can push totals higher.`,
+				62,
+			);
+		}
+		if (hasH2H && (h2hOverPct ?? 0) >= 60) {
+			pushWatchOut(
+				`Head-to-heads have often gone over ${line} goals.`,
+				62,
+			);
+		}
 	}
 
-	insights.push({
-		text: `Model probability: Over ${line} ${overProb.toFixed(0)}%`,
-		emoji: "🎯",
-		priority: 80,
-		category: "SCORING",
-		severity: overProb >= 70 || overProb <= 30 ? "HIGH" : "MEDIUM",
-	});
+	// Ensure at least two supporting reasons so we don't imply a single factor.
+	if (supporting.length < 2) {
+		if (!supporting.some((s) => s.text.includes("goals per game"))) {
+			pushSupport(
+				`Overall scoring trends sit around ${combinedScored.toFixed(
+					1,
+				)} goals per game across the two teams.`,
+				"SCORING",
+				58,
+			);
+		}
+		if (!supporting.some((s) => s.text.includes("Defensive trends"))) {
+			pushSupport(
+				`Defensive trends allow about ${combinedConceded.toFixed(
+					1,
+				)} goals per game combined.`,
+				"DEFENSIVE",
+				56,
+			);
+		}
+	}
 
-	return insights.slice(0, 5);
+	if (supporting.length === 0 && watchOuts.length === 0) return [];
+
+	if (watchOuts.length === 0) return supporting.slice(0, 5);
+
+	const remaining = Math.max(1, 5 - watchOuts.length);
+	return [
+		...supporting.slice(0, remaining),
+		...watchOuts.slice(0, 5 - remaining),
+	];
 }
 
 
