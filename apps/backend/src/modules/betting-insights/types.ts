@@ -129,6 +129,10 @@ export interface ProcessedMatch {
   goalsScored: number;
   /** Goals conceded by the relevant team */
   goalsConceded: number;
+  /** Expected goals for the relevant team (if available) */
+  expectedGoals?: number;
+  /** Goals prevented for the relevant team (if available) */
+  goalsPrevented?: number;
   /** First half goals by relevant team (if available) */
   firstHalfGoals?: number;
   league: {
@@ -708,6 +712,20 @@ export interface CumulativeCapsConfig {
 }
 
 /**
+ * Goal distribution configuration
+ */
+export interface GoalDistributionConfig {
+  /** Max goals per team in score matrix */
+  maxGoals: number;
+  /** Recent-form blend weight (0-1) */
+  recentFormWeight: number;
+  /** Recent matches count for form blend */
+  recentMatchesCount: number;
+  /** Dixon-Coles low-score correction rho */
+  dixonColesRho: number;
+}
+
+/**
  * Form weighting configuration
  */
 export interface FormWeightingConfig {
@@ -790,6 +808,7 @@ export interface AlgorithmConfig {
   confidenceDowngrade: ConfidenceDowngradeConfig;
   asymmetricWeighting: AsymmetricWeightingConfig;
   cumulativeCaps: CumulativeCapsConfig;
+  goalDistribution: GoalDistributionConfig;
 }
 
 // ============================================================================

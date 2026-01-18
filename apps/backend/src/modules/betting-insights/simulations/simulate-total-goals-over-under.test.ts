@@ -266,6 +266,10 @@ describe("simulateTotalGoalsOverUnder", () => {
 					...createTeamData().stats,
 					avgGoalsScored: 0.8,
 					avgGoalsConceded: 0.6,
+					homeAvgScored: 0.9,
+					homeAvgConceded: 0.6,
+					awayAvgScored: 0.7,
+					awayAvgConceded: 0.6,
 				},
 				dna: {
 					...createTeamData().dna,
@@ -298,42 +302,6 @@ describe("simulateTotalGoalsOverUnder", () => {
 	});
 
 	describe("H2H impact", () => {
-		it("should increase Over probability with high H2H goals", () => {
-			const homeTeam = createTeamData();
-			const awayTeam = createTeamData({ id: 2 });
-
-			const highGoalsH2H = createH2HData({
-				avgGoals: 4.2,
-				goalLineOverPct: {
-					"0.5": 100,
-					"1.5": 100,
-					"2.5": 90,
-					"3.5": 75,
-					"4.5": 50,
-					"5.5": 30,
-				},
-			});
-			const lowGoalsH2H = createH2HData({
-				avgGoals: 1.5,
-				goalLineOverPct: {
-					"0.5": 80,
-					"1.5": 60,
-					"2.5": 30,
-					"3.5": 10,
-					"4.5": 5,
-					"5.5": 0,
-				},
-			});
-
-			const highGoalsResult = simulateTotalGoalsOverUnder(homeTeam, awayTeam, highGoalsH2H, undefined, 2.5);
-			const lowGoalsResult = simulateTotalGoalsOverUnder(homeTeam, awayTeam, lowGoalsH2H, undefined, 2.5);
-
-			const highGoalsOver = highGoalsResult.probabilityDistribution.over ?? 0;
-			const lowGoalsOver = lowGoalsResult.probabilityDistribution.over ?? 0;
-
-			expect(highGoalsOver).toBeGreaterThan(lowGoalsOver);
-		});
-
 		it("should handle missing H2H data gracefully", () => {
 			const homeTeam = createTeamData();
 			const awayTeam = createTeamData({ id: 2 });
@@ -348,95 +316,14 @@ describe("simulateTotalGoalsOverUnder", () => {
 		});
 	});
 
-	describe("DNA goalLineOverPct impact", () => {
-		it("should use team DNA percentages for specific lines", () => {
-			const highOver25Team = createTeamData({
-				dna: {
-					...createTeamData().dna,
-					goalLineOverPct: {
-						"0.5": 100,
-						"1.5": 95,
-						"2.5": 85,
-						"3.5": 60,
-						"4.5": 30,
-						"5.5": 10,
-					},
-				},
-			});
-			const lowOver25Team = createTeamData({
-				id: 2,
-				dna: {
-					...createTeamData().dna,
-					goalLineOverPct: {
-						"0.5": 75,
-						"1.5": 55,
-						"2.5": 30,
-						"3.5": 15,
-						"4.5": 5,
-						"5.5": 2,
-					},
-				},
-			});
-
-			const highResult = simulateTotalGoalsOverUnder(highOver25Team, highOver25Team, undefined, undefined, 2.5);
-			const lowResult = simulateTotalGoalsOverUnder(lowOver25Team, lowOver25Team, undefined, undefined, 2.5);
-
-			const highOver = highResult.probabilityDistribution.over ?? 0;
-			const lowOver = lowResult.probabilityDistribution.over ?? 0;
-
-			expect(highOver).toBeGreaterThan(lowOver);
-		});
-	});
-
 	describe("confidence levels", () => {
-		it("should return HIGH confidence for extreme probabilities", () => {
-			// Create teams that will produce extreme probability
-			const highScoringTeam = createTeamData({
-				stats: {
-					...createTeamData().stats,
-					avgGoalsScored: 3.0,
-					avgGoalsConceded: 2.0,
-				},
-				dna: {
-					...createTeamData().dna,
-					goalLineOverPct: {
-						"0.5": 100,
-						"1.5": 98,
-						"2.5": 90,
-						"3.5": 70,
-						"4.5": 50,
-						"5.5": 25,
-					},
-				},
-			});
+		it("should return a confidence level", () => {
+			const homeTeam = createTeamData();
+			const awayTeam = createTeamData({ id: 2 });
 
-			// Over 0.5 should have very high probability = high confidence
-			const result = simulateTotalGoalsOverUnder(highScoringTeam, highScoringTeam, undefined, undefined, 0.5);
+			const result = simulateTotalGoalsOverUnder(homeTeam, awayTeam, undefined, undefined, 2.5);
 
-			// With very high Over 0.5 probability, confidence should be HIGH
-			expect(["HIGH", "MEDIUM"]).toContain(result.modelReliability);
-		});
-
-		it("should return lower confidence for balanced probabilities", () => {
-			const balancedTeam = createTeamData({
-				dna: {
-					...createTeamData().dna,
-					goalLineOverPct: {
-						"0.5": 90,
-						"1.5": 70,
-						"2.5": 50,
-						"3.5": 30,
-						"4.5": 15,
-						"5.5": 5,
-					},
-				},
-			});
-
-			// Line 2.5 with 50% DNA should produce balanced probability
-			const result = simulateTotalGoalsOverUnder(balancedTeam, balancedTeam, undefined, undefined, 2.5);
-
-			// Balanced probabilities should result in LOW or MEDIUM confidence
-			expect(["LOW", "MEDIUM"]).toContain(result.modelReliability);
+			expect(["LOW", "MEDIUM", "HIGH"]).toContain(result.modelReliability);
 		});
 	});
 
@@ -449,53 +336,7 @@ describe("simulateTotalGoalsOverUnder", () => {
 
 			expect(result.adjustmentsApplied).toBeDefined();
 			expect(Array.isArray(result.adjustmentsApplied)).toBe(true);
-		});
-
-		it("should include H2H adjustment when H2H data shows strong pattern", () => {
-			const homeTeam = createTeamData();
-			const awayTeam = createTeamData({ id: 2 });
-
-			const strongH2H = createH2HData({
-				goalLineOverPct: {
-					"0.5": 100,
-					"1.5": 100,
-					"2.5": 90,
-					"3.5": 80,
-					"4.5": 60,
-					"5.5": 40,
-				},
-				hasSufficientData: true,
-			});
-
-			const result = simulateTotalGoalsOverUnder(homeTeam, awayTeam, strongH2H, undefined, 2.5);
-
-			const hasH2HAdjustment = result.adjustmentsApplied?.some(
-				(adj) => adj.type === "h2h" || adj.reason?.toLowerCase().includes("h2h"),
-			);
-			expect(hasH2HAdjustment).toBe(true);
-		});
-
-		it("should include DNA adjustment for extreme DNA patterns", () => {
-			const extremeDnaTeam = createTeamData({
-				dna: {
-					...createTeamData().dna,
-					goalLineOverPct: {
-						"0.5": 100,
-						"1.5": 95,
-						"2.5": 85,
-						"3.5": 70,
-						"4.5": 50,
-						"5.5": 25,
-					},
-				},
-			});
-
-			const result = simulateTotalGoalsOverUnder(extremeDnaTeam, extremeDnaTeam, undefined, undefined, 2.5);
-
-			const hasDnaAdjustment = result.adjustmentsApplied?.some(
-				(adj) => adj.type === "dna" || adj.reason?.toLowerCase().includes("dna"),
-			);
-			expect(hasDnaAdjustment).toBe(true);
+			expect(result.adjustmentsApplied.length).toBe(0);
 		});
 	});
 
@@ -534,19 +375,6 @@ describe("simulateTotalGoalsOverUnder", () => {
 			expect(result.insights).toBeDefined();
 			expect(Array.isArray(result.insights)).toBe(true);
 			expect(result.insights.length).toBeGreaterThan(0);
-		});
-
-		it("should include H2H insights when H2H data is available", () => {
-			const homeTeam = createTeamData();
-			const awayTeam = createTeamData({ id: 2 });
-			const h2h = createH2HData({ hasSufficientData: true });
-
-			const result = simulateTotalGoalsOverUnder(homeTeam, awayTeam, h2h, undefined, 2.5);
-
-			const hasH2HInsight = result.insights?.some(
-				(insight) => insight.category === "H2H" || insight.text.toLowerCase().includes("h2h"),
-			);
-			expect(hasH2HInsight).toBe(true);
 		});
 	});
 

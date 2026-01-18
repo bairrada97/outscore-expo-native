@@ -160,10 +160,12 @@ describe("simulateBTTS", () => {
 			const normalTeam = createTeamData();
 			const highScoringTeam = createTeamData({
 				id: 2,
-				dna: {
-					...createTeamData().dna,
-					failedToScorePercentage: 5, // 95% scoring rate
-					bttsYesRate: 80,
+				stats: {
+					...createTeamData().stats,
+					avgGoalsScored: 2.2,
+					avgGoalsConceded: 1.6,
+					homeAvgScored: 2.4,
+					awayAvgScored: 2.0,
 				},
 			});
 
@@ -180,10 +182,12 @@ describe("simulateBTTS", () => {
 			const normalTeam = createTeamData();
 			const lowScoringTeam = createTeamData({
 				id: 2,
-				dna: {
-					...createTeamData().dna,
-					failedToScorePercentage: 50, // 50% scoring rate
-					bttsYesRate: 30,
+				stats: {
+					...createTeamData().stats,
+					avgGoalsScored: 0.9,
+					avgGoalsConceded: 1.0,
+					homeAvgScored: 1.0,
+					awayAvgScored: 0.8,
 				},
 			});
 
@@ -202,9 +206,11 @@ describe("simulateBTTS", () => {
 			const normalTeam = createTeamData();
 			const strongDefenseTeam = createTeamData({
 				id: 2,
-				dna: {
-					...createTeamData().dna,
-					cleanSheetPercentage: 50, // High clean sheet rate
+				stats: {
+					...createTeamData().stats,
+					avgGoalsConceded: 0.7,
+					homeAvgConceded: 0.6,
+					awayAvgConceded: 0.8,
 				},
 			});
 
@@ -225,9 +231,11 @@ describe("simulateBTTS", () => {
 			const normalTeam = createTeamData();
 			const weakDefenseTeam = createTeamData({
 				id: 2,
-				dna: {
-					...createTeamData().dna,
-					cleanSheetPercentage: 5, // Very low clean sheet rate
+				stats: {
+					...createTeamData().stats,
+					avgGoalsConceded: 2.1,
+					homeAvgConceded: 2.2,
+					awayAvgConceded: 2.0,
 				},
 			});
 
@@ -241,23 +249,7 @@ describe("simulateBTTS", () => {
 		});
 	});
 
-	describe("H2H impact", () => {
-		it("should increase BTTS probability with high H2H BTTS rate", () => {
-			const homeTeam = createTeamData();
-			const awayTeam = createTeamData({ id: 2 });
-
-			const lowH2H = createH2HData({ bttsPercentage: 20 });
-			const highH2H = createH2HData({ bttsPercentage: 85 });
-
-			const lowH2HResult = simulateBTTS(homeTeam, awayTeam, lowH2H);
-			const highH2HResult = simulateBTTS(homeTeam, awayTeam, highH2H);
-
-			const lowH2HYes = lowH2HResult.probabilityDistribution.yes ?? 0;
-			const highH2HYes = highH2HResult.probabilityDistribution.yes ?? 0;
-
-			expect(highH2HYes).toBeGreaterThan(lowH2HYes);
-		});
-
+	describe("H2H handling", () => {
 		it("should handle missing H2H data gracefully", () => {
 			const homeTeam = createTeamData();
 			const awayTeam = createTeamData({ id: 2 });
@@ -308,23 +300,17 @@ describe("simulateBTTS", () => {
 
 			expect(result.adjustmentsApplied).toBeDefined();
 			expect(Array.isArray(result.adjustmentsApplied)).toBe(true);
+			expect(result.adjustmentsApplied.length).toBe(0);
 		});
 
 		it("should include adjustment reasons", () => {
-			const highScoringTeam = createTeamData({
-				dna: {
-					...createTeamData().dna,
-					failedToScorePercentage: 5,
-				},
-			});
-
-			const result = simulateBTTS(highScoringTeam, highScoringTeam);
+			const result = simulateBTTS(createTeamData(), createTeamData({ id: 2 }));
 
 			// Should have some adjustments with reasons
 			const hasReasons = result.adjustmentsApplied?.some(
 				(adj) => adj.reason && adj.reason.length > 0,
 			);
-			expect(hasReasons).toBe(true);
+			expect(hasReasons).toBe(false);
 		});
 	});
 
@@ -345,11 +331,12 @@ describe("simulateBTTS", () => {
 	describe("most probable outcome", () => {
 		it("should correctly identify most probable outcome", () => {
 			const homeTeam = createTeamData({
-				dna: {
-					...createTeamData().dna,
-					failedToScorePercentage: 5,
-					cleanSheetPercentage: 5,
-					bttsYesRate: 85,
+				stats: {
+					...createTeamData().stats,
+					avgGoalsScored: 2.2,
+					avgGoalsConceded: 1.6,
+					homeAvgScored: 2.4,
+					awayAvgScored: 2.0,
 				},
 			});
 

@@ -341,6 +341,9 @@ Before proceeding to Phase 5, the following acceptance criteria must be met:
 - [ ] **Per-market ECE < 0.10** - After caps, probabilities still well-calibrated
 - [ ] **Swing distribution documented** - Know how often caps are hit
 
+### Next TODO (Post-Backbone)
+- [ ] **Per-market calibration layer** - Add a lightweight calibration step per market (BTTS, O/U, 1X2, 1H) now that the shared goal-distribution backbone is in place
+
 ### Cap Effectiveness
 - [ ] **Cap-hit rate < 15%** - Caps should not be triggered too often (indicates base predictions need tuning)
 - [ ] **Overcorrection rate < 5%** - Very few predictions should trigger overcorrection detection

@@ -57,6 +57,7 @@ import { attachInsightPartsToList } from "../presentation/insight-parts";
 import { buildKeyInsights } from "../presentation/key-insights-builder";
 import { buildMatchFacts } from "../presentation/match-facts-builder";
 import { buildModelReliabilityBreakdown } from "../presentation/simulation-presenter";
+import { buildGoalDistributionModifiers } from "../simulations/goal-distribution-modifiers";
 import { attachRelatedScenarios } from "../simulations/related-scenarios";
 import { simulateBTTS } from "../simulations/simulate-btts";
 import { simulateFirstHalfActivity } from "../simulations/simulate-first-half-activity";
@@ -120,6 +121,8 @@ const INSIGHTS_FINISHED_STATUSES = [
 	"AWD", // Awarded
 	"WO", // Walkover
 ];
+
+const FINISHED_STATUSES = new Set(["FT", "AET", "PEN"]);
 
 // ============================================================================
 // ERRORS
@@ -864,9 +867,11 @@ export const insightsService = {
 			const rawMatches = data.response ?? [];
 
 			// Convert to ProcessedMatch format
-			return rawMatches
-				.filter((m) => m.fixture.status.short === "FT") // Only finished matches
+			const matches = rawMatches
+				.filter((m) => FINISHED_STATUSES.has(m.fixture.status.short)) // Only finished matches
 				.map((m) => this.convertToProcessedMatch(m, teamId));
+
+			return matches;
 		} catch (error) {
 			console.warn(
 				`⚠️ [Insights] Error fetching matches for team ${teamId}:`,
@@ -1671,18 +1676,59 @@ export const insightsService = {
 			console.log(`🏥 [Insights] Injury situation: ${summary}`);
 		}
 
+		const distributionModifiers = buildGoalDistributionModifiers({
+			context,
+			homeTeam,
+			awayTeam,
+			h2h,
+			homeInjuryImpact: homeImpact,
+			awayInjuryImpact: awayImpact,
+		});
+
 		// Both Teams To Score (injuries affect scoring likelihood)
-		simulations.push(simulateBTTS(homeTeam, awayTeam, h2h, context));
+		simulations.push(
+			simulateBTTS(
+				homeTeam,
+				awayTeam,
+				h2h,
+				context,
+				undefined,
+				distributionModifiers,
+			),
+		);
 
 		// Total Goals Over/Under (multi-line)
 		for (const line of DEFAULT_GOAL_LINES) {
 			simulations.push(
-				simulateTotalGoalsOverUnder(homeTeam, awayTeam, h2h, context, line),
+				simulateTotalGoalsOverUnder(
+					homeTeam,
+					awayTeam,
+					h2h,
+					context,
+					line,
+					undefined,
+					distributionModifiers,
+				),
 			);
 		}
 
 		// Match Outcome
-		simulations.push(simulateMatchOutcome(homeTeam, awayTeam, h2h, context));
+		simulations.push(
+			simulateMatchOutcome(
+				homeTeam,
+				awayTeam,
+				h2h,
+				context,
+				undefined,
+				{
+					homeAdjustments,
+					awayAdjustments,
+					homeImpact,
+					awayImpact,
+				},
+				distributionModifiers,
+			),
+		);
 
 		// First Half Activity
 		simulations.push(
@@ -1690,9 +1736,12 @@ export const insightsService = {
 		);
 
 		// Apply injury adjustments to relevant simulations
-		// Note: We add injury adjustments as explanatory factors for transparency
+		// Note: We add injury adjustments as explanatory factors for transparency.
+		// MatchOutcome already consumes these adjustments inside `simulateMatchOutcome`,
+		// so we skip it here to avoid double-counting.
 		if (homeAdjustments.length > 0 || awayAdjustments.length > 0) {
 			for (const sim of simulations) {
+				if (sim.scenarioType === "MatchOutcome") continue;
 				// Add injury adjustments to the simulation's adjustmentsApplied array for transparency
 				sim.adjustmentsApplied = [
 					...(sim.adjustmentsApplied || []),

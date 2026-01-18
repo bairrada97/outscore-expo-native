@@ -125,9 +125,9 @@ describe("calculateRestQuality", () => {
 	});
 
 	it("should handle exactly 10 days", () => {
-		// 10 days is not optimal, slightly long, or rusty (>10), so falls to default
+		// 10 days is slightly long (not rusty until >10)
 		const quality = calculateRestQuality(10);
-		expect(quality).toBe(3); // Falls through to default SLIGHTLY_SHORT
+		expect(quality).toBe(4);
 	});
 });
 

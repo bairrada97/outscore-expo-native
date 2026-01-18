@@ -1,5 +1,6 @@
 import { FixtureEventsBlock } from "@/components/fixture-events-block";
 import { FixtureInfoHeader } from "@/components/fixture-info-header";
+import { GoalAnalysisCard } from "@/components/insights/goal-analysis-card";
 import { InsightsSectionHeader } from "@/components/insights/insights-section-header";
 import { KeyInsightsList } from "@/components/insights/key-insights-list";
 import { MatchFactsGrid } from "@/components/insights/match-facts-grid";
@@ -255,6 +256,12 @@ export default function FixtureDetailScreen() {
 	const matchOutcomeSimulation = insightsData?.simulations?.find(
 		(simulation) => simulation.scenarioType === "MatchOutcome",
 	);
+	const overUnderSimulations = (insightsData?.simulations ?? []).filter(
+		(simulation) => simulation.scenarioType === "TotalGoalsOverUnder",
+	);
+	const bttsSimulation = insightsData?.simulations?.find(
+		(simulation) => simulation.scenarioType === "BothTeamsToScore",
+	);
 
 	if (isLoading && !data) {
 		return (
@@ -344,7 +351,7 @@ export default function FixtureDetailScreen() {
 											<MatchFactsGrid facts={insightsData.matchFacts ?? []} />
 
 											<InsightsSectionHeader title="Key Insights" />
-											<View className="gap-y-24">
+											<View className="gap-y-24 mb-16">
 												<KeyInsightsList
 													title={`${insightsData.match.homeTeam} (HOME) INSIGHTS`}
 													insights={(insightsData.keyInsights?.home ?? []).map(
@@ -367,7 +374,6 @@ export default function FixtureDetailScreen() {
 												/>
 											</View>
 
-											<InsightsSectionHeader title="Match Outcome" />
 											{matchOutcomeSimulation ? (
 												<MatchOutcomeCard
 													homeTeam={insightsData.match.homeTeam}
@@ -394,6 +400,11 @@ export default function FixtureDetailScreen() {
 													</Text>
 												</View>
 											)}
+
+											<GoalAnalysisCard
+												overUnderSimulations={overUnderSimulations}
+												bttsSimulation={bttsSimulation}
+											/>
 										</View>
 									) : null}
 								</View>

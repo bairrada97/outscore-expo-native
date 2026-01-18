@@ -15,6 +15,7 @@
 
 import { DEFAULT_ALGORITHM_CONFIG } from "../config/algorithm-config";
 import type { MatchContext } from "../match-context/context-adjustments";
+import { getMaxConfidenceForContext } from "../match-context/context-adjustments";
 import { finalizeSimulation } from "../presentation/simulation-presenter";
 import type {
   Adjustment,
@@ -25,10 +26,9 @@ import type {
   Simulation,
   TeamData,
 } from "../types";
-import {
-  applyCappedAsymmetricAdjustments,
-  createAdjustment,
-} from "../utils/capped-adjustments";
+import { buildGoalDistribution } from "./goal-distribution";
+import type { GoalDistributionModifiers } from "./goal-distribution-modifiers";
+import { applyCappedAsymmetricAdjustments } from "../utils/capped-adjustments";
 import { clamp } from "../utils/helpers";
 
 // ============================================================================
@@ -139,49 +139,60 @@ export function simulateBTTS(
 	h2h?: H2HData,
 	context?: MatchContext,
 	config: AlgorithmConfig = DEFAULT_ALGORITHM_CONFIG,
+	distributionModifiers?: GoalDistributionModifiers,
 ): Simulation {
-	// Step 1: Calculate base probability from factors
-	const baseProbability = calculateBaseBTTSProbability(homeTeam, awayTeam, h2h);
+	// Shared goal distribution (Poisson + Dixon-Coles)
+	const distribution = buildGoalDistribution(
+		homeTeam,
+		awayTeam,
+		config.goalDistribution,
+		distributionModifiers,
+	);
+	const baseYesProbability = distribution.probBTTSYes;
 
-	// Step 2: Collect all adjustments
+	// Context-aware + capped adjustments (Phase 3.5 + 4.5)
 	const adjustments: Adjustment[] = [];
 
-	// Add scoring rate adjustments
-	adjustments.push(...getScoringRateAdjustments(homeTeam, awayTeam));
-
-	// Add defensive form adjustments
-	adjustments.push(...getDefensiveFormAdjustments(homeTeam, awayTeam));
-
-	// Add recent form adjustments
-	adjustments.push(...getRecentFormAdjustments(homeTeam, awayTeam));
-
-	// Add H2H adjustments
-	if (h2h?.hasSufficientData) {
-		adjustments.push(...getH2HAdjustments(h2h));
-	}
-
-	// Add context adjustments
+	// Base confidence from data coverage, then cap maximum confidence based on match context volatility.
+	let baseConfidence = calculateBaseConfidence(homeTeam, awayTeam, h2h);
 	if (context) {
-		adjustments.push(...getContextAdjustments(context));
+		const maxConfidence = getMaxConfidenceForContext(context);
+		baseConfidence = minConfidence(baseConfidence, maxConfidence);
 	}
 
-	// Add formation stability adjustments (40% impact for BTTS)
-	adjustments.push(...getFormationAdjustments(homeTeam, awayTeam, 0.4));
-
-	// Add safety flag adjustments
-	adjustments.push(...getSafetyFlagAdjustments(homeTeam, awayTeam));
-
-	// Step 3: Apply unified capping
 	const result = applyCappedAsymmetricAdjustments(
-		baseProbability,
+		baseYesProbability,
 		adjustments,
 		"BothTeamsToScore",
 		config,
-		calculateBaseConfidence(homeTeam, awayTeam, h2h),
+		baseConfidence,
 	);
 
-	// Step 4: Build prediction response
-	return buildBTTSPrediction(result);
+	const yesProbability = result.finalProbability;
+	const noProbability = 100 - yesProbability;
+
+	return finalizeSimulation({
+		scenarioType: "BothTeamsToScore",
+		probabilityDistribution: {
+			yes: Math.round(yesProbability * 10) / 10,
+			no: Math.round(noProbability * 10) / 10,
+		},
+		modelReliability: result.confidenceLevel,
+		insights: buildBttsInsights(yesProbability, homeTeam, awayTeam, h2h),
+		adjustmentsApplied: result.cappedAdjustments,
+		totalAdjustment: result.totalAdjustment,
+		capsHit: result.wasCapped,
+		overcorrectionWarning: result.overcorrectionWarning,
+	});
+}
+
+function minConfidence(
+	a: ConfidenceLevel,
+	b: ConfidenceLevel,
+): ConfidenceLevel {
+	if (a === "LOW" || b === "LOW") return "LOW";
+	if (a === "MEDIUM" || b === "MEDIUM") return "MEDIUM";
+	return "HIGH";
 }
 
 // ============================================================================
@@ -607,22 +618,172 @@ function calculateBaseConfidence(
  * Build final BTTS prediction response
  */
 function buildBTTSPrediction(
-	result: ReturnType<typeof applyCappedAsymmetricAdjustments>,
+	_result: ReturnType<typeof applyCappedAsymmetricAdjustments>,
+	_homeTeam: TeamData,
+	_awayTeam: TeamData,
+	_h2h?: H2HData,
 ): Simulation {
-	const yesProbability = result.finalProbability;
-	const noProbability = 100 - yesProbability;
+	throw new Error("Legacy BTTS path disabled in goal-distribution mode.");
+}
 
-	return finalizeSimulation({
-		scenarioType: "BothTeamsToScore",
-		probabilityDistribution: {
-			yes: Math.round(yesProbability * 10) / 10,
-			no: Math.round(noProbability * 10) / 10,
-		},
-		modelReliability: result.confidenceLevel,
-		insights: [],
-		adjustmentsApplied: result.cappedAdjustments,
-		totalAdjustment: result.totalAdjustment,
-		capsHit: result.wasCapped,
-		overcorrectionWarning: result.overcorrectionWarning,
-	});
+function buildBttsInsights(
+	yesProb: number,
+	homeTeam: TeamData,
+	awayTeam: TeamData,
+	h2h?: H2HData,
+): Insight[] {
+	const supporting: Insight[] = [];
+	const watchOuts: Insight[] = [];
+
+	const homeScoringRate = getScoringRateFromDNA(homeTeam);
+	const awayScoringRate = getScoringRateFromDNA(awayTeam);
+	const avgScoringRate = (homeScoringRate + awayScoringRate) / 2;
+
+	const homeCleanSheets = getCleanSheetRateFromDNA(homeTeam);
+	const awayCleanSheets = getCleanSheetRateFromDNA(awayTeam);
+	const avgCleanSheets = (homeCleanSheets + awayCleanSheets) / 2;
+
+	const recentHomeBtts = getRecentBttsRate(homeTeam);
+	const recentAwayBtts = getRecentBttsRate(awayTeam);
+	const avgRecentBtts = (recentHomeBtts + recentAwayBtts) / 2;
+
+	const hasH2H = Boolean(h2h?.hasSufficientData);
+	const h2hBtts = hasH2H ? h2h?.bttsPercentage ?? 0 : null;
+
+	const leansYes = yesProb >= 50;
+	const strongRecentBtts = avgRecentBtts >= 60;
+	const strongScoring = avgScoringRate >= 65;
+
+	const pushSupport = (
+		text: string,
+		category: Insight["category"],
+		priority: number = 70,
+	) =>
+		supporting.push({
+			text,
+			emoji: "✅",
+			priority,
+			category,
+			severity: "MEDIUM",
+		});
+
+	const pushWatchOut = (text: string, priority: number = 70) =>
+		watchOuts.push({
+			text,
+			emoji: "⚠️",
+			priority,
+			category: "WARNING",
+			severity: "MEDIUM",
+		});
+
+	if (leansYes) {
+		if (avgScoringRate >= 60) {
+			pushSupport(
+				`Both sides usually find the net — their combined scoring rate is around ${avgScoringRate.toFixed(
+					0,
+				)}%.`,
+				"SCORING",
+			);
+		}
+		if (avgCleanSheets <= 30) {
+			pushSupport(
+				`Clean sheets are relatively rare (${avgCleanSheets.toFixed(
+					0,
+				)}% combined), which keeps goals at both ends in play.`,
+				"DEFENSIVE",
+				65,
+			);
+		}
+		if (avgRecentBtts >= 55) {
+			pushSupport(
+				`Recent matches for both teams have seen both teams score about ${avgRecentBtts.toFixed(
+					0,
+				)}% of the time.`,
+				"FORM",
+				60,
+			);
+		}
+		if (hasH2H && (h2hBtts ?? 0) >= 55) {
+			pushSupport(
+				`Recent head-to-heads have seen both teams score in ${(
+					h2hBtts ?? 0
+				).toFixed(0)}% of meetings.`,
+				"H2H",
+				60,
+			);
+		}
+
+		if (avgCleanSheets >= 40) {
+			pushWatchOut(
+				`One side keeps clean sheets fairly often, which can spoil a goal at both ends.`,
+				68,
+			);
+		}
+		if (avgScoringRate <= 50) {
+			pushWatchOut(
+				`One of the teams doesn’t always find the net, which can leave a side scoreless.`,
+				65,
+			);
+		}
+		if (hasH2H && (h2hBtts ?? 0) <= 35 && !strongRecentBtts && !strongScoring) {
+			pushWatchOut(
+				`Recent head-to-heads have often had a clean sheet.`,
+				62,
+			);
+		}
+	} else {
+		if (avgCleanSheets >= 35) {
+			pushSupport(
+				`Clean sheets show up fairly often (${avgCleanSheets.toFixed(
+					0,
+				)}% combined), which leans against goals at both ends.`,
+				"DEFENSIVE",
+			);
+		}
+		if (avgScoringRate <= 55) {
+			pushSupport(
+				`At least one side has a modest scoring rate (${avgScoringRate.toFixed(
+					0,
+				)}% combined).`,
+				"SCORING",
+				65,
+			);
+		}
+		if (hasH2H && (h2hBtts ?? 0) <= 40) {
+			pushSupport(
+				`Recent meetings have more often featured a clean sheet.`,
+				"H2H",
+				60,
+			);
+		}
+
+		if (avgScoringRate >= 65) {
+			pushWatchOut(
+				`Both teams score frequently, which keeps a goal at both ends in play.`,
+				68,
+			);
+		}
+		if (avgCleanSheets <= 20) {
+			pushWatchOut(
+				`Clean sheets are rare, so a goal at both ends can still happen.`,
+				65,
+			);
+		}
+		if (hasH2H && (h2hBtts ?? 0) >= 60) {
+			pushWatchOut(
+				`Head-to-heads have often featured goals from both sides.`,
+				62,
+			);
+		}
+	}
+
+	if (supporting.length === 0 && watchOuts.length === 0) return [];
+
+	if (watchOuts.length === 0) return supporting.slice(0, 5);
+
+	const remaining = Math.max(1, 5 - watchOuts.length);
+	return [
+		...supporting.slice(0, remaining),
+		...watchOuts.slice(0, 5 - remaining),
+	];
 }
