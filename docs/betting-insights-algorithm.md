@@ -5445,7 +5445,7 @@ async function generateFinalPrediction(
 5. ✅ Backtesting framework
 
 **Medium Priority (Weeks 5-8):**
-1. Model calibration
+1. Model calibration (per-market calibration layer using Brier/ECE for BTTS, O/U, 1X2, 1H)
 2. Hybrid approach integration
 3. Feature importance analysis
 4. A/B testing framework
