@@ -12,15 +12,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { BarChart3, Info } from "lucide-react-native";
-import { useId } from "react";
+import { Info } from "lucide-react-native";
 import { View } from "react-native";
-import Svg, {
-  Defs,
-  LinearGradient,
-  Stop,
-  Text as SvgText,
-} from "react-native-svg";
 
 type MatchOutcomeInsight = {
 	text: string;
@@ -114,39 +107,6 @@ const renderInsightText = (insight: MatchOutcomeInsight) => {
 
 const tooltipText = "test";
 
-function GradientPercent({
-	value,
-	fontSize,
-}: {
-	value: number;
-	fontSize: number;
-}) {
-	const gradientId = useId();
-	const label = formatPercent(value);
-	const width = Math.max(Math.ceil(label.length * fontSize * 0.65), fontSize);
-	const height = Math.ceil(fontSize * 1.2);
-
-	return (
-		<Svg width={width} height={height}>
-			<Defs>
-				<LinearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
-					<Stop offset="0%" stopColor="#1f7d4b" />
-					<Stop offset="100%" stopColor="#76c427" />
-				</LinearGradient>
-			</Defs>
-			<SvgText
-				x="0"
-				y={fontSize}
-				fill={`url(#${gradientId})`}
-				fontSize={fontSize}
-				fontFamily="SourceSans3-semibold"
-			>
-				{label}
-			</SvgText>
-		</Svg>
-	);
-}
-
 export function MatchOutcomeCard({
 	homeTeam,
 	awayTeam,
@@ -173,7 +133,6 @@ export function MatchOutcomeCard({
 	return (
 		<View className="shadow-sha-01 dark:shadow-sha-06 rounded-lg bg-neu-01 dark:bg-neu-11 p-16">
 			<View className="flex-row items-center gap-8">
-				<Icon as={BarChart3} className="text-m-01 w-24 h-24" />
 				<Text
 					variant="caption-01"
 					className="uppercase text-m-01 dark:text-m-01-light-04"
@@ -184,7 +143,7 @@ export function MatchOutcomeCard({
 
 			<View className="bg-neu-02 dark:bg-neu-12 px-16 py-16 gap-y-16 rounded-lg mt-8">
 				<View className="gap-y-8">
-					<Text variant="highlight-04" className="text-neu-10 dark:text-neu-01">
+					<Text variant="highlight-03" className="text-neu-10 dark:text-neu-01">
 						{getOutcomeEdgeLabel(probabilityDistribution)}
 					</Text>
 
@@ -240,16 +199,16 @@ export function MatchOutcomeCard({
 								Home
 							</Text>
 							<View className="justify-end">
-								{homeValue === maxSide ? (
-									<GradientPercent value={homeValue} fontSize={24} />
-								) : (
-									<Text
-										variant="body-02"
-										className="text-neu-07 dark:text-neu-06"
-									>
-										{formatPercent(homeValue)}
-									</Text>
-								)}
+								<Text
+									variant={homeValue === maxSide ? "highlight-01" : "body-02"}
+									className={
+										homeValue === maxSide
+											? "text-m-02"
+											: "text-neu-07 dark:text-neu-06"
+									}
+								>
+									{formatPercent(homeValue)}
+								</Text>
 							</View>
 						</View>
 						<View className="flex-1 justify-between items-center">
@@ -260,16 +219,16 @@ export function MatchOutcomeCard({
 								Draw
 							</Text>
 							<View className="justify-end">
-								{drawValue === maxSide ? (
-									<GradientPercent value={drawValue} fontSize={24} />
-								) : (
-									<Text
-										variant="body-02"
-										className="text-neu-07 dark:text-neu-06"
-									>
-										{formatPercent(drawValue)}
-									</Text>
-								)}
+								<Text
+									variant={drawValue === maxSide ? "highlight-03" : "body-02"}
+									className={
+										drawValue === maxSide
+											? "text-m-02"
+											: "text-neu-07 dark:text-neu-06"
+									}
+								>
+									{formatPercent(drawValue)}
+								</Text>
 							</View>
 						</View>
 						<View className="flex-1 justify-between items-end">
@@ -280,16 +239,16 @@ export function MatchOutcomeCard({
 								Away
 							</Text>
 							<View className="justify-end items-end">
-								{awayValue === maxSide ? (
-									<GradientPercent value={awayValue} fontSize={24} />
-								) : (
-									<Text
-										variant="body-02"
-										className="text-neu-07 dark:text-neu-06"
-									>
-										{formatPercent(awayValue)}
-									</Text>
-								)}
+								<Text
+									variant={awayValue === maxSide ? "highlight-03" : "body-02"}
+									className={
+										awayValue === maxSide
+											? "text-m-02"
+											: "text-neu-07 dark:text-neu-06"
+									}
+								>
+									{formatPercent(awayValue)}
+								</Text>
 							</View>
 						</View>
 					</View>
@@ -299,8 +258,8 @@ export function MatchOutcomeCard({
 							style={{ flexGrow: homeValue / total }}
 							className={
 								homeValue === maxSide
-									? "bg-linear-to-r from-m-02-dark-01 to-m-02-light-02"
-									: "bg-neu-05 dark:bg-neu-10"
+									? "bg-linear-to-l from-m-02-dark-01 to-m-02-light-02"
+									: "bg-linear-to-l from-neu-05 to-neu-06 "
 							}
 						/>
 						<View
@@ -308,7 +267,7 @@ export function MatchOutcomeCard({
 							className={
 								drawValue === maxSide
 									? "bg-linear-to-r from-m-02-dark-01 to-m-02-light-02"
-									: "bg-neu-04 dark:bg-neu-09"
+									: "bg-neu-04 dark:bg-neu-10"
 							}
 						/>
 						<View
@@ -316,7 +275,7 @@ export function MatchOutcomeCard({
 							className={
 								awayValue === maxSide
 									? "bg-linear-to-r from-m-02-dark-01 to-m-02-light-02"
-									: "bg-neu-05 dark:bg-neu-10"
+									: "bg-linear-to-r from-neu-06 to-neu-05 "
 							}
 						/>
 					</View>
