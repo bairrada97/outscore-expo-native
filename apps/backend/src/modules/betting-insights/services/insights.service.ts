@@ -122,6 +122,8 @@ const INSIGHTS_FINISHED_STATUSES = [
 	"WO", // Walkover
 ];
 
+const FINISHED_STATUSES = new Set(["FT", "AET", "PEN"]);
+
 // ============================================================================
 // ERRORS
 // ============================================================================
@@ -866,7 +868,7 @@ export const insightsService = {
 
 			// Convert to ProcessedMatch format
 			const matches = rawMatches
-				.filter((m) => m.fixture.status.short === "FT") // Only finished matches
+				.filter((m) => FINISHED_STATUSES.has(m.fixture.status.short)) // Only finished matches
 				.map((m) => this.convertToProcessedMatch(m, teamId));
 
 			return matches;

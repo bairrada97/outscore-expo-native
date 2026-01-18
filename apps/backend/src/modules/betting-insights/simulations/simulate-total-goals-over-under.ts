@@ -64,7 +64,7 @@ export function simulateTotalGoalsOverUnder(
 		distributionModifiers,
 	);
 	const baseOverProbability = clamp(
-		distribution.probOverByLine[String(line)] ?? 0,
+		distribution.probOverByLine[String(line)] ?? 50,
 		0,
 		100,
 	);

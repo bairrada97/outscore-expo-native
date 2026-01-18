@@ -21,18 +21,18 @@ import type { MatchContext } from "../match-context/context-adjustments";
 import { detectDerby } from "../match-context/derby-detector";
 import { finalizeSimulation } from "../presentation/simulation-presenter";
 import type {
-  Adjustment,
-  AlgorithmConfig,
-  ConfidenceLevel,
-  H2HData,
-  Insight,
-  ProcessedMatch,
-  Simulation,
-  TeamData,
+	Adjustment,
+	AlgorithmConfig,
+	ConfidenceLevel,
+	H2HData,
+	Insight,
+	ProcessedMatch,
+	Simulation,
+	TeamData,
 } from "../types";
 import {
-  applyCappedAsymmetricAdjustments,
-  createAdjustment,
+	applyCappedAsymmetricAdjustments,
+	createAdjustment,
 } from "../utils/capped-adjustments";
 // Extracted factor calculation utilities (Phase 4.6)
 import { calculateFormScore } from "../utils/form-score";
@@ -41,9 +41,9 @@ import { clamp } from "../utils/helpers";
 import { calculateHomeAdvantageScore } from "../utils/home-advantage";
 import type { InjuryImpactAssessment } from "../utils/injury-adjustments";
 import {
-  calculateMotivationScore,
-  getMotivationDescription,
-  hasMotivationClash,
+	calculateMotivationScore,
+	getMotivationDescription,
+	hasMotivationClash,
 } from "../utils/motivation-score";
 import { calculatePositionScore } from "../utils/position-score";
 import { calculateRestScore } from "../utils/rest-score";
@@ -316,12 +316,8 @@ export function simulateMatchOutcome(
 		awayAdjustments,
 	);
 
-	if (injuries?.homeAdjustments?.length) {
-		homeAdjustments.push(...injuries.homeAdjustments);
-	}
-	if (injuries?.awayAdjustments?.length) {
-		awayAdjustments.push(...injuries.awayAdjustments);
-	}
+	const injuryAdjustmentsHome = injuries?.homeAdjustments ?? [];
+	const injuryAdjustmentsAway = injuries?.awayAdjustments ?? [];
 
 	const homeMidweek = buildMidweekLoadAdjustment(homeTeam);
 	if (homeMidweek) homeAdjustments.push(homeMidweek.adj);
@@ -384,7 +380,7 @@ export function simulateMatchOutcome(
 			restScore,
 			positionScore,
 		},
-		[],
+		[...injuryAdjustmentsHome, ...injuryAdjustmentsAway],
 	);
 }
 
