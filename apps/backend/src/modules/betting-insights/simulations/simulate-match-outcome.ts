@@ -145,9 +145,8 @@ function buildMidweekLoadAdjustment(
 
 function buildPostDerbyHangoverAdjustment(params: {
 	team: TeamData;
-	currentContext?: MatchContext;
 }): { adj: Adjustment; derbyName?: string } | null {
-	const { team, currentContext } = params;
+	const { team } = params;
 	const last = getMostRecentMatch(team);
 	if (!last) return null;
 
@@ -164,7 +163,9 @@ function buildPostDerbyHangoverAdjustment(params: {
 	if (!derby.isDerby) return null;
 
 	// Stronger effect for international matches (e.g., UCL) where intensity/travel tends to be higher.
-	const isInternational = currentContext?.matchType?.type === "INTERNATIONAL";
+	const lastLeagueName = last.league?.name ?? "";
+	const lastCompetition = classifyCompetition(lastLeagueName);
+	const isInternational = lastCompetition === "international";
 
 	let base = 0;
 	switch (derby.intensity) {
@@ -294,12 +295,10 @@ export function simulateMatchOutcome(
 
 	const homeDerbyHangover = buildPostDerbyHangoverAdjustment({
 		team: homeTeam,
-		currentContext: context,
 	});
 	if (homeDerbyHangover) homeAdjustments.push(homeDerbyHangover.adj);
 	const awayDerbyHangover = buildPostDerbyHangoverAdjustment({
 		team: awayTeam,
-		currentContext: context,
 	});
 	if (awayDerbyHangover) awayAdjustments.push(awayDerbyHangover.adj);
 
@@ -1086,11 +1085,9 @@ function buildMatchOutcomeInsights(params: {
 	) {
 		const homeDerby = buildPostDerbyHangoverAdjustment({
 			team: homeTeam,
-			currentContext: context,
 		});
 		const awayDerby = buildPostDerbyHangoverAdjustment({
 			team: awayTeam,
-			currentContext: context,
 		});
 
 		const pickedDerby =

@@ -147,7 +147,7 @@ function buildInsights(
 
 	const hasH2H = Boolean(h2h?.hasSufficientData);
 	const key = String(line) as GoalLineKey;
-	const h2hOverPct = hasH2H ? (h2h?.goalLineOverPct?.[key] ?? 0) : null;
+	const h2hOverPct = hasH2H ? (h2h?.goalLineOverPct?.[key] ?? null) : null;
 
 	const leansOver = overProb >= 50;
 
@@ -200,7 +200,7 @@ function buildInsights(
 				60,
 			);
 		}
-		if (hasH2H && (h2hOverPct ?? 0) >= 55) {
+		if (hasH2H && h2hOverPct !== null && h2hOverPct >= 55) {
 			pushSupport(
 				`Recent meetings have gone over ${line} goals in ${(
 					h2hOverPct ?? 0
@@ -232,7 +232,7 @@ function buildInsights(
 				62,
 			);
 		}
-		if (hasH2H && (h2hOverPct ?? 0) <= 40) {
+		if (hasH2H && h2hOverPct !== null && h2hOverPct <= 40) {
 			pushWatchOut(
 				`Recent head-to-heads often stay under ${line} goals (${(
 					h2hOverPct ?? 0
@@ -267,7 +267,7 @@ function buildInsights(
 				60,
 			);
 		}
-		if (hasH2H && (h2hOverPct ?? 0) <= 45) {
+		if (hasH2H && h2hOverPct !== null && h2hOverPct <= 45) {
 			pushSupport(
 				`Recent meetings have stayed under ${line} goals most of the time.`,
 				"H2H",
@@ -297,7 +297,7 @@ function buildInsights(
 				62,
 			);
 		}
-		if (hasH2H && (h2hOverPct ?? 0) >= 60) {
+		if (hasH2H && h2hOverPct !== null && h2hOverPct >= 60) {
 			pushWatchOut(`Head-to-heads have often gone over ${line} goals.`, 62);
 		}
 	}
