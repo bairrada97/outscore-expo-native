@@ -18,6 +18,7 @@
 
 import { DEFAULT_ALGORITHM_CONFIG } from "../config/algorithm-config";
 import type { MatchContext } from "../match-context/context-adjustments";
+import { detectDerby } from "../match-context/derby-detector";
 import { finalizeSimulation } from "../presentation/simulation-presenter";
 import type {
   Adjustment,
@@ -25,6 +26,7 @@ import type {
   ConfidenceLevel,
   H2HData,
   Insight,
+  ProcessedMatch,
   Simulation,
   TeamData,
 } from "../types";
@@ -37,10 +39,11 @@ import { calculateFormScore } from "../utils/form-score";
 import { calculateH2HScore } from "../utils/h2h-score";
 import { clamp } from "../utils/helpers";
 import { calculateHomeAdvantageScore } from "../utils/home-advantage";
+import type { InjuryImpactAssessment } from "../utils/injury-adjustments";
 import {
   calculateMotivationScore,
   getMotivationDescription,
-  hasMotivationClash
+  hasMotivationClash,
 } from "../utils/motivation-score";
 import { calculatePositionScore } from "../utils/position-score";
 import { calculateRestScore } from "../utils/rest-score";
@@ -67,15 +70,167 @@ const MATCH_RESULT_WEIGHTS = {
  * Home teams statistically win ~45%, draw ~27%, away ~28%
  */
 const BASE_PROBABILITIES = {
-	home: 35, // Base before any factors
-	draw: 30,
-	away: 35,
+	// Home advantage is real in most leagues; start closer to empirical priors.
+	// Draw is handled separately via calculateDrawProbability().
+	home: 45,
+	draw: 27,
+	away: 28,
 } as const;
 
 /**
  * Typical draw rate in football
  */
 const TYPICAL_DRAW_RATE = 27;
+
+// ============================================================================
+// MIDWEEK LOAD (competition context)
+// ============================================================================
+
+function getMostRecentMatch(team: TeamData): ProcessedMatch | null {
+	const all = [
+		...(team.lastHomeMatches ?? []),
+		...(team.lastAwayMatches ?? []),
+	];
+	if (!all.length) return null;
+	const sorted = all
+		.slice()
+		.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+	return sorted[0] ?? null;
+}
+
+function isMidweekUTC(dateIso: string): boolean {
+	const d = new Date(dateIso);
+	const day = d.getUTCDay(); // 0 Sun ... 6 Sat
+	return day === 2 || day === 3 || day === 4; // Tue/Wed/Thu
+}
+
+function classifyCompetition(
+	leagueName: string,
+): "international" | "domestic_cup" | "other" {
+	const t = (leagueName ?? "").toLowerCase();
+
+	// International club/national competitions
+	if (
+		t.includes("champions league") ||
+		t.includes("europa league") ||
+		t.includes("conference league") ||
+		t.includes("nations league") ||
+		t.includes("world cup") ||
+		t.includes("copa america") ||
+		t.includes("afc champions") ||
+		t.includes("caf champions") ||
+		t.includes("concacaf") ||
+		t.includes("libertadores") ||
+		t.includes("sudamericana")
+	) {
+		return "international";
+	}
+
+	// Domestic cups
+	if (
+		t.includes(" cup") ||
+		t.startsWith("cup ") ||
+		t.includes("copa") ||
+		t.includes("taça") ||
+		t.includes("taca") ||
+		t.includes("coupe") ||
+		t.includes("coppa") ||
+		t.includes("pokal") ||
+		t.includes("beker")
+	) {
+		return "domestic_cup";
+	}
+
+	return "other";
+}
+
+function buildMidweekLoadAdjustment(
+	team: TeamData,
+): { adj: Adjustment; leagueName: string } | null {
+	const last = getMostRecentMatch(team);
+	if (!last) return null;
+	if (!isMidweekUTC(last.date)) return null;
+
+	const leagueName = last.league?.name ?? "";
+	const kind = classifyCompetition(leagueName);
+	if (kind === "other") return null;
+
+	const days = team.daysSinceLastMatch ?? 7;
+	const veryShort = days <= 3;
+	const short = days <= 5;
+	if (!short) return null;
+
+	// Conservative penalties; this captures intensity/rotation effects beyond rest-days alone.
+	let value = 0;
+	if (kind === "international") value = veryShort ? -4 : -3;
+	if (kind === "domestic_cup") value = veryShort ? -3 : -2;
+
+	return {
+		leagueName,
+		adj: createAdjustment(
+			"context_midweek_competition_load",
+			value,
+			`Midweek ${leagueName} match can affect freshness and rotation`,
+		),
+	};
+}
+
+function buildPostDerbyHangoverAdjustment(params: {
+	team: TeamData;
+	currentContext?: MatchContext;
+}): { adj: Adjustment; derbyName?: string } | null {
+	const { team, currentContext } = params;
+	const last = getMostRecentMatch(team);
+	if (!last) return null;
+
+	// If we have no days since last match, don't guess.
+	const days = team.daysSinceLastMatch ?? 7;
+	if (days > 6) return null;
+
+	const derby = detectDerby(
+		last.homeTeam.id,
+		last.awayTeam.id,
+		last.homeTeam.name,
+		last.awayTeam.name,
+	);
+	if (!derby.isDerby) return null;
+
+	// Stronger effect for international matches (e.g., UCL) where intensity/travel tends to be higher.
+	const isInternational = currentContext?.matchType?.type === "INTERNATIONAL";
+
+	let base = 0;
+	switch (derby.intensity) {
+		case "EXTREME":
+			base = -3;
+			break;
+		case "HIGH":
+			base = -2;
+			break;
+		case "MEDIUM":
+			base = -1.5;
+			break;
+		default:
+			base = -1;
+	}
+
+	// Shorter turnaround increases the hangover risk.
+	if (days <= 3) base -= 1;
+	if (isInternational) base -= 0.5;
+
+	// Clamp to a conservative range (we still want the core model to dominate).
+	const value = Math.max(-4, Math.min(-1, base));
+
+	return {
+		derbyName: derby.derbyName,
+		adj: createAdjustment(
+			"context_post_derby_hangover",
+			value,
+			derby.derbyName
+				? `Coming off a derby (${derby.derbyName}) can affect freshness and focus`
+				: "Coming off a derby can affect freshness and focus",
+		),
+	};
+}
 
 // ============================================================================
 // MAIN PREDICTION FUNCTION
@@ -99,6 +254,12 @@ export function simulateMatchOutcome(
 	h2h?: H2HData,
 	context?: MatchContext,
 	config: AlgorithmConfig = DEFAULT_ALGORITHM_CONFIG,
+	injuries?: {
+		homeAdjustments?: Adjustment[];
+		awayAdjustments?: Adjustment[];
+		homeImpact?: InjuryImpactAssessment | null;
+		awayImpact?: InjuryImpactAssessment | null;
+	},
 ): Simulation {
 	// =========================================================================
 	// STEP 1: Calculate factor scores (Section 4.6.1)
@@ -201,6 +362,32 @@ export function simulateMatchOutcome(
 		awayAdjustments,
 	);
 
+	// Add injury adjustments (when provided) so injuries affect MatchOutcome probabilities.
+	if (injuries?.homeAdjustments?.length) {
+		homeAdjustments.push(...injuries.homeAdjustments);
+	}
+	if (injuries?.awayAdjustments?.length) {
+		awayAdjustments.push(...injuries.awayAdjustments);
+	}
+
+	// Midweek competition load (international / domestic cup).
+	const homeMidweek = buildMidweekLoadAdjustment(homeTeam);
+	if (homeMidweek) homeAdjustments.push(homeMidweek.adj);
+	const awayMidweek = buildMidweekLoadAdjustment(awayTeam);
+	if (awayMidweek) awayAdjustments.push(awayMidweek.adj);
+
+	// Post-derby hangover (based on previous match being a derby).
+	const homeDerbyHangover = buildPostDerbyHangoverAdjustment({
+		team: homeTeam,
+		currentContext: context,
+	});
+	if (homeDerbyHangover) homeAdjustments.push(homeDerbyHangover.adj);
+	const awayDerbyHangover = buildPostDerbyHangoverAdjustment({
+		team: awayTeam,
+		currentContext: context,
+	});
+	if (awayDerbyHangover) awayAdjustments.push(awayDerbyHangover.adj);
+
 	// Add context adjustments
 	if (context) {
 		addContextAdjustments(context, homeAdjustments, awayAdjustments);
@@ -267,6 +454,9 @@ export function simulateMatchOutcome(
 		homeTeam,
 		awayTeam,
 		context,
+		h2h,
+		injuries?.homeImpact ?? null,
+		injuries?.awayImpact ?? null,
 		{
 			formScore,
 			h2hScore,
@@ -583,6 +773,9 @@ function buildMatchResultPrediction(
 	_homeTeam: TeamData,
 	_awayTeam: TeamData,
 	_context: MatchContext | undefined,
+	_h2h: H2HData | undefined,
+	_homeInjuryImpact: InjuryImpactAssessment | null,
+	_awayInjuryImpact: InjuryImpactAssessment | null,
 	factorScores: {
 		formScore: number;
 		h2hScore: number;
@@ -619,6 +812,9 @@ function buildMatchResultPrediction(
 			homeTeam: _homeTeam,
 			awayTeam: _awayTeam,
 			context: _context,
+			h2h: _h2h,
+			homeInjuryImpact: _homeInjuryImpact,
+			awayInjuryImpact: _awayInjuryImpact,
 		}),
 		factorScores,
 		adjustmentsApplied: [
@@ -647,8 +843,20 @@ function buildMatchOutcomeInsights(params: {
 	homeTeam: TeamData;
 	awayTeam: TeamData;
 	context?: MatchContext;
+	h2h?: H2HData;
+	homeInjuryImpact?: InjuryImpactAssessment | null;
+	awayInjuryImpact?: InjuryImpactAssessment | null;
 }): Insight[] {
-	const { probs, factorScores, homeTeam, awayTeam, context } = params;
+	const {
+		probs,
+		factorScores,
+		homeTeam,
+		awayTeam,
+		context,
+		h2h,
+		homeInjuryImpact,
+		awayInjuryImpact,
+	} = params;
 
 	function getPick(): "home" | "away" | "draw" {
 		const homeP = probs.home ?? 0;
@@ -707,7 +915,7 @@ function buildMatchOutcomeInsights(params: {
 
 	function restSentence(dir: "home" | "away"): string {
 		const team = dir === "home" ? homeTeam.name : awayTeam.name;
-		return `${team} should be fresher, because they’ve had more time to recover since their last match.`;
+		return `${team} comes in with a better recovery rhythm, which can help maintain sharpness.`;
 	}
 
 	function homeAdvantageSentence(dir: "home" | "away"): string {
@@ -922,6 +1130,206 @@ function buildMatchOutcomeInsights(params: {
 
 		if (warn) watchOuts.push({ abs: d.abs, insight });
 		else supporting.push({ abs: d.abs, insight });
+	}
+
+	// -------------------------------------------------------------------------
+	// Additional non-probability watch-outs (variance / uncertainty)
+	// These do NOT restate probabilities; they highlight concrete reasons the
+	// favorite might still drop points (draw/lose).
+	// -------------------------------------------------------------------------
+
+	// H2H tendency: if the picked team doesn't have a strong win record in recent H2H.
+	// Only use when we actually have a small recent sample (commonly last 5).
+	if (pick !== "draw" && h2h && h2h.h2hMatchCount >= 3) {
+		const n = Math.min(5, h2h.h2hMatchCount);
+		const pickedWins = pick === "home" ? h2h.homeTeamWins : h2h.awayTeamWins;
+		// If the picked side won <= 2 of the last 5 (or <= 1 of the last 3-4), it’s a fair watch-out.
+		const isSoftH2H = n >= 5 ? pickedWins <= 2 : pickedWins <= 1;
+
+		if (isSoftH2H && !watchOuts.some((w) => w.insight.emoji === "🤝")) {
+			watchOuts.push({
+				abs: 28,
+				insight: {
+					text: `In the last ${n} meetings between these two teams, ${pickTeam} only won ${pickedWins}.`,
+					emoji: "🤝",
+					priority: 68,
+					category: "WARNING",
+					severity: "MEDIUM",
+				},
+			});
+		}
+	}
+
+	// Rest/rhythm watch-outs (aligned with rest quality, not "more days = fresher"):
+	// - Very short turnaround can bring fatigue/rotation risk
+	// - Very long break can disrupt rhythm (or help); we frame it as uncertainty
+	if (!watchOuts.some((w) => w.insight.emoji === "🛌")) {
+		const homeDays = homeTeam.daysSinceLastMatch ?? 7;
+		const awayDays = awayTeam.daysSinceLastMatch ?? 7;
+
+		const fatigueTeam =
+			homeDays < 3 ? homeTeam.name : awayDays < 3 ? awayTeam.name : null;
+		if (fatigueTeam) {
+			watchOuts.push({
+				abs: 24,
+				insight: {
+					text: `${fatigueTeam} are on a short turnaround — fatigue and rotation can be factors.`,
+					emoji: "🛌",
+					priority: 66,
+					category: "WARNING",
+					severity: "MEDIUM",
+				},
+			});
+		}
+
+		const longBreakTeam =
+			homeDays > 10 ? homeTeam.name : awayDays > 10 ? awayTeam.name : null;
+		if (longBreakTeam) {
+			watchOuts.push({
+				abs: 18,
+				insight: {
+					text: `${longBreakTeam} are coming off a longer break, while that can sometimes help, it can also disrupt their rhythm.`,
+					emoji: "🛌",
+					priority: 62,
+					category: "WARNING",
+					severity: "LOW",
+				},
+			});
+		}
+	}
+
+	// Injuries uncertainty: only when the situation is materially unbalanced or severe.
+	if (
+		(homeInjuryImpact || awayInjuryImpact) &&
+		!watchOuts.some((w) => w.insight.emoji === "🏥")
+	) {
+		const homeAdj = homeInjuryImpact?.adjustmentValue ?? 0;
+		const awayAdj = awayInjuryImpact?.adjustmentValue ?? 0;
+		const diff = Math.abs(homeAdj - awayAdj);
+		const severe =
+			homeInjuryImpact?.severity === "CRITICAL" ||
+			awayInjuryImpact?.severity === "CRITICAL" ||
+			homeInjuryImpact?.severity === "HIGH" ||
+			awayInjuryImpact?.severity === "HIGH";
+
+		// Trigger only when relatively meaningful (future: key-player injuries).
+		if (severe || diff >= 5) {
+			watchOuts.push({
+				abs: severe ? 30 : 20,
+				insight: {
+					text: "Injuries add more uncertainty to this match",
+					emoji: "🏥",
+					priority: 70,
+					category: "WARNING",
+					severity: severe ? "HIGH" : "MEDIUM",
+				},
+			});
+		}
+	}
+
+	// Midweek competition load: highlight potential rotation/freshness effects without rest-day talk.
+	if (!watchOuts.some((w) => w.insight.emoji === "🗓️")) {
+		const homeLoad = buildMidweekLoadAdjustment(homeTeam);
+		const awayLoad = buildMidweekLoadAdjustment(awayTeam);
+		const pickLoad =
+			pick === "home" ? homeLoad : pick === "away" ? awayLoad : null;
+
+		if (pick !== "draw" && pickLoad) {
+			watchOuts.push({
+				abs: 22,
+				insight: {
+					text: `${pickTeam} had a midweek ${pickLoad.leagueName} match, which can impact rotation and sharpness.`,
+					emoji: "🗓️",
+					priority: 64,
+					category: "WARNING",
+					severity: "MEDIUM",
+				},
+			});
+		}
+	}
+
+	// Post-derby hangover: previous match was a derby/rivalry.
+	// - If the picked team comes off a derby, it’s a watch-out.
+	// - If the opponent comes off a derby, it can be a supporting context signal.
+	if (
+		!supporting.some((s) => s.insight.emoji === "⚔️") &&
+		!watchOuts.some((w) => w.insight.emoji === "⚔️")
+	) {
+		const homeDerby = buildPostDerbyHangoverAdjustment({
+			team: homeTeam,
+			currentContext: context,
+		});
+		const awayDerby = buildPostDerbyHangoverAdjustment({
+			team: awayTeam,
+			currentContext: context,
+		});
+
+		const pickedDerby =
+			pick === "home" ? homeDerby : pick === "away" ? awayDerby : null;
+		const oppDerby =
+			pick === "home" ? awayDerby : pick === "away" ? homeDerby : null;
+
+		if (pick !== "draw" && pickedDerby) {
+			watchOuts.push({
+				abs: 26,
+				insight: {
+					text: pickedDerby.derbyName
+						? `${pickTeam} are coming off a derby (${pickedDerby.derbyName}) — those games can be draining and sometimes affect focus and legs.`
+						: `${pickTeam} are coming off a derby — those games can be draining and sometimes affect focus and legs.`,
+					emoji: "⚔️",
+					priority: 68,
+					category: "WARNING",
+					severity: "MEDIUM",
+				},
+			});
+		} else if (pick !== "draw" && oppDerby) {
+			const oppName = pick === "home" ? awayTeam.name : homeTeam.name;
+			supporting.push({
+				abs: 20,
+				insight: {
+					text: oppDerby.derbyName
+						? `${oppName} are coming off a derby (${oppDerby.derbyName}), which can impact recovery and rotation.`
+						: `${oppName} are coming off a derby, which can impact recovery and rotation.`,
+					emoji: "⚔️",
+					priority: 60,
+					category: "CONTEXT",
+					severity: "LOW",
+				},
+			});
+		}
+	}
+
+	// Match context volatility (derby/neutral/post-break/end-season).
+	const isDerby = !!(context?.derby?.isDerby ?? context?.matchType?.isDerby);
+	const isNeutral = !!context?.matchType?.isNeutralVenue;
+	const isPostBreak = !!context?.isPostInternationalBreak;
+	const isEndSeason = !!context?.isEndOfSeason;
+
+	if (
+		(isDerby || isNeutral || isPostBreak || isEndSeason) &&
+		!watchOuts.some((w) => w.insight.emoji === "⚠️")
+	) {
+		const reasons: string[] = [];
+		if (isDerby) reasons.push("Derby matches can be unpredictable.");
+		if (isNeutral)
+			reasons.push("A neutral venue can reduce the usual home edge.");
+		if (isPostBreak)
+			reasons.push(
+				"Post-break games can be harder to read due to rotation and rhythm.",
+			);
+		if (isEndSeason)
+			reasons.push("Late-season pressure can lead to surprise outcomes.");
+
+		watchOuts.push({
+			abs: 24,
+			insight: {
+				text: reasons.join(" "),
+				emoji: "⚠️",
+				priority: 66,
+				category: "WARNING",
+				severity: "MEDIUM",
+			},
+		});
 	}
 
 	// Allow more depth: up to 5 supporting + up to 5 watch-outs.

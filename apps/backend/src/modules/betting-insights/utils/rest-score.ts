@@ -55,7 +55,9 @@ export function calculateRestScore(
  */
 export function calculateRestQuality(days: number): number {
   if (days >= 4 && days <= 7) return REST_QUALITY.OPTIMAL;
-  if (days === 8 || days === 9) return REST_QUALITY.SLIGHTLY_LONG;
+  // Treat 8-10 days as "slightly long" (still generally fine, but can start to reduce sharpness).
+  // Previously day=10 fell through to the default and was incorrectly treated as "slightly short".
+  if (days >= 8 && days <= 10) return REST_QUALITY.SLIGHTLY_LONG;
   if (days === 3) return REST_QUALITY.SLIGHTLY_SHORT;
   if (days > 10) return REST_QUALITY.RUSTY;
   if (days < 3) return REST_QUALITY.FATIGUED;

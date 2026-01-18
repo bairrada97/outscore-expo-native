@@ -1682,7 +1682,14 @@ export const insightsService = {
 		}
 
 		// Match Outcome
-		simulations.push(simulateMatchOutcome(homeTeam, awayTeam, h2h, context));
+		simulations.push(
+			simulateMatchOutcome(homeTeam, awayTeam, h2h, context, undefined, {
+				homeAdjustments,
+				awayAdjustments,
+				homeImpact,
+				awayImpact,
+			}),
+		);
 
 		// First Half Activity
 		simulations.push(
@@ -1690,9 +1697,12 @@ export const insightsService = {
 		);
 
 		// Apply injury adjustments to relevant simulations
-		// Note: We add injury adjustments as explanatory factors for transparency
+		// Note: We add injury adjustments as explanatory factors for transparency.
+		// MatchOutcome already consumes these adjustments inside `simulateMatchOutcome`,
+		// so we skip it here to avoid double-counting.
 		if (homeAdjustments.length > 0 || awayAdjustments.length > 0) {
 			for (const sim of simulations) {
+				if (sim.scenarioType === "MatchOutcome") continue;
 				// Add injury adjustments to the simulation's adjustmentsApplied array for transparency
 				sim.adjustmentsApplied = [
 					...(sim.adjustmentsApplied || []),
