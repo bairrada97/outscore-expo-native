@@ -1,5 +1,6 @@
 import type { FixtureStatusShort } from "@outscore/shared-types";
 import { isFinishedStatus } from "@outscore/shared-types";
+import * as ProgressPrimitive from "@rn-primitives/progress";
 import { View } from "react-native";
 
 interface FixtureProgressBarProps {
@@ -44,13 +45,16 @@ export function FixtureProgressBar({
 	return (
 		<View className="relative w-full">
 			{/* Track */}
-			<View className="overflow-hidden relative h-4 w-full rounded-[22px] bg-m-01-light-01">
-			{/* Progress fill */}
-				<View
+			<ProgressPrimitive.Root
+				value={progress}
+				className="overflow-hidden relative h-4 w-full rounded-[22px] bg-m-01-light-01"
+			>
+				{/* Progress fill */}
+				<ProgressPrimitive.Indicator
 					className="h-full rounded-[22px] bg-linear-to-r from-m-02-dark-01 to-m-02-light-02"
 					style={{ width: `${progress}%` }}
 				/>
-			</View>
+			</ProgressPrimitive.Root>
 
 			{/* Dots */}
 			{hasDots && (

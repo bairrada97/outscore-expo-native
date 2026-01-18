@@ -344,7 +344,7 @@ export default function FixtureDetailScreen() {
 											<MatchFactsGrid facts={insightsData.matchFacts ?? []} />
 
 											<InsightsSectionHeader title="Key Insights" />
-											<View className="gap-y-24">
+											<View className="gap-y-24 mb-16">
 												<KeyInsightsList
 													title={`${insightsData.match.homeTeam} (HOME) INSIGHTS`}
 													insights={(insightsData.keyInsights?.home ?? []).map(
@@ -367,7 +367,6 @@ export default function FixtureDetailScreen() {
 												/>
 											</View>
 
-											<InsightsSectionHeader title="Match Outcome" />
 											{matchOutcomeSimulation ? (
 												<MatchOutcomeCard
 													homeTeam={insightsData.match.homeTeam}
