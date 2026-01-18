@@ -1,12 +1,12 @@
 import {
-  EventCardRed,
-  EventCardSecondYellow,
-  EventCardYellow,
-  EventGoal,
-  EventOwngoal,
-  EventPenaltyGoal,
-  EventPenaltyMissed,
-  EventSub,
+	EventCardRed,
+	EventCardSecondYellow,
+	EventCardYellow,
+	EventGoal,
+	EventOwngoal,
+	EventPenaltyGoal,
+	EventPenaltyMissed,
+	EventSub,
 } from "@/components/ui/SvgIcons";
 import { Text } from "@/components/ui/text";
 import type { FixtureEvent } from "@outscore/shared-types";
@@ -66,14 +66,14 @@ function getEventIcon(event: FixtureEvent): EventIcon {
 }
 
 function formatDetailLine(event: FixtureEvent): string | null {
-	// Substitutions: show the incoming player (assist) if present
+	// Substitutions: show the player leaving
 	if (event.type === "subst") {
-		return event.assist?.name ?? null;
+		return event.player?.name ? `${event.player.name}` : null;
 	}
 
 	// Goals: show special detail lines
 	if (event.type === "Goal") {
-		if (event.detail === "Own Goal") return "Auto Goal";
+		if (event.detail === "Own Goal") return "Own Goal";
 		if (event.detail === "Missed Penalty") return "Penalty Missed";
 		if (event.detail === "Penalty" || event.detail === "Penalty Goal")
 			return "Penalty";
@@ -132,7 +132,10 @@ export function CardEvent({
 }) {
 	const { Icon, color } = getEventIcon(event);
 	const detailLine = formatDetailLine(event);
-	const playerName = event.player?.name ?? "";
+	const playerName =
+		event.type === "subst"
+			? (event.assist?.name ?? event.player?.name ?? "")
+			: (event.player?.name ?? "");
 
 	// Shared minute block (minute + optional +extra)
 	const MinuteBlock = (
@@ -156,11 +159,12 @@ export function CardEvent({
 		<View className="h-24 w-24" />
 	);
 
+	const textAlignClass = side === "away" ? "text-right" : "text-left";
 	const TextBlock = (
 		<View className="flex-col">
 			<Text
 				variant="body-01--semi"
-				className="text-neu-10 dark:text-neu-01"
+				className={`text-neu-10 dark:text-neu-01 ${textAlignClass}`}
 				numberOfLines={1}
 			>
 				{playerName}
@@ -168,7 +172,7 @@ export function CardEvent({
 			{detailLine ? (
 				<Text
 					variant="caption-02"
-					className="text-neu-09/70 dark:text-neu-06"
+					className={`text-neu-09/70 dark:text-neu-06 ${textAlignClass}`}
 					numberOfLines={1}
 				>
 					{detailLine}

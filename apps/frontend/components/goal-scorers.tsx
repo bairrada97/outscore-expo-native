@@ -40,7 +40,9 @@ export function GoalScorers({
 	homeTeamId,
 	awayTeamId: _awayTeamId,
 }: GoalScorersProps) {
-	const goalEvents = events.filter((event) => event.type === "Goal");
+	const goalEvents = events.filter(
+		(event) => event.type === "Goal" && event.detail !== "Missed Penalty",
+	);
 
 	if (goalEvents.length === 0) {
 		return null;
