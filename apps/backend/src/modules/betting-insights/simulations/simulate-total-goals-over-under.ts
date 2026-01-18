@@ -13,36 +13,24 @@ import type { MatchContext } from "../match-context/context-adjustments";
 import { getMaxConfidenceForContext } from "../match-context/context-adjustments";
 import { finalizeSimulation } from "../presentation/simulation-presenter";
 import type {
-  Adjustment,
-  AlgorithmConfig,
-  ConfidenceLevel,
-  GoalLine,
-  GoalLineKey,
-  H2HData,
-  Insight,
-  Simulation,
-  TeamData,
+	Adjustment,
+	AlgorithmConfig,
+	ConfidenceLevel,
+	GoalLine,
+	GoalLineKey,
+	H2HData,
+	Insight,
+	Simulation,
+	TeamData,
 } from "../types";
+import { applyCappedAsymmetricAdjustments } from "../utils/capped-adjustments";
+import { clamp } from "../utils/helpers";
 import { buildGoalDistribution } from "./goal-distribution";
 import type { GoalDistributionModifiers } from "./goal-distribution-modifiers";
-import {
-  applyCappedAsymmetricAdjustments,
-  createAdjustment,
-} from "../utils/capped-adjustments";
-import { clamp } from "../utils/helpers";
 
 // ============================================================================
 // CONSTANTS
 // ============================================================================
-
-const BASE_PROBABILITY = 50;
-
-const WEIGHTS = {
-	avgGoals: 0.3,
-	defensiveWeakness: 0.25,
-	recentForm: 0.3,
-	h2h: 0.2,
-} as const;
 
 // ============================================================================
 // MAIN PREDICTION FUNCTION
@@ -106,148 +94,6 @@ export function simulateTotalGoalsOverUnder(
 }
 
 // ============================================================================
-// BASE PROBABILITY
-// ============================================================================
-
-function calculateBaseProbability(
-	homeTeam: TeamData,
-	awayTeam: TeamData,
-	h2h: H2HData | undefined,
-	line: GoalLine,
-): number {
-	const avgGoalsScore = getAvgGoalsScore(homeTeam, awayTeam);
-	const defensiveWeaknessScore = getDefensiveWeaknessScore(homeTeam, awayTeam);
-	const recentFormScore = getRecentFormScore(homeTeam, awayTeam, line);
-	const h2hScore = getH2HScore(h2h, line);
-
-	const weighted =
-		avgGoalsScore * WEIGHTS.avgGoals +
-		defensiveWeaknessScore * WEIGHTS.defensiveWeakness +
-		recentFormScore * WEIGHTS.recentForm +
-		h2hScore * WEIGHTS.h2h;
-
-	// Normalize weights sum (~1.05) → clamp to sane 0-100
-	const normalized = weighted / (WEIGHTS.avgGoals + WEIGHTS.defensiveWeakness + WEIGHTS.recentForm + WEIGHTS.h2h);
-	return clamp(normalized, 5, 95);
-}
-
-function getAvgGoalsScore(homeTeam: TeamData, awayTeam: TeamData): number {
-	const combinedAvgGoals = (homeTeam.stats.avgGoalsScored ?? 0) + (awayTeam.stats.avgGoalsScored ?? 0);
-	// Map typical range ~1.5..4.0 to ~30..80
-	return clamp(50 + (combinedAvgGoals - 2.5) * 15, 20, 80);
-}
-
-function getDefensiveWeaknessScore(homeTeam: TeamData, awayTeam: TeamData): number {
-	const combinedConceded = (homeTeam.stats.avgGoalsConceded ?? 0) + (awayTeam.stats.avgGoalsConceded ?? 0);
-	return clamp(50 + (combinedConceded - 2.0) * 15, 20, 80);
-}
-
-function getRecentFormScore(homeTeam: TeamData, awayTeam: TeamData, line: GoalLine): number {
-	const homeOverPct = getTeamLineOverPct(homeTeam, line);
-	const awayOverPct = getTeamLineOverPct(awayTeam, line);
-	return clamp((homeOverPct + awayOverPct) / 2, 10, 90);
-}
-
-function getH2HScore(h2h: H2HData | undefined, line: GoalLine): number {
-	if (!h2h || h2h.h2hMatchCount === 0) return BASE_PROBABILITY;
-	const key = String(line) as GoalLineKey;
-	const pct = h2h.goalLineOverPct?.[key] ?? BASE_PROBABILITY;
-	return clamp(pct, 10, 90);
-}
-
-function getTeamLineOverPct(team: TeamData, line: GoalLine): number {
-	const key = String(line) as GoalLineKey;
-	const pct = team.dna.goalLineOverPct?.[key];
-	if (typeof pct === "number") return pct;
-	// Fallback to a rough estimate from avg goals if line rate missing
-	const combined = (team.stats.avgGoalsScored ?? 0) + (team.stats.avgGoalsConceded ?? 0);
-	return clamp(50 + (combined - line) * 20, 5, 95);
-}
-
-// ============================================================================
-// ADJUSTMENTS
-// ============================================================================
-
-function getAvgGoalsAdjustments(homeTeam: TeamData, awayTeam: TeamData, line: GoalLine): Adjustment[] {
-	const combinedAvg = (homeTeam.stats.avgGoalsScored ?? 0) + (awayTeam.stats.avgGoalsScored ?? 0);
-	const adjustments: Adjustment[] = [];
-
-	if (combinedAvg >= 3.2) {
-		adjustments.push(
-			createAdjustment("other", 4, `High combined scoring (${combinedAvg.toFixed(2)} goals/game)`),
-		);
-	} else if (combinedAvg <= 1.8 && line >= 2.5) {
-		adjustments.push(
-			createAdjustment("other", -4, `Low combined scoring (${combinedAvg.toFixed(2)} goals/game)`),
-		);
-	}
-
-	return adjustments;
-}
-
-function getDefensiveWeaknessAdjustments(homeTeam: TeamData, awayTeam: TeamData, _line: GoalLine): Adjustment[] {
-	const combinedConceded = (homeTeam.stats.avgGoalsConceded ?? 0) + (awayTeam.stats.avgGoalsConceded ?? 0);
-	const adjustments: Adjustment[] = [];
-
-	if (combinedConceded >= 2.8) {
-		adjustments.push(
-			createAdjustment("other", 3, `Leaky defenses (${combinedConceded.toFixed(2)} conceded/game combined)`),
-		);
-	} else if (combinedConceded <= 1.4) {
-		adjustments.push(
-			createAdjustment("other", -3, `Strong defenses (${combinedConceded.toFixed(2)} conceded/game combined)`),
-		);
-	}
-
-	return adjustments;
-}
-
-function getRecentFormAdjustments(homeTeam: TeamData, awayTeam: TeamData, line: GoalLine): Adjustment[] {
-	const avgOverPct = (getTeamLineOverPct(homeTeam, line) + getTeamLineOverPct(awayTeam, line)) / 2;
-	const adjustments: Adjustment[] = [];
-
-	if (avgOverPct >= 70) {
-		adjustments.push(
-			createAdjustment("dna", 4, `High Over ${line} DNA (${avgOverPct.toFixed(0)}% avg)`),
-		);
-	} else if (avgOverPct <= 35) {
-		adjustments.push(
-			createAdjustment("dna", -4, `Low Over ${line} DNA (${avgOverPct.toFixed(0)}% avg)`),
-		);
-	}
-
-	return adjustments;
-}
-
-function getH2HAdjustments(h2h: H2HData, line: GoalLine): Adjustment[] {
-	const key = String(line) as GoalLineKey;
-	const pct = h2h.goalLineOverPct?.[key] ?? 50;
-	const adjustments: Adjustment[] = [];
-
-	if (pct >= 70) {
-		adjustments.push(
-			createAdjustment("h2h", 3, `Over ${line} in ${pct.toFixed(0)}% of H2H matches`),
-		);
-	} else if (pct <= 35) {
-		adjustments.push(
-			createAdjustment("h2h", -3, `Under ${line} in ${(100 - pct).toFixed(0)}% of H2H matches`),
-		);
-	}
-
-	return adjustments;
-}
-
-function getContextAdjustments(_context: MatchContext): Adjustment[] {
-	// Placeholder: keep same structure as other predictors; context-based adjustments can be added later.
-	return [];
-}
-
-function getFormationAdjustments(_homeTeam: TeamData, _awayTeam: TeamData, _impact: number): Adjustment[] {
-	// Placeholder: existing formation stability adjustments are applied in other predictors; keep consistent shape for now.
-	return [];
-}
-
-// ============================================================================
 // OUTPUT HELPERS
 // ============================================================================
 
@@ -269,6 +115,16 @@ function minConfidence(
 	return "HIGH";
 }
 
+function getTeamLineOverPct(team: TeamData, line: GoalLine): number {
+	const key = String(line) as GoalLineKey;
+	const pct = team.dna.goalLineOverPct?.[key];
+	if (typeof pct === "number") return pct;
+	// Fallback to a rough estimate from avg goals if line rate missing
+	const combined =
+		(team.stats.avgGoalsScored ?? 0) + (team.stats.avgGoalsConceded ?? 0);
+	return clamp(50 + (combined - line) * 20, 5, 95);
+}
+
 function buildInsights(
 	overProb: number,
 	line: GoalLine,
@@ -284,15 +140,14 @@ function buildInsights(
 		2;
 	const underPct = 100 - avgOver;
 	const combinedScored =
-		(homeTeam.stats.avgGoalsScored ?? 0) +
-		(awayTeam.stats.avgGoalsScored ?? 0);
+		(homeTeam.stats.avgGoalsScored ?? 0) + (awayTeam.stats.avgGoalsScored ?? 0);
 	const combinedConceded =
 		(homeTeam.stats.avgGoalsConceded ?? 0) +
 		(awayTeam.stats.avgGoalsConceded ?? 0);
 
 	const hasH2H = Boolean(h2h?.hasSufficientData);
 	const key = String(line) as GoalLineKey;
-	const h2hOverPct = hasH2H ? h2h?.goalLineOverPct?.[key] ?? 0 : null;
+	const h2hOverPct = hasH2H ? (h2h?.goalLineOverPct?.[key] ?? 0) : null;
 
 	const leansOver = overProb >= 50;
 
@@ -443,10 +298,7 @@ function buildInsights(
 			);
 		}
 		if (hasH2H && (h2hOverPct ?? 0) >= 60) {
-			pushWatchOut(
-				`Head-to-heads have often gone over ${line} goals.`,
-				62,
-			);
+			pushWatchOut(`Head-to-heads have often gone over ${line} goals.`, 62);
 		}
 	}
 
@@ -476,11 +328,12 @@ function buildInsights(
 
 	if (watchOuts.length === 0) return supporting.slice(0, 5);
 
-	const remaining = Math.max(1, 5 - watchOuts.length);
+	const remainingSupports = Math.min(
+		supporting.length,
+		Math.max(2, 5 - watchOuts.length),
+	);
 	return [
-		...supporting.slice(0, remaining),
-		...watchOuts.slice(0, 5 - remaining),
+		...supporting.slice(0, remainingSupports),
+		...watchOuts.slice(0, 5 - remainingSupports),
 	];
 }
-
-

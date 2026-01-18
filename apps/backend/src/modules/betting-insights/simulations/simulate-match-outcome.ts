@@ -51,39 +51,6 @@ import { buildGoalDistribution } from "./goal-distribution";
 import type { GoalDistributionModifiers } from "./goal-distribution-modifiers";
 
 // ============================================================================
-// CONSTANTS - Section 4.6.1 Weights
-// ============================================================================
-
-/**
- * Market weights for Match Result prediction
- * These are the proper weights from Section 4.6.1
- */
-const MATCH_RESULT_WEIGHTS = {
-	recentForm: 0.3,
-	h2h: 0.25,
-	homeAdvantage: 0.2,
-	motivation: 0.18,
-	rest: 0.12,
-	leaguePosition: 0.1,
-} as const;
-
-/**
- * Base probabilities (neutral starting point)
- * Home teams statistically win ~45%, draw ~27%, away ~28%
- */
-const BASE_PROBABILITIES = {
-	// Home advantage is real in most leagues; start closer to empirical priors.
-	home: 45,
-	draw: 27,
-	away: 28,
-} as const;
-
-/**
- * Typical draw rate in football
- */
-const TYPICAL_DRAW_RATE = 27;
-
-// ============================================================================
 // MIDWEEK LOAD (competition context)
 // ============================================================================
 
@@ -296,7 +263,8 @@ export function simulateMatchOutcome(
 	);
 
 	// =========================================================================
-	// STEP 3: Collect adjustments for tracking (do not alter probabilities)
+	// STEP 3: Collect adjustments for tracking and application
+	// These adjustments are applied later via applyCappedAsymmetricAdjustments to modify probabilities.
 	// =========================================================================
 	const homeAdjustments: Adjustment[] = [];
 	const awayAdjustments: Adjustment[] = [];
@@ -578,32 +546,6 @@ function normalizeProbabilities(
 		home: (home / total) * 100,
 		draw: (draw / total) * 100,
 		away: (away / total) * 100,
-	};
-}
-
-function applyLiveDogCompetitivenessShift(probs: {
-	home: number;
-	draw: number;
-	away: number;
-}): { home: number; draw: number; away: number } {
-	// Target shift (percentage points): home -> draw/away
-	const desiredHomeDown = 1.5;
-	const desiredDrawUp = 1.0;
-	const desiredAwayUp = 0.5;
-
-	// Respect the minimum bucket constraint used elsewhere (>=5)
-	const maxHomeDown = Math.max(0, probs.home - 5);
-	const scale =
-		desiredHomeDown > 0 ? Math.min(1, maxHomeDown / desiredHomeDown) : 0;
-
-	const homeDown = desiredHomeDown * scale;
-	const drawUp = desiredDrawUp * scale;
-	const awayUp = desiredAwayUp * scale;
-
-	return {
-		home: probs.home - homeDown,
-		draw: probs.draw + drawUp,
-		away: probs.away + awayUp,
 	};
 }
 
