@@ -10,10 +10,12 @@
 
 import { DEFAULT_ALGORITHM_CONFIG } from "../config/algorithm-config";
 import type { MatchContext } from "../match-context/context-adjustments";
+import { getMaxConfidenceForContext } from "../match-context/context-adjustments";
 import { finalizeSimulation } from "../presentation/simulation-presenter";
 import type {
   Adjustment,
   AlgorithmConfig,
+  ConfidenceLevel,
   GoalLine,
   GoalLineKey,
   H2HData,
@@ -21,6 +23,8 @@ import type {
   Simulation,
   TeamData,
 } from "../types";
+import { buildGoalDistribution } from "./goal-distribution";
+import type { GoalDistributionModifiers } from "./goal-distribution-modifiers";
 import {
   applyCappedAsymmetricAdjustments,
   createAdjustment,
@@ -51,31 +55,35 @@ export function simulateTotalGoalsOverUnder(
 	context: MatchContext | undefined,
 	line: GoalLine,
 	config: AlgorithmConfig = DEFAULT_ALGORITHM_CONFIG,
+	distributionModifiers?: GoalDistributionModifiers,
 ): Simulation {
-	const baseProbability = calculateBaseProbability(homeTeam, awayTeam, h2h, line);
+	const distribution = buildGoalDistribution(
+		homeTeam,
+		awayTeam,
+		config.goalDistribution,
+		distributionModifiers,
+	);
+	const baseOverProbability = clamp(
+		distribution.probOverByLine[String(line)] ?? 0,
+		0,
+		100,
+	);
 
+	// Phase 3.5 + 4.5: context-aware adjustments + caps/asymmetry.
 	const adjustments: Adjustment[] = [];
-	adjustments.push(...getAvgGoalsAdjustments(homeTeam, awayTeam, line));
-	adjustments.push(...getDefensiveWeaknessAdjustments(homeTeam, awayTeam, line));
-	adjustments.push(...getRecentFormAdjustments(homeTeam, awayTeam, line));
 
-	if (h2h?.hasSufficientData) {
-		adjustments.push(...getH2HAdjustments(h2h, line));
-	}
-
+	let baseConfidence = calculateBaseConfidence(baseOverProbability);
 	if (context) {
-		adjustments.push(...getContextAdjustments(context));
+		const maxConfidence = getMaxConfidenceForContext(context);
+		baseConfidence = minConfidence(baseConfidence, maxConfidence);
 	}
-
-	// Formation adjustments: 40% impact for goal totals (same as old Over25)
-	adjustments.push(...getFormationAdjustments(homeTeam, awayTeam, 0.4));
 
 	const result = applyCappedAsymmetricAdjustments(
-		baseProbability,
+		baseOverProbability,
 		adjustments,
 		"TotalGoalsOverUnder",
 		config,
-		calculateBaseConfidence(baseProbability),
+		baseConfidence,
 	);
 
 	const overProbability = clamp(result.finalProbability, 0, 100);
@@ -251,6 +259,15 @@ function calculateBaseConfidence(baseProbability: number) {
 }
 
 // Note: `signalStrength` and `mostProbableOutcome` are added via `finalizeSimulation`.
+
+function minConfidence(
+	a: ConfidenceLevel,
+	b: ConfidenceLevel,
+): ConfidenceLevel {
+	if (a === "LOW" || b === "LOW") return "LOW";
+	if (a === "MEDIUM" || b === "MEDIUM") return "MEDIUM";
+	return "HIGH";
+}
 
 function buildInsights(
 	overProb: number,

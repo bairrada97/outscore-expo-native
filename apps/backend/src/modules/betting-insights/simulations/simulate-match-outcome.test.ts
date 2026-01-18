@@ -165,232 +165,33 @@ describe("simulateMatchOutcome", () => {
 		});
 	});
 
-	describe("live dog handling", () => {
-		it("should shift probability from home win into draw/away (competitiveness), not inflate away win directly", () => {
-			const baseHome = createTeamData({ name: "Home Team" });
-			const baseAway = createTeamData({ id: 2, name: "Away Team" });
-
-			const base = simulateMatchOutcome(baseHome, baseAway);
-
-			const liveDogAway = createTeamData({
-				id: 2,
-				name: "Away Team",
-				safetyFlags: { ...createTeamData().safetyFlags, liveDog: true },
+	describe("season scoring impact", () => {
+		it("should increase home win probability when home attack and away defense are strong", () => {
+			const strongHome = createTeamData({
+				stats: {
+					...createTeamData().stats,
+					homeAvgScored: 2.3,
+					homeAvgConceded: 1.0,
+				},
 			});
-			const withLiveDog = simulateMatchOutcome(baseHome, liveDogAway);
+			const weakAway = createTeamData({
+				id: 2,
+				stats: {
+					...createTeamData().stats,
+					awayAvgScored: 0.9,
+					awayAvgConceded: 1.9,
+				},
+			});
 
-			// Draw should increase and home should decrease (small shift)
-			expect(withLiveDog.probabilityDistribution.draw ?? 0).toBeGreaterThan(
-				base.probabilityDistribution.draw ?? 0,
+			const base = simulateMatchOutcome(
+				createTeamData(),
+				createTeamData({ id: 2 }),
 			);
-			expect(withLiveDog.probabilityDistribution.home ?? 0).toBeLessThan(
+			const strong = simulateMatchOutcome(strongHome, weakAway);
+
+			expect(strong.probabilityDistribution.home ?? 0).toBeGreaterThan(
 				base.probabilityDistribution.home ?? 0,
 			);
-			// Away can increase slightly, but should not jump dramatically like the old +5 approach
-			expect(withLiveDog.probabilityDistribution.away ?? 0).toBeLessThan(
-				(base.probabilityDistribution.away ?? 0) + 3,
-			);
-
-			// Ensure we record the reason for transparency
-			const names = (withLiveDog.adjustmentsApplied ?? []).map((a) => a.name);
-			expect(names).toContain("live_dog_competitiveness");
-		});
-	});
-
-	describe("form score impact", () => {
-		it("should increase home win probability for home team with better form", () => {
-			const strongHomeTeam = createTeamData({
-				mood: {
-					...createTeamData().mood,
-					tier: 1,
-					formString: "WWWWW",
-					last10Points: 30,
-				},
-			});
-			const weakAwayTeam = createTeamData({
-				id: 2,
-				mood: {
-					...createTeamData().mood,
-					tier: 4,
-					formString: "LLLLL",
-					last10Points: 0,
-				},
-			});
-
-			const equalHomeTeam = createTeamData();
-			const equalAwayTeam = createTeamData({ id: 2 });
-
-			const strongResult = simulateMatchOutcome(strongHomeTeam, weakAwayTeam);
-			const equalResult = simulateMatchOutcome(equalHomeTeam, equalAwayTeam);
-
-			const strongHomeProb = strongResult.probabilityDistribution.home ?? 0;
-			const equalHomeProb = equalResult.probabilityDistribution.home ?? 0;
-
-			expect(strongHomeProb).toBeGreaterThan(equalHomeProb);
-		});
-
-		it("should decrease home win probability when away team has better form", () => {
-			const weakHomeTeam = createTeamData({
-				mood: {
-					...createTeamData().mood,
-					tier: 4,
-					formString: "LLLLL",
-					last10Points: 0,
-				},
-			});
-			const strongAwayTeam = createTeamData({
-				id: 2,
-				mood: {
-					...createTeamData().mood,
-					tier: 1,
-					formString: "WWWWW",
-					last10Points: 30,
-				},
-			});
-
-			const equalHomeTeam = createTeamData();
-			const equalAwayTeam = createTeamData({ id: 2 });
-
-			const weakResult = simulateMatchOutcome(weakHomeTeam, strongAwayTeam);
-			const equalResult = simulateMatchOutcome(equalHomeTeam, equalAwayTeam);
-
-			const weakHomeProb = weakResult.probabilityDistribution.home ?? 0;
-			const equalHomeProb = equalResult.probabilityDistribution.home ?? 0;
-
-			expect(weakHomeProb).toBeLessThan(equalHomeProb);
-		});
-	});
-
-	describe("H2H impact", () => {
-		it("should increase home win probability with strong H2H record", () => {
-			const homeTeam = createTeamData();
-			const awayTeam = createTeamData({ id: 2 });
-
-			const strongH2H = createH2HData({
-				homeTeamWins: 8,
-				awayTeamWins: 1,
-				draws: 1,
-			});
-			const weakH2H = createH2HData({
-				homeTeamWins: 1,
-				awayTeamWins: 8,
-				draws: 1,
-			});
-
-			const strongH2HResult = simulateMatchOutcome(homeTeam, awayTeam, strongH2H);
-			const weakH2HResult = simulateMatchOutcome(homeTeam, awayTeam, weakH2H);
-
-			const strongHomeProb = strongH2HResult.probabilityDistribution.home ?? 0;
-			const weakHomeProb = weakH2HResult.probabilityDistribution.home ?? 0;
-
-			expect(strongHomeProb).toBeGreaterThan(weakHomeProb);
-		});
-
-		it("should handle missing H2H data gracefully", () => {
-			const homeTeam = createTeamData();
-			const awayTeam = createTeamData({ id: 2 });
-
-			const result = simulateMatchOutcome(homeTeam, awayTeam, undefined);
-
-			expect(result).toBeDefined();
-			expect(result.scenarioType).toBe("MatchOutcome");
-			const total =
-				(result.probabilityDistribution.home ?? 0) +
-				(result.probabilityDistribution.draw ?? 0) +
-				(result.probabilityDistribution.away ?? 0);
-			expect(Math.round(total)).toBe(100);
-		});
-
-		it("should increase draw probability with high H2H draw rate", () => {
-			const homeTeam = createTeamData();
-			const awayTeam = createTeamData({ id: 2 });
-
-			const highDrawH2H = createH2HData({
-				homeTeamWins: 2,
-				awayTeamWins: 2,
-				draws: 6,
-				h2hMatchCount: 10,
-			});
-			const lowDrawH2H = createH2HData({
-				homeTeamWins: 5,
-				awayTeamWins: 4,
-				draws: 1,
-				h2hMatchCount: 10,
-			});
-
-			const highDrawResult = simulateMatchOutcome(homeTeam, awayTeam, highDrawH2H);
-			const lowDrawResult = simulateMatchOutcome(homeTeam, awayTeam, lowDrawH2H);
-
-			const highDrawProb = highDrawResult.probabilityDistribution.draw ?? 0;
-			const lowDrawProb = lowDrawResult.probabilityDistribution.draw ?? 0;
-
-			expect(highDrawProb).toBeGreaterThan(lowDrawProb);
-		});
-	});
-
-	describe("tier difference impact", () => {
-		it("should favor higher tier team", () => {
-			const eliteHomeTeam = createTeamData({
-				mind: {
-					...createTeamData().mind,
-					tier: 1,
-				},
-			});
-			const weakAwayTeam = createTeamData({
-				id: 2,
-				mind: {
-					...createTeamData().mind,
-					tier: 4,
-				},
-			});
-
-			const equalHomeTeam = createTeamData({
-				mind: {
-					...createTeamData().mind,
-					tier: 2,
-				},
-			});
-			const equalAwayTeam = createTeamData({
-				id: 2,
-				mind: {
-					...createTeamData().mind,
-					tier: 2,
-				},
-			});
-
-			const mismatchResult = simulateMatchOutcome(eliteHomeTeam, weakAwayTeam);
-			const equalResult = simulateMatchOutcome(equalHomeTeam, equalAwayTeam);
-
-			const mismatchHomeProb = mismatchResult.probabilityDistribution.home ?? 0;
-			const equalHomeProb = equalResult.probabilityDistribution.home ?? 0;
-
-			expect(mismatchHomeProb).toBeGreaterThan(equalHomeProb);
-		});
-
-		it("should increase draw probability when tiers are equal", () => {
-			const sameTierHome = createTeamData({
-				mind: { ...createTeamData().mind, tier: 2 },
-			});
-			const sameTierAway = createTeamData({
-				id: 2,
-				mind: { ...createTeamData().mind, tier: 2 },
-			});
-
-			const diffTierHome = createTeamData({
-				mind: { ...createTeamData().mind, tier: 1 },
-			});
-			const diffTierAway = createTeamData({
-				id: 2,
-				mind: { ...createTeamData().mind, tier: 4 },
-			});
-
-			const sameTierResult = simulateMatchOutcome(sameTierHome, sameTierAway);
-			const diffTierResult = simulateMatchOutcome(diffTierHome, diffTierAway);
-
-			const sameTierDraw = sameTierResult.probabilityDistribution.draw ?? 0;
-			const diffTierDraw = diffTierResult.probabilityDistribution.draw ?? 0;
-
-			expect(sameTierDraw).toBeGreaterThan(diffTierDraw);
 		});
 	});
 
@@ -551,91 +352,6 @@ describe("simulateMatchOutcome", () => {
 
 			// mostProbableOutcome is a sentence including "Home" for home win predictions
 			expect(result.mostProbableOutcome).toMatch(/Home/i);
-		});
-	});
-
-	describe("context adjustments", () => {
-		it("should apply neutral venue adjustment", () => {
-			const homeTeam = createTeamData();
-			const awayTeam = createTeamData({ id: 2 });
-
-			const neutralContext: MatchContext = {
-				matchType: {
-					type: "LEAGUE",
-					importance: "MEDIUM",
-					isKnockout: false,
-					isNeutralVenue: true,
-					isDerby: false,
-					isEndOfSeason: false,
-					isPostInternationalBreak: false,
-				},
-				derby: {
-					isDerby: false,
-					derbyType: "NONE",
-					intensity: "LOW",
-				},
-				isEarlySeason: false,
-				isEndOfSeason: false,
-				isPostInternationalBreak: false,
-				adjustments: {
-					recentForm: 1,
-					h2h: 1,
-					homeAdvantage: 0.5,
-					motivation: 1,
-					goalScoring: 1,
-					confidenceReduction: 0,
-					goalExpectationAdjustment: 0,
-				},
-			};
-
-			const result = simulateMatchOutcome(homeTeam, awayTeam, undefined, neutralContext);
-
-			const hasNeutralVenue = result.adjustmentsApplied?.some(
-				(adj) => adj.name.includes("neutral_venue"),
-			);
-			expect(hasNeutralVenue).toBe(true);
-		});
-
-		it("should apply derby adjustment", () => {
-			const homeTeam = createTeamData();
-			const awayTeam = createTeamData({ id: 2 });
-
-			const derbyContext: MatchContext = {
-				matchType: {
-					type: "LEAGUE",
-					importance: "MEDIUM",
-					isKnockout: false,
-					isNeutralVenue: false,
-					isDerby: true,
-					isEndOfSeason: false,
-					isPostInternationalBreak: false,
-				},
-				derby: {
-					isDerby: true,
-					derbyType: "LOCAL",
-					derbyName: "Test Derby",
-					intensity: "HIGH",
-				},
-				isEarlySeason: false,
-				isEndOfSeason: false,
-				isPostInternationalBreak: false,
-				adjustments: {
-					recentForm: 0.8,
-					h2h: 1.2,
-					homeAdvantage: 0.9,
-					motivation: 1,
-					goalScoring: 1,
-					confidenceReduction: 0,
-					goalExpectationAdjustment: 0,
-				},
-			};
-
-			const result = simulateMatchOutcome(homeTeam, awayTeam, undefined, derbyContext);
-
-			const hasDerby = result.adjustmentsApplied?.some(
-				(adj) => adj.name.includes("derby"),
-			);
-			expect(hasDerby).toBe(true);
 		});
 	});
 

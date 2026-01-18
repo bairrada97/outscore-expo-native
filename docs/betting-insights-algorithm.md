@@ -5728,6 +5728,56 @@ Think of us as a research assistant, not a crystal ball.
 
 ## Part 2: How Factors Apply to Different Markets
 
+### Market Consistency via Shared Goal Distribution (Optional)
+
+To improve cross-market consistency (1X2, BTTS, O/U), we can derive all markets
+from a single goal distribution per team instead of modeling each market
+independently.
+
+**Why:** Independent models can drift (e.g., Over 2.5 > BTTS but 1X2 disagrees).
+A shared goal distribution keeps markets coherent and behaves more like a
+bookmaker.
+
+**Approach (no xG required):**
+1. **Estimate expected goals (lambda) per team**
+   - Use season averages you already have:
+     - `avgGoalsScored`, `avgGoalsConceded`, plus home/away splits
+   - Example:
+     - `lambdaHome = homeAttack * awayDefense * homeEdge`
+     - `lambdaAway = awayAttack * homeDefense * awayPenalty`
+
+2. **Blend season vs historical/league average early in season**
+   - If matches < 8:
+     - `lambda = 0.6 * leagueAvg + 0.4 * season`
+   - If matches >= 8-10:
+     - `lambda = 0.8-0.9 * season + remainder leagueAvg`
+
+3. **Include a small recent-form weight**
+   - Apply a light blend (10-20%) using recent goals for/against to capture
+     short-term trends without overpowering season data.
+
+4. **Generate goal distribution (Poisson)**
+   - For goals k = 0..5:
+     - `P(k) = e^-lambda * lambda^k / k!`
+
+5. **Add Dixon-Coles low-score correction**
+   - Apply the Dixon-Coles adjustment for 0-0, 1-0, 0-1, 1-1 to reduce low-score
+     bias:
+     - `tau(0,0)=1 - (lambdaHome*lambdaAway)*rho`
+     - `tau(1,0)=1 + lambdaAway*rho`
+     - `tau(0,1)=1 + lambdaHome*rho`
+     - `tau(1,1)=1 - rho`
+   - Suggested default: `rho = -0.05` (small negative correlation).
+
+6. **Derive markets from the same distribution**
+   - **1X2:** sum of scorelines where home>away / draw / away>home
+   - **BTTS:** `P(home>0 AND away>0)`
+   - **Over/Under:** `P(total > line)`
+
+7. **Apply small market-specific nudges**
+   - Use current factor scores as light adjustments (not full re-modeling) to
+     preserve explainability without breaking consistency.
+
 ### Factor Relevance Matrix
 
 **Note:** Base weights shown below are adjusted dynamically based on:

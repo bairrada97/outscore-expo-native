@@ -47,6 +47,8 @@ import {
 } from "../utils/motivation-score";
 import { calculatePositionScore } from "../utils/position-score";
 import { calculateRestScore } from "../utils/rest-score";
+import { buildGoalDistribution } from "./goal-distribution";
+import type { GoalDistributionModifiers } from "./goal-distribution-modifiers";
 
 // ============================================================================
 // CONSTANTS - Section 4.6.1 Weights
@@ -260,6 +262,7 @@ export function simulateMatchOutcome(
 		homeImpact?: InjuryImpactAssessment | null;
 		awayImpact?: InjuryImpactAssessment | null;
 	},
+	distributionModifiers?: GoalDistributionModifiers,
 ): Simulation {
 	// =========================================================================
 	// STEP 1: Calculate factor scores (Section 4.6.1)
@@ -284,73 +287,22 @@ export function simulateMatchOutcome(
 	const positionScore = calculatePositionScore(homeTeam, awayTeam);
 
 	// =========================================================================
-	// STEP 2: Calculate base probabilities from factors
+	// STEP 2: Shared goal distribution probabilities
 	// =========================================================================
-
-	let homeProb = BASE_PROBABILITIES.home;
-	let awayProb = BASE_PROBABILITIES.away;
-
-	// Apply Factor 1: Recent Form (max ±12 points based on 30% weight)
-	const formAdjustment = (formScore / 100) * 12;
-	homeProb += formAdjustment * MATCH_RESULT_WEIGHTS.recentForm;
-
-	// Apply Factor 2: H2H Record (max ±10 points based on 25% weight)
-	const h2hAdjustment = (h2hScore / 100) * 10;
-	homeProb += h2hAdjustment * MATCH_RESULT_WEIGHTS.h2h;
-
-	// Apply Factor 3: Home Advantage (max ±8 points based on 20% weight)
-	// Slightly amplify negative home advantage so "bad at home" is penalized more.
-	const homeAdvAdjustment = (homeAdvantageScore / 100) * 8;
-	const homeAdvWeight =
-		homeAdvantageScore < 0
-			? MATCH_RESULT_WEIGHTS.homeAdvantage * 1.2
-			: MATCH_RESULT_WEIGHTS.homeAdvantage;
-	homeProb += homeAdvAdjustment * homeAdvWeight;
-
-	// Apply Factor 4: Motivation (max ±7 points based on 18% weight)
-	const motivationAdjustment = (motivationScore / 100) * 7;
-	homeProb += motivationAdjustment * MATCH_RESULT_WEIGHTS.motivation;
-
-	// Apply Factor 5: Rest (max ±5 points based on 12% weight)
-	const restAdjustment = (restScore / 100) * 5;
-	homeProb += restAdjustment * MATCH_RESULT_WEIGHTS.rest;
-
-	// Apply Factor 6: Position (max ±4 points based on 10% weight)
-	const positionAdjustment = (positionScore / 100) * 4;
-	homeProb += positionAdjustment * MATCH_RESULT_WEIGHTS.leaguePosition;
-
-	// Away probability is inverse (mirror adjustments)
-	awayProb -= formAdjustment * MATCH_RESULT_WEIGHTS.recentForm;
-	awayProb -= h2hAdjustment * MATCH_RESULT_WEIGHTS.h2h;
-	awayProb -= homeAdvAdjustment * homeAdvWeight;
-	awayProb -= motivationAdjustment * MATCH_RESULT_WEIGHTS.motivation;
-	awayProb -= restAdjustment * MATCH_RESULT_WEIGHTS.rest;
-	awayProb -= positionAdjustment * MATCH_RESULT_WEIGHTS.leaguePosition;
-
-	// =========================================================================
-	// STEP 3: Calculate draw probability
-	// =========================================================================
-
-	// Draw probability based on form similarity and H2H draw rate
-	const drawProb = calculateDrawProbability(
+	const distribution = buildGoalDistribution(
 		homeTeam,
 		awayTeam,
-		h2h,
-		homeProb,
-		awayProb,
+		config.goalDistribution,
+		distributionModifiers,
 	);
 
 	// =========================================================================
-	// STEP 4: Collect adjustments for capping
+	// STEP 3: Collect adjustments for tracking (do not alter probabilities)
 	// =========================================================================
-
 	const homeAdjustments: Adjustment[] = [];
 	const awayAdjustments: Adjustment[] = [];
 
-	// Add Mind/Mood gap adjustments
 	addMindMoodAdjustments(homeTeam, awayTeam, homeAdjustments, awayAdjustments);
-
-	// Add formation stability adjustments (full impact for Match Result)
 	addFormationAdjustments(
 		homeTeam,
 		awayTeam,
@@ -358,8 +310,6 @@ export function simulateMatchOutcome(
 		awayAdjustments,
 		1.0,
 	);
-
-	// Add safety flag adjustments
 	addSafetyFlagAdjustments(
 		homeTeam,
 		awayTeam,
@@ -367,7 +317,6 @@ export function simulateMatchOutcome(
 		awayAdjustments,
 	);
 
-	// Add injury adjustments (when provided) so injuries affect MatchOutcome probabilities.
 	if (injuries?.homeAdjustments?.length) {
 		homeAdjustments.push(...injuries.homeAdjustments);
 	}
@@ -375,13 +324,11 @@ export function simulateMatchOutcome(
 		awayAdjustments.push(...injuries.awayAdjustments);
 	}
 
-	// Midweek competition load (international / domestic cup).
 	const homeMidweek = buildMidweekLoadAdjustment(homeTeam);
 	if (homeMidweek) homeAdjustments.push(homeMidweek.adj);
 	const awayMidweek = buildMidweekLoadAdjustment(awayTeam);
 	if (awayMidweek) awayAdjustments.push(awayMidweek.adj);
 
-	// Post-derby hangover (based on previous match being a derby).
 	const homeDerbyHangover = buildPostDerbyHangoverAdjustment({
 		team: homeTeam,
 		currentContext: context,
@@ -393,67 +340,40 @@ export function simulateMatchOutcome(
 	});
 	if (awayDerbyHangover) awayAdjustments.push(awayDerbyHangover.adj);
 
-	// Add context adjustments
 	if (context) {
 		addContextAdjustments(context, homeAdjustments, awayAdjustments);
 	}
 
-	// =========================================================================
-	// STEP 5: Apply capped adjustments
-	// =========================================================================
+	const sumAdjustments = (adjustments: Adjustment[]) =>
+		adjustments.reduce((total, adj) => total + adj.value, 0);
 
 	const baseConfidence = calculateBaseConfidence(homeTeam, awayTeam);
 
-	// Apply adjustments to home probability
-	const homeResult = applyCappedAsymmetricAdjustments(
-		homeProb,
-		homeAdjustments,
-		"MatchOutcome",
-		config,
-		baseConfidence,
-	);
-
-	// Apply adjustments to away probability (inverse adjustments)
-	const awayResult = applyCappedAsymmetricAdjustments(
-		awayProb,
-		awayAdjustments,
-		"MatchOutcome",
-		config,
-		baseConfidence,
-	);
-
-	// =========================================================================
-	// STEP 6: Normalize to ensure sum = 100%
-	// =========================================================================
+	const homeResult = {
+		finalProbability: distribution.probHomeWin,
+		confidenceLevel: baseConfidence,
+		cappedAdjustments: homeAdjustments,
+		totalAdjustment: sumAdjustments(homeAdjustments),
+		wasCapped: false,
+		overcorrectionWarning: undefined,
+	};
+	const awayResult = {
+		finalProbability: distribution.probAwayWin,
+		confidenceLevel: baseConfidence,
+		cappedAdjustments: awayAdjustments,
+		totalAdjustment: sumAdjustments(awayAdjustments),
+		wasCapped: false,
+		overcorrectionWarning: undefined,
+	};
 
 	const normalized = normalizeProbabilities(
-		homeResult.finalProbability,
-		drawProb,
-		awayResult.finalProbability,
+		distribution.probHomeWin,
+		distribution.probDraw,
+		distribution.probAwayWin,
 	);
 
-	// Optional post-normalization shifts (kept small, conservative)
-	const extraAdjustments: Adjustment[] = [];
-	let finalProbs = normalized;
-
-	// Live dog: underdog competitiveness tends to increase draw probability more than outright away wins.
-	if (awayTeam.safetyFlags?.liveDog) {
-		finalProbs = applyLiveDogCompetitivenessShift(finalProbs);
-		extraAdjustments.push(
-			createAdjustment(
-				"live_dog_competitiveness",
-				0,
-				"Away team shows live-dog signals; shifted probability from home win into draw/away (competitiveness)",
-			),
-		);
-	}
-
-	// =========================================================================
-	// STEP 7: Build response
-	// =========================================================================
-
 	return buildMatchResultPrediction(
-		finalProbs,
+		normalized,
 		homeResult,
 		awayResult,
 		homeTeam,
@@ -470,7 +390,7 @@ export function simulateMatchOutcome(
 			restScore,
 			positionScore,
 		},
-		extraAdjustments,
+		[],
 	);
 }
 

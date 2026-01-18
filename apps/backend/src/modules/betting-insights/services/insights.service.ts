@@ -57,6 +57,7 @@ import { attachInsightPartsToList } from "../presentation/insight-parts";
 import { buildKeyInsights } from "../presentation/key-insights-builder";
 import { buildMatchFacts } from "../presentation/match-facts-builder";
 import { buildModelReliabilityBreakdown } from "../presentation/simulation-presenter";
+import { buildGoalDistributionModifiers } from "../simulations/goal-distribution-modifiers";
 import { attachRelatedScenarios } from "../simulations/related-scenarios";
 import { simulateBTTS } from "../simulations/simulate-btts";
 import { simulateFirstHalfActivity } from "../simulations/simulate-first-half-activity";
@@ -223,6 +224,37 @@ interface RawMatchData {
 		team: { id: number };
 		formation: string | null;
 	}>;
+}
+
+interface RawFixtureStatisticsEntry {
+	team: {
+		id: number;
+		name: string;
+	};
+	statistics: Array<{
+		type: string;
+		value: number | string | null;
+	}>;
+}
+
+function parseStatValue(
+	value: number | string | null | undefined,
+): number | null {
+	if (value === null || value === undefined) return null;
+	if (typeof value === "number") return Number.isFinite(value) ? value : null;
+	const trimmed = String(value).replace("%", "").trim();
+	const parsed = Number(trimmed);
+	return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getStatisticValue(
+	entry: RawFixtureStatisticsEntry,
+	key: string,
+): number | null {
+	const match = entry.statistics.find(
+		(stat) => stat.type.toLowerCase() === key.toLowerCase(),
+	);
+	return match ? parseStatValue(match.value) : null;
 }
 
 /**
@@ -864,12 +896,67 @@ export const insightsService = {
 			const rawMatches = data.response ?? [];
 
 			// Convert to ProcessedMatch format
-			return rawMatches
+			const matches = rawMatches
 				.filter((m) => m.fixture.status.short === "FT") // Only finished matches
 				.map((m) => this.convertToProcessedMatch(m, teamId));
+
+			// Fetch expected_goals/goals_prevented for a small recent subset.
+			const statsLimit = Math.min(10, matches.length);
+			await Promise.all(
+				matches.slice(0, statsLimit).map(async (match) => {
+					const stats = await this.fetchFixtureStatistics(match.id, env);
+					if (!stats || stats.length === 0) return;
+					const entry = stats.find((s) => s.team.id === teamId);
+					if (!entry) return;
+					match.expectedGoals =
+						getStatisticValue(entry, "expected_goals") ?? undefined;
+					match.goalsPrevented =
+						getStatisticValue(entry, "goals_prevented") ?? undefined;
+				}),
+			);
+
+			return matches;
 		} catch (error) {
 			console.warn(
 				`⚠️ [Insights] Error fetching matches for team ${teamId}:`,
+				error,
+			);
+			return [];
+		}
+	},
+
+	/**
+	 * Fetch fixture statistics (expected_goals / goals_prevented) for a match
+	 */
+	async fetchFixtureStatistics(
+		fixtureId: number,
+		env: InsightsEnv,
+	): Promise<RawFixtureStatisticsEntry[]> {
+		const url = new URL(`${env.FOOTBALL_API_URL}/fixtures/statistics`);
+		url.searchParams.append("fixture", fixtureId.toString());
+
+		try {
+			const response = await fetch(url.toString(), {
+				headers: {
+					"x-rapidapi-host": "api-football-v1.p.rapidapi.com",
+					"x-rapidapi-key": env.RAPIDAPI_KEY,
+				},
+			});
+
+			if (!response.ok) {
+				console.warn(
+					`⚠️ [Insights] Failed to fetch statistics for fixture ${fixtureId}`,
+				);
+				return [];
+			}
+
+			const data = (await response.json()) as {
+				response: RawFixtureStatisticsEntry[];
+			};
+			return data.response ?? [];
+		} catch (error) {
+			console.warn(
+				`⚠️ [Insights] Error fetching statistics for fixture ${fixtureId}:`,
 				error,
 			);
 			return [];
@@ -1671,24 +1758,57 @@ export const insightsService = {
 			console.log(`🏥 [Insights] Injury situation: ${summary}`);
 		}
 
+		const distributionModifiers = buildGoalDistributionModifiers({
+			context,
+			homeTeam,
+			awayTeam,
+			homeInjuryImpact: homeImpact,
+			awayInjuryImpact: awayImpact,
+		});
+
 		// Both Teams To Score (injuries affect scoring likelihood)
-		simulations.push(simulateBTTS(homeTeam, awayTeam, h2h, context));
+		simulations.push(
+			simulateBTTS(
+				homeTeam,
+				awayTeam,
+				h2h,
+				context,
+				undefined,
+				distributionModifiers,
+			),
+		);
 
 		// Total Goals Over/Under (multi-line)
 		for (const line of DEFAULT_GOAL_LINES) {
 			simulations.push(
-				simulateTotalGoalsOverUnder(homeTeam, awayTeam, h2h, context, line),
+				simulateTotalGoalsOverUnder(
+					homeTeam,
+					awayTeam,
+					h2h,
+					context,
+					line,
+					undefined,
+					distributionModifiers,
+				),
 			);
 		}
 
 		// Match Outcome
 		simulations.push(
-			simulateMatchOutcome(homeTeam, awayTeam, h2h, context, undefined, {
-				homeAdjustments,
-				awayAdjustments,
-				homeImpact,
-				awayImpact,
-			}),
+			simulateMatchOutcome(
+				homeTeam,
+				awayTeam,
+				h2h,
+				context,
+				undefined,
+				{
+					homeAdjustments,
+					awayAdjustments,
+					homeImpact,
+					awayImpact,
+				},
+				distributionModifiers,
+			),
 		);
 
 		// First Half Activity

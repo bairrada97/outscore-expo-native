@@ -15,6 +15,7 @@
 
 import { DEFAULT_ALGORITHM_CONFIG } from "../config/algorithm-config";
 import type { MatchContext } from "../match-context/context-adjustments";
+import { getMaxConfidenceForContext } from "../match-context/context-adjustments";
 import { finalizeSimulation } from "../presentation/simulation-presenter";
 import type {
   Adjustment,
@@ -25,10 +26,9 @@ import type {
   Simulation,
   TeamData,
 } from "../types";
-import {
-  applyCappedAsymmetricAdjustments,
-  createAdjustment,
-} from "../utils/capped-adjustments";
+import { buildGoalDistribution } from "./goal-distribution";
+import type { GoalDistributionModifiers } from "./goal-distribution-modifiers";
+import { applyCappedAsymmetricAdjustments } from "../utils/capped-adjustments";
 import { clamp } from "../utils/helpers";
 
 // ============================================================================
@@ -139,49 +139,60 @@ export function simulateBTTS(
 	h2h?: H2HData,
 	context?: MatchContext,
 	config: AlgorithmConfig = DEFAULT_ALGORITHM_CONFIG,
+	distributionModifiers?: GoalDistributionModifiers,
 ): Simulation {
-	// Step 1: Calculate base probability from factors
-	const baseProbability = calculateBaseBTTSProbability(homeTeam, awayTeam, h2h);
+	// Shared goal distribution (Poisson + Dixon-Coles)
+	const distribution = buildGoalDistribution(
+		homeTeam,
+		awayTeam,
+		config.goalDistribution,
+		distributionModifiers,
+	);
+	const baseYesProbability = distribution.probBTTSYes;
 
-	// Step 2: Collect all adjustments
+	// Context-aware + capped adjustments (Phase 3.5 + 4.5)
 	const adjustments: Adjustment[] = [];
 
-	// Add scoring rate adjustments
-	adjustments.push(...getScoringRateAdjustments(homeTeam, awayTeam));
-
-	// Add defensive form adjustments
-	adjustments.push(...getDefensiveFormAdjustments(homeTeam, awayTeam));
-
-	// Add recent form adjustments
-	adjustments.push(...getRecentFormAdjustments(homeTeam, awayTeam));
-
-	// Add H2H adjustments
-	if (h2h?.hasSufficientData) {
-		adjustments.push(...getH2HAdjustments(h2h));
-	}
-
-	// Add context adjustments
+	// Base confidence from data coverage, then cap maximum confidence based on match context volatility.
+	let baseConfidence = calculateBaseConfidence(homeTeam, awayTeam, h2h);
 	if (context) {
-		adjustments.push(...getContextAdjustments(context));
+		const maxConfidence = getMaxConfidenceForContext(context);
+		baseConfidence = minConfidence(baseConfidence, maxConfidence);
 	}
 
-	// Add formation stability adjustments (40% impact for BTTS)
-	adjustments.push(...getFormationAdjustments(homeTeam, awayTeam, 0.4));
-
-	// Add safety flag adjustments
-	adjustments.push(...getSafetyFlagAdjustments(homeTeam, awayTeam));
-
-	// Step 3: Apply unified capping
 	const result = applyCappedAsymmetricAdjustments(
-		baseProbability,
+		baseYesProbability,
 		adjustments,
 		"BothTeamsToScore",
 		config,
-		calculateBaseConfidence(homeTeam, awayTeam, h2h),
+		baseConfidence,
 	);
 
-	// Step 4: Build prediction response
-	return buildBTTSPrediction(result, homeTeam, awayTeam, h2h);
+	const yesProbability = result.finalProbability;
+	const noProbability = 100 - yesProbability;
+
+	return finalizeSimulation({
+		scenarioType: "BothTeamsToScore",
+		probabilityDistribution: {
+			yes: Math.round(yesProbability * 10) / 10,
+			no: Math.round(noProbability * 10) / 10,
+		},
+		modelReliability: result.confidenceLevel,
+		insights: buildBttsInsights(yesProbability, homeTeam, awayTeam, h2h),
+		adjustmentsApplied: result.cappedAdjustments,
+		totalAdjustment: result.totalAdjustment,
+		capsHit: result.wasCapped,
+		overcorrectionWarning: result.overcorrectionWarning,
+	});
+}
+
+function minConfidence(
+	a: ConfidenceLevel,
+	b: ConfidenceLevel,
+): ConfidenceLevel {
+	if (a === "LOW" || b === "LOW") return "LOW";
+	if (a === "MEDIUM" || b === "MEDIUM") return "MEDIUM";
+	return "HIGH";
 }
 
 // ============================================================================
@@ -607,27 +618,12 @@ function calculateBaseConfidence(
  * Build final BTTS prediction response
  */
 function buildBTTSPrediction(
-	result: ReturnType<typeof applyCappedAsymmetricAdjustments>,
-	homeTeam: TeamData,
-	awayTeam: TeamData,
-	h2h?: H2HData,
+	_result: ReturnType<typeof applyCappedAsymmetricAdjustments>,
+	_homeTeam: TeamData,
+	_awayTeam: TeamData,
+	_h2h?: H2HData,
 ): Simulation {
-	const yesProbability = result.finalProbability;
-	const noProbability = 100 - yesProbability;
-
-	return finalizeSimulation({
-		scenarioType: "BothTeamsToScore",
-		probabilityDistribution: {
-			yes: Math.round(yesProbability * 10) / 10,
-			no: Math.round(noProbability * 10) / 10,
-		},
-		modelReliability: result.confidenceLevel,
-		insights: buildBttsInsights(yesProbability, homeTeam, awayTeam, h2h),
-		adjustmentsApplied: result.cappedAdjustments,
-		totalAdjustment: result.totalAdjustment,
-		capsHit: result.wasCapped,
-		overcorrectionWarning: result.overcorrectionWarning,
-	});
+	throw new Error("Legacy BTTS path disabled in goal-distribution mode.");
 }
 
 function buildBttsInsights(

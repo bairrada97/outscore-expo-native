@@ -14,6 +14,7 @@ import type {
   ConfidenceDowngradeConfig,
   CumulativeCapsConfig,
   FormWeightingConfig,
+  GoalDistributionConfig,
   H2HRecencyConfig,
   MarketWeightsConfig,
   ProbabilityCapsConfig,
@@ -268,6 +269,17 @@ export const DEFAULT_CUMULATIVE_CAPS: CumulativeCapsConfig = {
 };
 
 // ============================================================================
+// GOAL DISTRIBUTION CONFIGURATION
+// ============================================================================
+
+export const DEFAULT_GOAL_DISTRIBUTION: GoalDistributionConfig = {
+	maxGoals: 6,
+	recentFormWeight: 0.15,
+	recentMatchesCount: 8,
+	dixonColesRho: -0.05,
+};
+
+// ============================================================================
 // COMPLETE DEFAULT CONFIGURATION
 // ============================================================================
 
@@ -286,6 +298,7 @@ export const DEFAULT_ALGORITHM_CONFIG: AlgorithmConfig = {
 	confidenceDowngrade: DEFAULT_CONFIDENCE_DOWNGRADE,
 	asymmetricWeighting: DEFAULT_ASYMMETRIC_WEIGHTING,
 	cumulativeCaps: DEFAULT_CUMULATIVE_CAPS,
+	goalDistribution: DEFAULT_GOAL_DISTRIBUTION,
 };
 
 // ============================================================================
@@ -336,6 +349,10 @@ export function createConfig(
 		cumulativeCaps: {
 			...DEFAULT_ALGORITHM_CONFIG.cumulativeCaps,
 			...overrides.cumulativeCaps,
+		},
+		goalDistribution: {
+			...DEFAULT_ALGORITHM_CONFIG.goalDistribution,
+			...overrides.goalDistribution,
 		},
 	};
 }

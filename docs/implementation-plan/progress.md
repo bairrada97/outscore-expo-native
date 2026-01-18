@@ -21,6 +21,16 @@
 | Phase 5: API Endpoint | 🟢 Completed | 100% | Routes + service with D1 persistence, H2H caching, injuries caching, standings integration, 3 AM prefetch cron, end-of-season context, **integration tests added** |
 | Phase 6: Odds & Pricing | ⏸️ Deferred | - | Post-MVP, see phase6-odds-pricing.md |
 
+## Next TODOs (Planned)
+
+1. Pre-Phase2 Quick Checks (Gate 1 + Mini Backtest):
+   - Add `sanityWarnings` surfaced in API response for now.
+   - Add data-quality guards + invariant checks with regression tests.
+   - Add D1 `backtest_runs` schema + define R2 artifact layout.
+   - Implement minimal backtest runner (BTTS + Over 2.5) with Brier/logloss + calibration bins + anomaly reporting.
+   - Persist artifacts to R2 + run metadata to D1; add list/download endpoint.
+2. Per-market calibration layer using Brier/ECE (BTTS, O/U, 1X2, 1H) now that the shared goal-distribution backbone is in place.
+
 ## Status Legend
 
 - 🔴 Not Started
