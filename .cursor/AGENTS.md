@@ -1,3 +1,16 @@
+## Plan mode
+- Make the plan extremely concise
+- At the end, give a list of unresolved questions
+
+## Testing instructions
+ - bun install
+ - nvm use 24
+ - run bun test
+
+ ## PR instructions
+- Title format: [<project_name>] <Title>
+- Always run `pnpm lint` and `pnpm test` before committing.
+
 ## Architecture
 
 - **Website:** Expo Router website with Tailwind + HeroUI Web.

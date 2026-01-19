@@ -22,6 +22,7 @@ export type GoalAnalysisCardViewProps = {
 	isOverUnder: boolean;
 	overUnderSimulationsCount: number;
 	onPressGoalLinesBreakdown?: () => void;
+	onPressBttsBreakdown?: () => void;
 
 	headline: string;
 	strengthLabel: string;
@@ -43,6 +44,7 @@ export function GoalAnalysisCardView({
 	isOverUnder,
 	overUnderSimulationsCount,
 	onPressGoalLinesBreakdown,
+	onPressBttsBreakdown,
 	headline,
 	strengthLabel,
 	reliabilityLabel,
@@ -191,6 +193,24 @@ export function GoalAnalysisCardView({
 								className="text-neu-08 dark:text-neu-06"
 							>
 								Goal lines breakdown
+							</Text>
+						</View>
+						<Icon as={ChevronRight} className="text-neu-06 size-4" />
+					</Pressable>
+				) : null}
+
+				{!isOverUnder && activeKey === "btts" ? (
+					<Pressable
+						onPress={onPressBttsBreakdown}
+						disabled={!onPressBttsBreakdown}
+						className="border border-neu-04/60 dark:border-neu-10/60 rounded-lg px-16 py-16 flex-row items-center justify-between"
+					>
+						<View className="flex-row items-center gap-8">
+							<Text
+								variant="caption-03"
+								className="text-neu-08 dark:text-neu-06"
+							>
+								BTTS breakdown
 							</Text>
 						</View>
 						<Icon as={ChevronRight} className="text-neu-06 size-4" />

@@ -1,6 +1,7 @@
 import type BottomSheet from "@gorhom/bottom-sheet";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { GoalAnalysisCardView } from "./goal-analysis-card-view";
+import { BttsBottomSheet } from "./btts-bottom-sheet";
 import { GoalLinesBottomSheet } from "./goal-lines-bottom-sheet";
 import type { GoalAnalysisCardProps } from "./types";
 import { getGoalLineLabel, normalizeLabel, titleCase } from "./utils";
@@ -10,6 +11,8 @@ export function GoalAnalysisCard({
 	bttsSimulation,
 	homeGoalLineOverPct,
 	awayGoalLineOverPct,
+	homeBttsYesPct,
+	awayBttsYesPct,
 }: GoalAnalysisCardProps) {
 	const [activeKey, setActiveKey] = useState<"over_under" | "btts">(
 		"over_under",
@@ -60,6 +63,7 @@ export function GoalAnalysisCard({
 		: "No";
 
 	const bottomSheetRef = useRef<BottomSheet>(null);
+	const bttsSheetRef = useRef<BottomSheet>(null);
 	const defaultSheetLine = useMemo(() => {
 		const preferred = overUnderSimulations.find((s) => s.line === 2.5)?.line;
 		if (typeof preferred === "number") return preferred;
@@ -83,6 +87,20 @@ export function GoalAnalysisCard({
 		bottomSheetRef.current?.snapToIndex(0);
 	}, [activeOverUnder?.line, defaultSheetLine]);
 
+	const defaultBttsOutcome = useMemo(() => {
+		const yes = bttsSimulation?.probabilityDistribution?.yes ?? 0;
+		const no = bttsSimulation?.probabilityDistribution?.no ?? 0;
+		return yes >= no ? ("yes" as const) : ("no" as const);
+	}, [bttsSimulation?.probabilityDistribution?.no, bttsSimulation?.probabilityDistribution?.yes]);
+	const [bttsSelectedOutcome, setBttsSelectedOutcome] = useState<
+		"yes" | "no"
+	>(defaultBttsOutcome);
+
+	const handleOpenBttsBreakdown = useCallback(() => {
+		setBttsSelectedOutcome(defaultBttsOutcome);
+		bttsSheetRef.current?.snapToIndex(0);
+	}, [defaultBttsOutcome]);
+
 	return (
 		<>
 			<GoalAnalysisCardView
@@ -91,6 +109,9 @@ export function GoalAnalysisCard({
 				isOverUnder={isOverUnder}
 				overUnderSimulationsCount={overUnderSimulations.length}
 				onPressGoalLinesBreakdown={handleOpenGoalLinesBreakdown}
+				onPressBttsBreakdown={
+					bttsSimulation ? handleOpenBttsBreakdown : undefined
+				}
 				headline={headline}
 				strengthLabel={strengthLabel}
 				reliabilityLabel={reliabilityLabel}
@@ -111,6 +132,20 @@ export function GoalAnalysisCard({
 					onSelectLine={setSheetSelectedLine}
 					homeGoalLineOverPct={homeGoalLineOverPct}
 					awayGoalLineOverPct={awayGoalLineOverPct}
+				/>
+			) : null}
+
+			{bttsSimulation ? (
+				<BttsBottomSheet
+					sheetRef={bttsSheetRef}
+					selectedOutcome={bttsSelectedOutcome}
+					onSelectOutcome={setBttsSelectedOutcome}
+					probabilityDistribution={bttsSimulation.probabilityDistribution}
+					signalStrength={bttsSimulation.signalStrength}
+					modelReliability={bttsSimulation.modelReliability}
+					insights={bttsSimulation.insights ?? []}
+					homeBttsYesPct={homeBttsYesPct}
+					awayBttsYesPct={awayBttsYesPct}
 				/>
 			) : null}
 		</>

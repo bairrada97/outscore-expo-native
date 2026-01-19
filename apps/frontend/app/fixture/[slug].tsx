@@ -410,6 +410,12 @@ export default function FixtureDetailScreen() {
 												awayGoalLineOverPct={
 													insightsData.awayTeamContext?.dna?.goalLineOverPct
 												}
+												homeBttsYesPct={
+													insightsData.homeTeamContext?.dna?.bttsYesPct
+												}
+												awayBttsYesPct={
+													insightsData.awayTeamContext?.dna?.bttsYesPct
+												}
 											/>
 										</View>
 									) : null}

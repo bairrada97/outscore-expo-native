@@ -21,6 +21,10 @@ export type BettingInsightsResponse = {
        * Keys are stringified lines like "2.5".
        */
       goalLineOverPct?: Record<string, number | undefined>;
+      /**
+       * How often this team lands BTTS = Yes (0-100).
+       */
+      bttsYesPct?: number;
     };
   };
   awayTeamContext?: {
@@ -30,6 +34,10 @@ export type BettingInsightsResponse = {
        * Keys are stringified lines like "2.5".
        */
       goalLineOverPct?: Record<string, number | undefined>;
+      /**
+       * How often this team lands BTTS = Yes (0-100).
+       */
+      bttsYesPct?: number;
     };
   };
   simulations?: Array<{

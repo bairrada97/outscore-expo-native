@@ -28,5 +28,7 @@ export type GoalAnalysisCardProps = {
 	bttsSimulation?: GoalSimulation | null;
 	homeGoalLineOverPct?: Record<string, number | undefined>;
 	awayGoalLineOverPct?: Record<string, number | undefined>;
+	homeBttsYesPct?: number;
+	awayBttsYesPct?: number;
 };
 
