@@ -5,6 +5,7 @@ import {
 	createCors,
 	createFixturesRoutes,
 	createInsightsRoutes,
+	createLeaguesRegistryRoutes,
 	type FixturesEnv,
 	handleScheduledEvent,
 	type InsightsEnv,
@@ -98,6 +99,14 @@ app.use(
 	}),
 );
 
+app.use(
+	"/registry*",
+	rateLimiter({
+		limit: 60,
+		windowSec: 60,
+	}),
+);
+
 /**
  * Health check endpoint
  */
@@ -118,6 +127,11 @@ app.get("/metrics", (context) => {
 		metrics,
 	});
 });
+
+/**
+ * Registry routes
+ */
+app.route("/registry", createLeaguesRegistryRoutes());
 
 /**
  * Fixtures routes (includes /fixtures/injuries)

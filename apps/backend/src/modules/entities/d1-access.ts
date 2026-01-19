@@ -98,6 +98,42 @@ export async function upsertExternalId(
     .run();
 }
 
+/**
+ * Insert external ID mapping only if missing (race-safe).
+ * Returns true if inserted, false if mapping already existed.
+ *
+ * Rationale:
+ * - Under concurrency, two requests can insert the same team/league row, then both try
+ *   to upsert external_ids. If the second overwrites internal_id, the first row becomes
+ *   an orphan and you see duplicates in `teams` / `leagues`.
+ */
+async function insertExternalIdIfMissing(
+  db: D1Database,
+  data: ExternalIdInsert,
+): Promise<boolean> {
+  const result = await db
+    .prepare(
+      `INSERT INTO external_ids (provider, entity_type, provider_id, internal_id, match_confidence, match_method)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(provider, entity_type, provider_id) DO NOTHING`
+    )
+    .bind(
+      data.provider,
+      data.entity_type,
+      data.provider_id,
+      data.internal_id,
+      data.match_confidence ?? null,
+      data.match_method ?? null,
+    )
+    .run();
+
+  // D1 returns a meta object; when the insert is ignored, changes should be 0.
+  // We treat any positive change count as "inserted".
+  const metaChanges = (result as { meta?: { changes?: number } }).meta?.changes;
+  const changes = typeof metaChanges === 'number' ? metaChanges : 0;
+  return changes > 0;
+}
+
 // ============================================================================
 // LEAGUES
 // ============================================================================
@@ -166,8 +202,8 @@ export async function upsertLeague(
   }
   const newId = result.id;
 
-  // Create external ID mapping
-  await upsertExternalId(db, {
+  // Create external ID mapping (race-safe).
+  const inserted = await insertExternalIdIfMissing(db, {
     provider,
     entity_type: 'league',
     provider_id: String(providerId),
@@ -175,6 +211,15 @@ export async function upsertLeague(
     match_confidence: 1.0,
     match_method: 'api_fetch',
   });
+
+  if (inserted) return newId;
+
+  // Mapping already existed (likely concurrent insert). Reuse mapped internal id and delete the orphan row.
+  const existingInternalId = await resolveExternalId(db, provider, 'league', providerId);
+  if (existingInternalId && existingInternalId !== newId) {
+    await db.prepare('DELETE FROM leagues WHERE id = ?').bind(newId).run();
+    return existingInternalId;
+  }
 
   return newId;
 }
@@ -250,7 +295,7 @@ export async function upsertTeam(
   }
   const newId = result.id;
 
-  await upsertExternalId(db, {
+  const inserted = await insertExternalIdIfMissing(db, {
     provider,
     entity_type: 'team',
     provider_id: String(providerId),
@@ -258,6 +303,15 @@ export async function upsertTeam(
     match_confidence: 1.0,
     match_method: 'api_fetch',
   });
+
+  if (inserted) return newId;
+
+  // Mapping already existed (likely concurrent insert). Reuse mapped internal id and delete the orphan row.
+  const existingInternalId = await resolveExternalId(db, provider, 'team', providerId);
+  if (existingInternalId && existingInternalId !== newId) {
+    await db.prepare('DELETE FROM teams WHERE id = ?').bind(newId).run();
+    return existingInternalId;
+  }
 
   return newId;
 }

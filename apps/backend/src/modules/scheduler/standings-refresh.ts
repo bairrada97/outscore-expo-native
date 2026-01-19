@@ -14,15 +14,16 @@ import {
 	type Fixture,
 	type StandingsResponse,
 } from "@outscore/shared-types";
+import { getFootballApiTeamsByLeagueSeason } from "../../pkg/util/football-api";
 import {
 	getInsightsSnapshot,
 	getStandingsGroupForTeams,
 	getStandingsRows,
 	resolveExternalId,
-	type StandingsCurrentRowInsert,
 	upsertLeague,
 	upsertStandings,
 	upsertTeam,
+	type StandingsCurrentRowInsert,
 } from "../entities";
 import type { SchedulerEnv } from "./refresh-scheduler";
 
@@ -409,6 +410,32 @@ export async function fetchStandingsForLeague(
 
 		const db = env.ENTITIES_DB;
 
+		// Best-effort: fetch /teams for this league-season to get team country metadata.
+		// This prevents `teams.country` from being null in D1 and is also correct for
+		// international competitions where `league.country` may be "World".
+		const teamCountryById = new Map<number, string>();
+		try {
+			const teams = await getFootballApiTeamsByLeagueSeason(
+				leagueId,
+				season,
+				env.FOOTBALL_API_URL,
+				env.RAPIDAPI_KEY,
+			);
+			for (const item of teams.response ?? []) {
+				const teamId = item.team?.id;
+				const country = item.team?.country;
+				if (typeof teamId === "number" && typeof country === "string") {
+					teamCountryById.set(teamId, country);
+				}
+			}
+		} catch (error) {
+			// Non-fatal: we can still upsert teams without country and fill later.
+			console.warn(
+				`⚠️ [Standings] Failed to fetch teams list for league ${leagueId}, season ${season}:`,
+				error,
+			);
+		}
+
 		// 1. Upsert league and get internal ID
 		const internalLeagueId = await upsertLeague(
 			db,
@@ -447,6 +474,7 @@ export async function fetchStandingsForLeague(
 				{
 					name: row.team.name,
 					logo: row.team.logo,
+					country: teamCountryById.get(row.team.id),
 				},
 				"api_football",
 				row.team.id,
@@ -690,6 +718,9 @@ export async function checkAndRegenerateForLeague(
 
 				// Create a minimal execution context
 				const ctx: ExecutionContext = {
+					// Some ExecutionContext type definitions require `props`.
+					// We don't use it here, but provide an empty object to satisfy typing.
+					props: {},
 					waitUntil: () => {
 						/* noop */
 					},

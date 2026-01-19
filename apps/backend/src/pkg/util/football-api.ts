@@ -5,6 +5,70 @@ import type {
   TeamStatisticsResponse,
 } from "@outscore/shared-types";
 
+type TeamsResponse = {
+	get: "teams";
+	parameters: Record<string, string>;
+	errors: unknown[];
+	results: number;
+	paging: { current: number; total: number };
+	response: Array<{
+		team: {
+			id: number;
+			name: string;
+			country?: string | null;
+			logo?: string | null;
+		};
+		venue?: {
+			id?: number | null;
+			name?: string | null;
+			city?: string | null;
+		} | null;
+	}>;
+};
+
+export type LeaguesResponse = {
+	get: "leagues";
+	parameters: Record<string, string>;
+	errors: unknown[];
+	results: number;
+	paging: { current: number; total: number };
+	response: Array<{
+		league: {
+			id: number;
+			name: string;
+			type: "League" | "Cup" | string;
+			logo?: string | null;
+		};
+		country: {
+			name: string | null;
+			code?: string | null;
+			flag?: string | null;
+		};
+		seasons: Array<{
+			year: number;
+			start?: string | null;
+			end?: string | null;
+			current?: boolean;
+			coverage?: {
+				fixtures?: {
+					events?: boolean;
+					lineups?: boolean;
+					statistics_fixtures?: boolean;
+					statistics_players?: boolean;
+				};
+				standings?: boolean;
+				players?: boolean;
+				top_scorers?: boolean;
+				top_assists?: boolean;
+				top_cards?: boolean;
+				injuries?: boolean;
+				predictions?: boolean;
+				odds?: boolean;
+			};
+		}>;
+	}>;
+};
+
 /**
  * Fetch a single fixture detail from the third-party Football API
  */
@@ -256,6 +320,149 @@ export const getFootballApiTeamFixtures = async (
 		console.error("❌ [API] Error fetching team fixtures:", error);
 		throw error;
 	}
+};
+
+/**
+ * Fetch teams for a league season from the third-party Football API
+ * Endpoint: /teams?league=${league}&season=${season}
+ */
+export const getFootballApiTeamsByLeagueSeason = async (
+	league: number,
+	season: number,
+	apiUrl?: string,
+	apiKey?: string,
+): Promise<TeamsResponse> => {
+	console.log(`🌐 [API] Request: teams league=${league}, season=${season}`);
+
+	if (!apiUrl || !apiKey) {
+		throw new Error("API URL or API Key not provided");
+	}
+
+	const url = new URL(`${apiUrl}/teams`);
+	url.searchParams.append("league", league.toString());
+	url.searchParams.append("season", season.toString());
+
+	console.log(`🌐 [API] URL: ${url.toString()}`);
+	const startTime = performance.now();
+
+	const response = await fetch(url.toString(), {
+		method: "GET",
+		headers: {
+			"x-rapidapi-host": "api-football-v1.p.rapidapi.com",
+			"x-rapidapi-key": apiKey,
+		},
+	});
+
+	const duration = (performance.now() - startTime).toFixed(2);
+	if (!response.ok) {
+		const errorText = await response.text();
+		console.error(`❌ [API] Error (${duration}ms): ${response.statusText}`);
+		throw new Error(`API request failed: ${response.statusText} - ${errorText}`);
+	}
+
+	const data = await response.json();
+	if (data.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+		throw new Error(`API returned errors: ${JSON.stringify(data.errors)}`);
+	}
+
+	console.log(
+		`✅ [API] Success (${duration}ms): ${data.response?.length || 0} teams`,
+	);
+
+	return data as TeamsResponse;
+};
+
+/**
+ * Fetch a single team by ID from the third-party Football API
+ * Endpoint: /teams?id=${teamId}
+ */
+export const getFootballApiTeamById = async (
+	teamId: number,
+	apiUrl?: string,
+	apiKey?: string,
+): Promise<TeamsResponse> => {
+	console.log(`🌐 [API] Request: team id=${teamId}`);
+
+	if (!apiUrl || !apiKey) {
+		throw new Error("API URL or API Key not provided");
+	}
+
+	const url = new URL(`${apiUrl}/teams`);
+	url.searchParams.append("id", teamId.toString());
+
+	console.log(`🌐 [API] URL: ${url.toString()}`);
+	const startTime = performance.now();
+
+	const response = await fetch(url.toString(), {
+		method: "GET",
+		headers: {
+			"x-rapidapi-host": "api-football-v1.p.rapidapi.com",
+			"x-rapidapi-key": apiKey,
+		},
+	});
+
+	const duration = (performance.now() - startTime).toFixed(2);
+	if (!response.ok) {
+		const errorText = await response.text();
+		console.error(`❌ [API] Error (${duration}ms): ${response.statusText}`);
+		throw new Error(`API request failed: ${response.statusText} - ${errorText}`);
+	}
+
+	const data = await response.json();
+	if (data.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+		throw new Error(`API returned errors: ${JSON.stringify(data.errors)}`);
+	}
+
+	console.log(
+		`✅ [API] Success (${duration}ms): ${data.response?.length || 0} team records`,
+	);
+
+	return data as TeamsResponse;
+};
+
+/**
+ * Fetch the full leagues registry from the third-party Football API
+ * Endpoint: /leagues
+ */
+export const getFootballApiLeagues = async (
+	apiUrl?: string,
+	apiKey?: string,
+): Promise<LeaguesResponse> => {
+	console.log(`🌐 [API] Request: leagues registry`);
+
+	if (!apiUrl || !apiKey) {
+		throw new Error("API URL or API Key not provided");
+	}
+
+	const url = new URL(`${apiUrl}/leagues`);
+	console.log(`🌐 [API] URL: ${url.toString()}`);
+
+	const startTime = performance.now();
+	const response = await fetch(url.toString(), {
+		method: "GET",
+		headers: {
+			"x-rapidapi-host": "api-football-v1.p.rapidapi.com",
+			"x-rapidapi-key": apiKey,
+		},
+	});
+
+	const duration = (performance.now() - startTime).toFixed(2);
+	if (!response.ok) {
+		const errorText = await response.text();
+		console.error(`❌ [API] Error (${duration}ms): ${response.statusText}`);
+		throw new Error(`API request failed: ${response.statusText} - ${errorText}`);
+	}
+
+	const data = await response.json();
+	if (data.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+		throw new Error(`API returned errors: ${JSON.stringify(data.errors)}`);
+	}
+
+	console.log(
+		`✅ [API] Success (${duration}ms): ${data.response?.length || 0} leagues`,
+	);
+
+	return data as LeaguesResponse;
 };
 
 /**

@@ -28,6 +28,8 @@ import {
 	makeH2HPairKey,
 	type StandingsCurrentRowInsert,
 	type TeamSeasonContextInsert,
+	getLeagueById,
+	getTeamByProviderId,
 	upsertH2HCache,
 	upsertInjuriesCache,
 	upsertLeague,
@@ -35,6 +37,7 @@ import {
 	upsertTeam,
 	upsertTeamSeasonContext,
 } from "../../entities";
+import { getFootballApiTeamById } from "../../../pkg/util/football-api";
 import {
 	fetchInjuriesForFixture,
 	type FixtureInjuries,
@@ -2064,12 +2067,20 @@ export const insightsService = {
 
 		// 2. If standings exist, upsert all teams in standings + standings rows
 		if (standings) {
+			const usableLeagueCountry =
+				typeof league.country === "string" &&
+				league.country !== "World" &&
+				league.country !== "Europe" &&
+				league.country !== "International"
+					? league.country
+					: undefined;
+
 			// First, ensure all teams in standings exist in D1 and build provider→internal ID map
 			const teamIdMap = new Map<number, number>();
 			for (const row of standings.rows) {
 				const internalId = await upsertTeam(
 					db,
-					{ name: row.teamName },
+					{ name: row.teamName, country: usableLeagueCountry },
 					"api_football",
 					row.teamId,
 				);
@@ -2129,16 +2140,53 @@ export const insightsService = {
 	 */
 	async persistTeamWithContext(
 		db: D1Database,
+		env: InsightsEnv,
 		team: { id: number; name: string; logo: string },
 		leagueId: number,
 		season: number,
 		teamData: TeamData,
 		now: string,
 	): Promise<number> {
+		const league = await getLeagueById(db, leagueId);
+		const leagueCountry =
+			typeof league?.country === "string" &&
+			league.country !== "World" &&
+			league.country !== "Europe" &&
+			league.country !== "International"
+				? league.country
+				: undefined;
+
+		// If the team already has a country in D1, do not fetch.
+		const existing = await getTeamByProviderId(db, "api_football", team.id).catch(
+			() => null,
+		);
+		const existingCountry = existing?.country ?? null;
+
+		let country: string | undefined = leagueCountry;
+		if (!country && !existingCountry) {
+			// Best-effort fetch team metadata from API-Football (/teams?id=...).
+			try {
+				const apiTeam = await getFootballApiTeamById(
+					team.id,
+					env.FOOTBALL_API_URL,
+					env.RAPIDAPI_KEY,
+				);
+				const first = apiTeam.response?.[0]?.team;
+				if (typeof first?.country === "string") {
+					country = first.country;
+				}
+			} catch (error) {
+				console.warn(
+					`⚠️ [D1] Failed to fetch country for team ${team.id} (${team.name}):`,
+					error,
+				);
+			}
+		}
+
 		// 1. Upsert team entity
 		const teamInternalId = await upsertTeam(
 			db,
-			{ name: team.name, logo: team.logo },
+			{ name: team.name, logo: team.logo, country: country ?? existingCountry ?? undefined },
 			"api_football",
 			team.id,
 		);
@@ -2202,6 +2250,7 @@ export const insightsService = {
 			// 2. Home Team + Context (grouped)
 			await this.persistTeamWithContext(
 				db,
+				env,
 				fixture.teams.home,
 				leagueInternalId,
 				fixture.league.season,
@@ -2212,6 +2261,7 @@ export const insightsService = {
 			// 3. Away Team + Context (grouped)
 			await this.persistTeamWithContext(
 				db,
+				env,
 				fixture.teams.away,
 				leagueInternalId,
 				fixture.league.season,

@@ -1,20 +1,24 @@
 import type { Fixture, FixturesResponse } from "@outscore/shared-types";
 import {
-  getFootballApiFixtures,
-  getFootballApiFixturesByIds,
+	getFootballApiFixtures,
+	getFootballApiFixturesByIds,
 } from "../../pkg/util/football-api";
 import { type InsightsEnv, insightsService } from "../betting-insights";
 import {
-  type CacheEnv,
-  cacheSet,
-  cacheSetEdgeOnly,
-  checkFixturesDateTransition,
-  cleanupOldCacheData,
-  getCurrentUtcDate,
-  getTomorrowUtcDate,
-  getYesterdayUtcDate,
+	type CacheEnv,
+	cacheSet,
+	cacheSetEdgeOnly,
+	checkFixturesDateTransition,
+	cleanupOldCacheData,
+	getCurrentUtcDate,
+	getTomorrowUtcDate,
+	getYesterdayUtcDate,
 } from "../cache";
 import { filterFixturesByTimezone, formatFixtures } from "../fixtures";
+import {
+	type LeaguesRegistryEnv,
+	refreshLeaguesRegistry,
+} from "../leagues-registry";
 import { commonTimezones } from "../timezones";
 import { fetchStandingsForLeague } from "./standings-refresh";
 
@@ -209,6 +213,17 @@ export const handleScheduledEvent = async (
 	// Run cleanup once per day at 2 AM UTC
 	const hour = scheduledTime.getUTCHours();
 	const minute = scheduledTime.getUTCMinutes();
+
+	// Weekly leagues registry refresh (Sunday 03:00 UTC window)
+	if (hour === 3 && minute < 10 && scheduledTime.getUTCDay() === 0) {
+		console.log(`📚 [Scheduler] Refreshing leagues registry`);
+		try {
+			await refreshLeaguesRegistry(env as LeaguesRegistryEnv);
+			console.log(`✅ [Scheduler] Leagues registry refreshed`);
+		} catch (error) {
+			console.error(`❌ [Scheduler] Leagues registry refresh failed:`, error);
+		}
+	}
 	if (hour === 2 && minute < 5) {
 		console.log(`🧹 [Scheduler] Running daily cleanup`);
 
