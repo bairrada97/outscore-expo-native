@@ -28,9 +28,7 @@ export function FixtureTeam({
 }: FixtureTeamProps) {
 	return (
 		<View className={fixtureTeam({ bold: winner || isGoal })}>
-			<Text
-				className={cn("min-w-[16px]", fixtureTeam({ bold: winner || isGoal }))}
-			>
+			<Text className={cn("min-w-16", fixtureTeam({ bold: winner || isGoal }))}>
 				{score !== undefined ? score : ""}
 			</Text>
 			<Text

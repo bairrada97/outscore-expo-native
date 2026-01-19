@@ -1,6 +1,6 @@
 import { FixtureEventsBlock } from "@/components/fixture-events-block";
 import { FixtureInfoHeader } from "@/components/fixture-info-header";
-import { GoalAnalysisCard } from "@/components/insights/goal-analysis-card";
+import { GoalAnalysisCard } from "@/components/insights/goal-analysis-card/goal-analysis-card";
 import { InsightsSectionHeader } from "@/components/insights/insights-section-header";
 import { KeyInsightsList } from "@/components/insights/key-insights-list";
 import { MatchFactsGrid } from "@/components/insights/match-facts-grid";

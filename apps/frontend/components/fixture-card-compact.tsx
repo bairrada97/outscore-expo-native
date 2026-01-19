@@ -1,14 +1,11 @@
 import { useFixtureStatus } from "@/hooks/useFixtureStatus";
 import usePrevious from "@/hooks/usePrevious";
-import { cn } from "@/lib/utils";
-import type { FormattedMatch } from "@outscore/shared-types";
 import { useEffect, useState } from "react";
-import { Animated, Easing, Image, Pressable, View } from "react-native";
-import { Text } from "./ui/text";
-
-interface ExtendedFormattedMatch extends FormattedMatch {
-	type?: "H2H" | "favorite-team" | null;
-}
+import { Animated, Easing, Pressable, View } from "react-native";
+import { ScoresColumn } from "./fixture-card-compact/scores-column";
+import { StatusCell } from "./fixture-card-compact/status-cell";
+import { TeamsColumn } from "./fixture-card-compact/teams-column";
+import type { ExtendedFormattedMatch } from "./fixture-card-compact/types";
 
 interface FixtureCardCompactProps {
 	fixture: ExtendedFormattedMatch;
@@ -127,100 +124,30 @@ export function FixtureCardCompact({
 			)}
 
 			<View className="flex h-full flex-row items-center">
-				{/* Status */}
-				<View className="min-w-40 items-center">
-					<Text
-							className={cn(
-								"text-11 font-sans-regular",
-							matchIsLive
-								? "text-m-01"
-								: matchIsFinished
-									? "text-neu-07 dark:text-neu-06"
-									: "text-neu-08 dark:text-neu-05",
-						)}
-					>
-						{statusState}
-					</Text>
-				</View>
+					{/* Status */}
+					<StatusCell
+						statusText={statusState}
+						matchIsLive={matchIsLive}
+						matchIsFinished={matchIsFinished}
+					/>
 
-				{/* Teams */}
-				<View className="flex-1 justify-center gap-y-2">
-					{/* Home */}
-					<View className="flex-row items-center gap-x-6">
-						<View className="h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-neu-03 dark:bg-neu-10">
-							{teams.home.logo ? (
-								<Image
-									source={{ uri: teams.home.logo }}
-									className="h-12 w-12"
-									resizeMode="contain"
-								/>
-							) : (
-								<View className="h-10 w-10 rounded-full bg-neu-05" />
-							)}
-						</View>
-						<Text
-							className={cn(
-								"flex-1 text-13",
-								homeIsWinner || teamScored.home
-									? "font-sans-semibold text-neu-13 dark:text-neu-01"
-									: "text-neu-10 dark:text-neu-05",
-							)}
-							numberOfLines={1}
-						>
-							{teams.home.name}
-						</Text>
-					</View>
+					{/* Teams */}
+					<TeamsColumn
+						teams={teams}
+						homeIsWinner={homeIsWinner}
+						awayIsWinner={awayIsWinner}
+						teamScored={teamScored}
+					/>
 
-					{/* Away */}
-					<View className="flex-row items-center gap-x-6">
-						<View className="h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-neu-03 dark:bg-neu-10">
-							{teams.away.logo ? (
-								<Image
-									source={{ uri: teams.away.logo }}
-									className="h-12 w-12"
-									resizeMode="contain"
-								/>
-							) : (
-								<View className="h-10 w-10 rounded-full bg-neu-05" />
-							)}
-						</View>
-						<Text
-							className={cn(
-								"flex-1 text-13",
-								awayIsWinner || teamScored.away
-									? "font-sans-semibold text-neu-13 dark:text-neu-01"
-									: "text-neu-10 dark:text-neu-05",
-							)}
-							numberOfLines={1}
-						>
-							{teams.away.name}
-						</Text>
-					</View>
-				</View>
-
-				{/* Scores */}
-				<View className="ml-8 w-20 items-end justify-center gap-y-2">
-					<Text
-						className={cn(
-							"font-mono text-13",
-							homeIsWinner || teamScored.home
-								? "font-sans-bold text-m-01"
-								: "text-neu-10 dark:text-neu-05",
-						)}
-					>
-						{matchHasNotStarted ? "" : homeTeamGoals}
-					</Text>
-					<Text
-						className={cn(
-							"font-mono text-13",
-							awayIsWinner || teamScored.away
-								? "font-sans-bold text-m-01"
-								: "text-neu-10 dark:text-neu-05",
-						)}
-					>
-						{matchHasNotStarted ? "" : awayTeamGoals}
-					</Text>
-				</View>
+					{/* Scores */}
+					<ScoresColumn
+						homeTeamGoals={homeTeamGoals}
+						awayTeamGoals={awayTeamGoals}
+						matchHasNotStarted={matchHasNotStarted}
+						homeIsWinner={homeIsWinner}
+						awayIsWinner={awayIsWinner}
+						teamScored={teamScored}
+					/>
 			</View>
 
 			{/* Divider */}

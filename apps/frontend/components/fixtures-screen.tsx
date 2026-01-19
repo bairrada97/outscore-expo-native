@@ -1,6 +1,7 @@
 import { useTimeZone } from "@/context/timezone-context";
 import { fixturesByDateQuery } from "@/queries/fixtures-by-date";
 import { isWeb } from "@/utils/platform";
+import type { FormattedCountry } from "@outscore/shared-types";
 import { useIsFocused } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
 import { Platform, View } from "react-native";
@@ -25,9 +26,20 @@ export function FixturesScreen({ date, live }: FixturesScreenProps) {
 		live: live ? "all" : undefined,
 	});
 
-	const { data, isLoading, isRefetching } = useQuery({
+	const { data, isLoading, isRefetching } = useQuery<
+		FormattedCountry[],
+		Error,
+		FormattedCountry[],
+		string[]
+	>({
 		...queryOptions,
 		refetchInterval: isFocused ? queryOptions.refetchInterval : false,
+		// React Query expects (unknown, unknown) => unknown here, but our query factory
+		// is more specific. Cast to the expected signature.
+		structuralSharing: queryOptions.structuralSharing as unknown as (
+			oldData: unknown,
+			newData: unknown,
+		) => unknown,
 	});
 
 	// Header component for LegendList (only for native)

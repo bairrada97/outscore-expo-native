@@ -139,10 +139,11 @@ export function fixturesByDateQuery({
 		gcTime,
 		refetchOnMount,
 		refetchOnWindowFocus,
-		structuralSharing: (
-			oldData: FormattedCountry[] | undefined,
-			newData: FormattedCountry[],
-		) => mergeFixturesByDate(oldData, newData),
+		structuralSharing: (oldData: unknown, newData: unknown) =>
+			mergeFixturesByDate(
+				oldData as FormattedCountry[] | undefined,
+				newData as FormattedCountry[],
+			),
 		// Retry configuration using React Query's built-in support
 		retry: (failureCount: number, error: Error) => {
 			// Only retry on 503 (Service Unavailable) or 429 (Rate Limited)

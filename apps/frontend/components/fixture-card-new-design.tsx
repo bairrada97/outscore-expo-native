@@ -1,14 +1,11 @@
 import { useFixtureStatus } from "@/hooks/useFixtureStatus";
 import usePrevious from "@/hooks/usePrevious";
 import { cn } from "@/lib/utils";
-import type { FormattedMatch } from "@outscore/shared-types";
 import { useEffect, useState } from "react";
-import { Animated, Easing, Image, Pressable, View } from "react-native";
-import { Text } from "./ui/text";
-
-interface ExtendedFormattedMatch extends FormattedMatch {
-	type?: "H2H" | "favorite-team" | null;
-}
+import { Animated, Easing, Pressable, View } from "react-native";
+import { CenterScore } from "./fixture-card-new-design/center-score";
+import { TeamColumn } from "./fixture-card-new-design/team-column";
+import type { ExtendedFormattedMatch } from "./fixture-card-new-design/types";
 
 interface FixtureCardNewDesignProps {
 	fixture: ExtendedFormattedMatch;
@@ -25,7 +22,6 @@ const TIME_TO_RESET_GOAL_STYLES = 60_000; // 1 minute
 export function FixtureCardNewDesign({
 	fixture,
 	timezone,
-	isLastMatch = false,
 	onPress,
 }: FixtureCardNewDesignProps) {
 	const [teamScored, setTeamScored] = useState<{
@@ -138,153 +134,31 @@ export function FixtureCardNewDesign({
 			)}
 
 			<View className="flex-row items-center px-16 py-12">
-				{/* Home Team */}
-				<View className="flex-1 items-center">
-					{/* Team Logo */}
-					<View
-						className={cn(
-							"mb-8 h-40 w-40 items-center justify-center rounded-full",
-							"bg-neu-02 dark:bg-neu-11",
-							homeIsWinner && "ring-2 ring-m-01",
-							teamScored.home && "ring-2 ring-m-01-light-02",
-						)}
-					>
-						{teams.home.logo ? (
-							<Image
-								source={{ uri: teams.home.logo }}
-								className="h-32 w-32"
-								resizeMode="contain"
-							/>
-						) : (
-							<View className="h-32 w-32 rounded-full bg-neu-04 dark:bg-neu-09" />
-						)}
-					</View>
+				<TeamColumn
+					team={teams.home}
+					isWinner={homeIsWinner}
+					isScored={teamScored.home}
+				/>
 
-					{/* Team Name */}
-					<Text
-						className={cn(
-							"text-center text-12 text-neu-09 dark:text-neu-05",
-							(homeIsWinner || teamScored.home) &&
-								"font-sans-semibold text-neu-13 dark:text-neu-01",
-						)}
-						numberOfLines={1}
-					>
-						{teams.home.name}
-					</Text>
-				</View>
+				<CenterScore
+					statusText={statusState}
+					matchIsLive={matchIsLive}
+					matchIsFinished={matchIsFinished}
+					matchHasNotStarted={matchHasNotStarted}
+					pulseAnim={pulseAnim}
+					homeTeamGoals={homeTeamGoals}
+					awayTeamGoals={awayTeamGoals}
+					homeIsWinner={homeIsWinner}
+					awayIsWinner={awayIsWinner}
+					homeJustScored={teamScored.home}
+					awayJustScored={teamScored.away}
+				/>
 
-				{/* Center Score Section */}
-				<View className="mx-8 items-center">
-					{/* Status Badge */}
-					<View
-						className={cn(
-							"mb-4 rounded-8 px-8 py-2",
-							matchIsLive && "bg-m-01/10 dark:bg-m-01/20",
-							matchIsFinished && "bg-neu-04/50 dark:bg-neu-10/50",
-							!matchIsLive && !matchIsFinished && "bg-neu-03 dark:bg-neu-10",
-						)}
-					>
-						{matchIsLive && (
-							<View className="flex-row items-center gap-x-4">
-								<Animated.View
-									style={{ opacity: pulseAnim }}
-									className="h-6 w-6 rounded-full bg-m-01"
-								/>
-								<Text className="text-10 font-sans-semibold uppercase text-m-01">
-									{statusState}
-								</Text>
-							</View>
-						)}
-						{!matchIsLive && (
-							<Text
-								className={cn(
-									"text-10 font-sans-regular uppercase",
-									matchIsFinished
-										? "text-neu-07 dark:text-neu-06"
-										: "text-neu-08 dark:text-neu-05",
-								)}
-							>
-								{statusState}
-							</Text>
-						)}
-					</View>
-
-					{/* Score Display */}
-					<View className="flex-row items-center gap-x-8">
-						<View
-							className={cn(
-								"min-w-32 items-center rounded-8 px-8 py-4",
-								teamScored.home && "bg-m-01/10",
-							)}
-						>
-							<Text
-								className={cn(
-									"font-mono text-24 font-sans-bold text-neu-10 dark:text-neu-03",
-									homeIsWinner && "text-m-01 dark:text-m-01-light-02",
-									teamScored.home && "text-m-01 dark:text-m-01-light-02",
-								)}
-							>
-								{matchHasNotStarted ? "" : homeTeamGoals}
-							</Text>
-						</View>
-
-						<Text className="text-14 text-neu-06 dark:text-neu-07">
-							{matchHasNotStarted ? "" : "-"}
-						</Text>
-
-						<View
-							className={cn(
-								"min-w-32 items-center rounded-8 px-8 py-4",
-								teamScored.away && "bg-m-01/10",
-							)}
-						>
-							<Text
-								className={cn(
-									"font-mono text-24 font-sans-bold text-neu-10 dark:text-neu-03",
-									awayIsWinner && "text-m-01 dark:text-m-01-light-02",
-									teamScored.away && "text-m-01 dark:text-m-01-light-02",
-								)}
-							>
-								{matchHasNotStarted ? "" : awayTeamGoals}
-							</Text>
-						</View>
-					</View>
-				</View>
-
-				{/* Away Team */}
-				<View className="flex-1 items-center">
-					{/* Team Logo */}
-					<View
-						className={cn(
-							"mb-8 h-40 w-40 items-center justify-center rounded-full",
-							"bg-neu-02 dark:bg-neu-11",
-							awayIsWinner && "ring-2 ring-m-01",
-							teamScored.away && "ring-2 ring-m-01-light-02",
-						)}
-					>
-						{teams.away.logo ? (
-							<Image
-								source={{ uri: teams.away.logo }}
-								className="h-32 w-32"
-								resizeMode="contain"
-							/>
-						) : (
-							<View className="h-32 w-32 rounded-full bg-neu-04 dark:bg-neu-09" />
-						)}
-					</View>
-
-					{/* Team Name */}
-					<Text
-						className={cn(
-							"text-center text-12 text-neu-09 dark:text-neu-05",
-							(awayIsWinner || teamScored.away) &&
-								"font-sans-semibold text-neu-13 dark:text-neu-01",
-						)}
-						numberOfLines={1}
-					>
-						{teams.away.name}
-					</Text>
-				</View>
+				<TeamColumn
+					team={teams.away}
+					isWinner={awayIsWinner}
+					isScored={teamScored.away}
+				/>
 			</View>
 
 			{/* Bottom accent line for finished matches */}

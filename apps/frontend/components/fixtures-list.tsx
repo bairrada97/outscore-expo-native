@@ -1,4 +1,4 @@
-import { LegendList, type LegendListRenderItemProps } from "@legendapp/list";
+import { LegendList, type LegendListRef, type LegendListRenderItemProps } from "@legendapp/list";
 import { type FormattedCountry, isLiveStatus } from "@outscore/shared-types";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -44,12 +44,16 @@ export function FixturesList({
 	listHeader,
 	resetKey,
 }: FixturesListProps) {
-	const listRef = useRef<any>(null);
+	// keep prop for API parity (callers may pass it)
+	void isRefetching;
+
+	const listRef = useRef<LegendListRef | null>(null);
 	const [expandedCountries, setExpandedCountries] = useState<string[]>([]);
 
 	useEffect(() => {
 		// Reset accordion expansion + scroll position when switching date/live tabs.
 		// This is much cheaper than remounting the entire list tree.
+		void resetKey;
 		setExpandedCountries([]);
 		listRef.current?.scrollToOffset?.({ offset: 0, animated: false });
 	}, [resetKey]);
@@ -107,7 +111,7 @@ export function FixturesList({
 			<Accordion
 				type="multiple"
 				value={expandedCountries}
-				onValueChange={(value) =>
+				onValueChange={(value: string[]) =>
 					setExpandedCountries(Array.isArray(value) ? value : [])
 				}
 				className="w-full flex-1"

@@ -1,32 +1,13 @@
 import { Text } from "@/components/ui/text";
 import { cn } from "@/lib/utils";
 import { isWeb } from "@/utils/platform";
-import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
-import { TabView, type SceneRendererProps } from "react-native-tab-view";
+import { type SceneRendererProps, TabView } from "react-native-tab-view";
+import type { TabsProps } from "./tabs.types";
+import { clamp, MIN_TAB_WIDTH_PX } from "./tabs.types";
 
-function clamp(n: number, min: number, max: number) {
-	return Math.max(min, Math.min(max, n));
-}
-
-export type TabsItem = {
-	key: string;
-	title: string;
-	render: () => ReactNode;
-};
-
-const MIN_TAB_WIDTH_PX = 94;
-
-export interface TabsProps {
-	tabs: TabsItem[];
-	defaultKey?: string;
-	activeKey?: string;
-	onChangeKey?: (key: string) => void;
-	swipeEnabled?: boolean;
-	minTabWidthPx?: number;
-	containerClassName?: string;
-}
+export type { TabsItem, TabsProps } from "./tabs.types";
 
 export function Tabs({
 	tabs,

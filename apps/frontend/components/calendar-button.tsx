@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { Pressable, View } from "react-native";
+import { Pressable } from "react-native";
 import SvgB022 from "./ui/SvgIcons/B022";
 
 interface CalendarButtonProps {
