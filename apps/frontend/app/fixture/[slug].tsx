@@ -391,7 +391,7 @@ export default function FixtureDetailScreen() {
 													insights={matchOutcomeSimulation.insights ?? []}
 												/>
 											) : (
-												<View className="bg-neu-01 dark:bg-neu-11 shadow-sha-01 dark:shadow-sha-06 rounded-lg px-16 py-12">
+												<View className="bg-neu-01 dark:bg-neu-11 shadow-sha-01 dark:shadow-sha-06 rounded-lg px-16 py-16">
 													<Text
 														variant="body-02"
 														className="text-neu-07 dark:text-neu-06"
@@ -404,6 +404,12 @@ export default function FixtureDetailScreen() {
 											<GoalAnalysisCard
 												overUnderSimulations={overUnderSimulations}
 												bttsSimulation={bttsSimulation}
+												homeGoalLineOverPct={
+													insightsData.homeTeamContext?.dna?.goalLineOverPct
+												}
+												awayGoalLineOverPct={
+													insightsData.awayTeamContext?.dna?.goalLineOverPct
+												}
 											/>
 										</View>
 									) : null}

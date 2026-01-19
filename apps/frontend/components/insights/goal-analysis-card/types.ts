@@ -26,5 +26,7 @@ export type GoalSimulation = {
 export type GoalAnalysisCardProps = {
 	overUnderSimulations: GoalSimulation[];
 	bttsSimulation?: GoalSimulation | null;
+	homeGoalLineOverPct?: Record<string, number | undefined>;
+	awayGoalLineOverPct?: Record<string, number | undefined>;
 };
 

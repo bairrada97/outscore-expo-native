@@ -14,6 +14,7 @@ import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
 import { AppState, type AppStateStatus, Platform, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { PortalHost } from "@rn-primitives/portal";
 
 // Import global styles for Uniwind
 import "../global.css";
@@ -187,6 +188,7 @@ export default function RootLayout() {
 						</View>
 					</SelectedDateProvider>
 				</TimeZoneProvider>
+				<PortalHost />
 			</GestureHandlerRootView>
 		</PersistQueryClientProvider>
 	);

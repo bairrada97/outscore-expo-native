@@ -21,6 +21,7 @@ export type GoalAnalysisCardViewProps = {
 
 	isOverUnder: boolean;
 	overUnderSimulationsCount: number;
+	onPressGoalLinesBreakdown?: () => void;
 
 	headline: string;
 	strengthLabel: string;
@@ -41,6 +42,7 @@ export function GoalAnalysisCardView({
 	onSelectKey,
 	isOverUnder,
 	overUnderSimulationsCount,
+	onPressGoalLinesBreakdown,
 	headline,
 	strengthLabel,
 	reliabilityLabel,
@@ -178,7 +180,11 @@ export function GoalAnalysisCardView({
 				</View>
 
 				{isOverUnder && overUnderSimulationsCount > 1 ? (
-					<Pressable className="border border-neu-04/60 dark:border-neu-10/60 rounded-lg px-16 py-16 flex-row items-center justify-between">
+					<Pressable
+						onPress={onPressGoalLinesBreakdown}
+						disabled={!onPressGoalLinesBreakdown}
+						className="border border-neu-04/60 dark:border-neu-10/60 rounded-lg px-16 py-16 flex-row items-center justify-between"
+					>
 						<View className="flex-row items-center gap-8">
 							<Text
 								variant="caption-03"

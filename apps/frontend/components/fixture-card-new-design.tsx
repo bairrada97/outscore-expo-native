@@ -133,7 +133,7 @@ export function FixtureCardNewDesign({
 				<View className="absolute left-0 top-0 h-full w-1 bg-linear-to-b from-m-01 to-m-01-light-02" />
 			)}
 
-			<View className="flex-row items-center px-16 py-12">
+			<View className="flex-row items-center px-16 py-16">
 				<TeamColumn
 					team={teams.home}
 					isWinner={homeIsWinner}

@@ -14,6 +14,24 @@ export type BettingInsightsResponse = {
     date: string;
     status: string;
   };
+  homeTeamContext?: {
+    dna?: {
+      /**
+       * How often this team goes over each goal line (0-100).
+       * Keys are stringified lines like "2.5".
+       */
+      goalLineOverPct?: Record<string, number | undefined>;
+    };
+  };
+  awayTeamContext?: {
+    dna?: {
+      /**
+       * How often this team goes over each goal line (0-100).
+       * Keys are stringified lines like "2.5".
+       */
+      goalLineOverPct?: Record<string, number | undefined>;
+    };
+  };
   simulations?: Array<{
     scenarioType: string;
     line?: number;
