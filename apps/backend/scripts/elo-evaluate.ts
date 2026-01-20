@@ -79,7 +79,11 @@ const main = () => {
 		throw new Error("Usage: bun scripts/elo-evaluate.ts <eval.json>");
 	}
 
-	const rows = JSON.parse(readFileSync(file, "utf-8")) as EvalRow[];
+	const parsed = JSON.parse(readFileSync(file, "utf-8"));
+	if (!Array.isArray(parsed)) {
+		throw new Error("Expected JSON array for eval rows.");
+	}
+	const rows = parsed as EvalRow[];
 	if (!rows.length) {
 		console.log("No rows to evaluate.");
 		return;

@@ -188,8 +188,10 @@ const resolveStartingElo = (params: {
 const main = async () => {
 	const args = process.argv.slice(2);
 	const leagueIds = parseLeagueIds(parseArg(args, "--league-ids"));
-	const fromSeason = Number(parseArg(args, "--from-season"));
-	const toSeason = Number(parseArg(args, "--to-season"));
+	const fromSeasonRaw = parseArg(args, "--from-season");
+	const toSeasonRaw = parseArg(args, "--to-season");
+	const fromSeason = Number(fromSeasonRaw);
+	const toSeason = Number(toSeasonRaw);
 	const payloadPath =
 		parseArg(args, "--payload") ??
 		resolve(__dirname, "../../../docs/plans/uefa-priors-payload.json");
@@ -204,6 +206,8 @@ const main = async () => {
 
 	if (
 		!leagueIds.length ||
+		!fromSeasonRaw ||
+		!toSeasonRaw ||
 		!Number.isFinite(fromSeason) ||
 		!Number.isFinite(toSeason) ||
 		!dbName

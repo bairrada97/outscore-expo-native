@@ -552,7 +552,18 @@ async function updateEloFromCachedFixtures(env: SchedulerEnv): Promise<void> {
 	for (const fixture of pending) {
 		const homeId = externalTeamMap.get(fixture.teams.home.id);
 		const awayId = externalTeamMap.get(fixture.teams.away.id);
-		if (!homeId || !awayId) continue;
+		if (!homeId || !awayId) {
+			const missing = [
+				!homeId ? `home=${fixture.teams.home.id}` : null,
+				!awayId ? `away=${fixture.teams.away.id}` : null,
+			]
+				.filter(Boolean)
+				.join(", ");
+			console.warn(
+				`⚠️ [Scheduler] Skipping fixture ${fixture.fixture.id}: missing team mapping (${missing}).`,
+			);
+			continue;
+		}
 
 		const matchType = detectMatchType(fixture.league.name);
 		const baseDivisionOffset =

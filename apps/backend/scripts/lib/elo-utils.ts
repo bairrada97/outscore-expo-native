@@ -31,9 +31,41 @@ export const buildWranglerArgs = (params: {
 };
 
 export const loadRows = (args: string[]) => {
-	const raw = execFileSync("bunx", args, { encoding: "utf-8" });
-	const parsed = JSON.parse(raw);
-	return extractWranglerResults(parsed);
+	let raw = "";
+	try {
+		raw = execFileSync("bunx", args, {
+			encoding: "utf-8",
+			stdio: ["ignore", "pipe", "pipe"],
+		});
+		const parsed = JSON.parse(raw);
+		return extractWranglerResults(parsed);
+	} catch (error) {
+		const err = error as {
+			message?: string;
+			stdout?: string | Buffer;
+			stderr?: string | Buffer;
+			status?: number | null;
+			signal?: NodeJS.Signals | null;
+		};
+		const stdout = raw || (err.stdout ? String(err.stdout) : "");
+		const stderr = err.stderr ? String(err.stderr) : "";
+		const exitInfo = [
+			typeof err.status === "number" ? `status=${err.status}` : null,
+			err.signal ? `signal=${err.signal}` : null,
+		]
+			.filter(Boolean)
+			.join(" ");
+		const details = [
+			`command: bunx ${args.join(" ")}`,
+			exitInfo ? `exit: ${exitInfo}` : null,
+			stdout ? `stdout:\n${stdout}` : null,
+			stderr ? `stderr:\n${stderr}` : null,
+			err.message ? `error: ${err.message}` : null,
+		]
+			.filter(Boolean)
+			.join("\n");
+		throw new Error(`Failed to load rows via wrangler.\n${details}`);
+	}
 };
 
 export const detectMatchType = (leagueName: string) => {
@@ -56,7 +88,16 @@ export const detectMatchType = (leagueName: string) => {
 		name.includes("coupe") ||
 		name.includes("coppa") ||
 		name.includes("pokal") ||
-		name.includes("beker")
+		name.includes("beker") ||
+		name.includes("community shield") ||
+		name.includes("charity shield") ||
+		name.includes("efl trophy") ||
+		name.includes("efl cup") ||
+		name.includes("league cup") ||
+		name.includes("super cup") ||
+		name.includes("supercopa") ||
+		name.includes("supertaca") ||
+		name.includes("supertaça")
 	) {
 		return "CUP" as const;
 	}

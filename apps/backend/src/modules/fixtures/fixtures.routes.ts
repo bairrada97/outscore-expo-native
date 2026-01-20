@@ -320,9 +320,11 @@ async function handleFixturesList(
 		});
 
 		const responseTime = (performance.now() - requestStartTime).toFixed(2);
+		const dateLabel =
+			isRangeRequest && from && to ? `${from}..${to}` : dateToUse || "today";
 
 		console.log(
-			`📊 [Response] date=${dateToUse || "today"}, timezone=${timezone}, ` +
+			`📊 [Response] date=${dateLabel}, timezone=${timezone}, ` +
 				`source=${result.source}, originalCount=${result.originalMatchCount}, ` +
 				`filteredCount=${filteredMatchCount}, time=${responseTime}ms`,
 		);
