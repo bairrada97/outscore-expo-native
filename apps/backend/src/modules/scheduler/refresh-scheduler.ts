@@ -2,6 +2,7 @@ import type { Fixture, FixturesResponse } from "@outscore/shared-types";
 import {
 	getFootballApiFixtures,
 	getFootballApiFixturesByIds,
+	getFootballApiTeamById,
 } from "../../pkg/util/football-api";
 import { type InsightsEnv, insightsService } from "../betting-insights";
 import {
@@ -32,6 +33,9 @@ const FIXTURES_BY_IDS_MAX = 20;
 export interface SchedulerEnv extends CacheEnv, InsightsEnv {
 	REFRESH_SCHEDULER_DO?: DurableObjectNamespace;
 }
+
+const TEAM_COUNTRY_BACKFILL_KEY = "jobs/team-country-backfill:last-run";
+const TEAM_COUNTRY_BACKFILL_LIMIT = 50;
 
 /**
  * Refresh today's fixtures data in all cache layers
@@ -224,6 +228,11 @@ export const handleScheduledEvent = async (
 			console.error(`❌ [Scheduler] Leagues registry refresh failed:`, error);
 		}
 	}
+
+	// Daily team country backfill (03:10 UTC window)
+	if (hour === 3 && minute >= 10 && minute < 15) {
+		await backfillTeamCountries(env);
+	}
 	if (hour === 2 && minute < 5) {
 		console.log(`🧹 [Scheduler] Running daily cleanup`);
 
@@ -276,6 +285,70 @@ export const handleScheduledEvent = async (
 		await refreshTodayFixtures(env);
 	}
 };
+
+async function backfillTeamCountries(env: SchedulerEnv): Promise<void> {
+	const today = getCurrentUtcDate();
+	const lastRun = await env.FOOTBALL_KV.get(TEAM_COUNTRY_BACKFILL_KEY);
+	if (lastRun === today) {
+		return;
+	}
+
+	console.log(`🌍 [Scheduler] Backfilling team countries`);
+
+	const rows = await env.ENTITIES_DB.prepare(
+		`SELECT t.id AS team_id, t.name AS team_name, e.provider_id AS provider_id
+		 FROM teams t
+		 JOIN external_ids e
+		   ON e.internal_id = t.id
+		  AND e.entity_type = 'team'
+		  AND e.provider = 'api_football'
+		 WHERE t.country IS NULL OR t.country = ''
+		 LIMIT ?`,
+	)
+		.bind(TEAM_COUNTRY_BACKFILL_LIMIT)
+		.all<{ team_id: number; team_name: string; provider_id: string }>();
+
+	const targets = rows.results ?? [];
+	if (!targets.length) {
+		await env.FOOTBALL_KV.put(TEAM_COUNTRY_BACKFILL_KEY, today);
+		console.log(`✅ [Scheduler] No missing team countries found`);
+		return;
+	}
+
+	let updated = 0;
+	for (const target of targets) {
+		try {
+			const apiTeam = await getFootballApiTeamById(
+				Number(target.provider_id),
+				env.FOOTBALL_API_URL,
+				env.RAPIDAPI_KEY,
+			);
+			const first = apiTeam.response?.[0]?.team;
+			const country =
+				typeof first?.country === "string" && first.country.trim()
+					? first.country.trim()
+					: null;
+			if (!country) continue;
+
+			await env.ENTITIES_DB.prepare(
+				`UPDATE teams SET country = ?, updated_at = datetime('now') WHERE id = ?`,
+			)
+				.bind(country, target.team_id)
+				.run();
+			updated += 1;
+		} catch (error) {
+			console.warn(
+				`⚠️ [Scheduler] Failed to fetch country for team ${target.team_id} (${target.team_name})`,
+				error,
+			);
+		}
+	}
+
+	await env.FOOTBALL_KV.put(TEAM_COUNTRY_BACKFILL_KEY, today);
+	console.log(
+		`✅ [Scheduler] Team country backfill done: updated ${updated} / ${targets.length}`,
+	);
+}
 
 // ============================================================================
 // DAILY ENTITY-DEDUPED PREFETCH (3 AM UTC)

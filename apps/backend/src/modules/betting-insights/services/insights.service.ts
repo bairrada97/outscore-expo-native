@@ -39,7 +39,6 @@ import {
 	upsertTeam,
 	upsertTeamSeasonContext,
 } from "../../entities";
-import { getFootballApiTeamById } from "../../../pkg/util/football-api";
 import {
 	fetchInjuriesForFixture,
 	type FixtureInjuries,
@@ -2224,7 +2223,7 @@ export const insightsService = {
 	 */
 	async persistTeamWithContext(
 		db: D1Database,
-		env: InsightsEnv,
+		_env: InsightsEnv,
 		team: { id: number; name: string; logo: string },
 		leagueId: number,
 		season: number,
@@ -2248,23 +2247,10 @@ export const insightsService = {
 
 		let country: string | undefined = leagueCountry;
 		if (!country && !existingCountry) {
-			// Best-effort fetch team metadata from API-Football (/teams?id=...).
-			try {
-				const apiTeam = await getFootballApiTeamById(
-					team.id,
-					env.FOOTBALL_API_URL,
-					env.RAPIDAPI_KEY,
-				);
-				const first = apiTeam.response?.[0]?.team;
-				if (typeof first?.country === "string") {
-					country = first.country;
-				}
-			} catch (error) {
-				console.warn(
-					`⚠️ [D1] Failed to fetch country for team ${team.id} (${team.name}):`,
-					error,
-				);
-			}
+			// Team country enrichment should happen asynchronously via background jobs
+			// to avoid blocking the insights request and consuming API quota.
+			// For now, keep country undefined and rely on league country or existing data.
+			country = undefined;
 		}
 
 		// 1. Upsert team entity
