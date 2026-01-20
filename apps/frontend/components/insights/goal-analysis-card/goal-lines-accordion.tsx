@@ -10,13 +10,7 @@ import { AlertTriangle } from "lucide-react-native";
 import { useState } from "react";
 import { View } from "react-native";
 import type { GoalInsight, GoalSimulation } from "./types";
-import { formatPercent, isWatchOutInsight, renderInsightText } from "./utils";
-
-function splitInsights(insights: GoalInsight[]) {
-	const supporting = insights.filter((i) => !isWatchOutInsight(i));
-	const watchOuts = insights.filter((i) => isWatchOutInsight(i));
-	return { supporting, watchOuts };
-}
+import { formatPercent, renderInsightText, splitInsights } from "./utils";
 
 function GoalLineSignals({ insights }: { insights: GoalInsight[] }) {
 	const { supporting, watchOuts } = splitInsights(insights);

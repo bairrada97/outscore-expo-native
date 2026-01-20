@@ -8,19 +8,15 @@ import { Badge } from "@/components/ui/SvgIcons/badge";
 import { Text } from "@/components/ui/text";
 import { View } from "react-native";
 import type { GoalInsight } from "./types";
-import { isWatchOutInsight, renderInsightText } from "./utils";
+import { renderInsightText, splitInsights } from "./utils";
 
 export function GoalSignalAccordion({
 	insights = [],
 }: {
 	insights?: GoalInsight[];
 }) {
-	const supportingInsights = insights.filter(
-		(insight) => !isWatchOutInsight(insight),
-	);
-	const watchOutInsights = insights.filter((insight) =>
-		isWatchOutInsight(insight),
-	);
+	const { supporting: supportingInsights, watchOuts: watchOutInsights } =
+		splitInsights(insights);
 
 	return (
 		<Accordion type="single" collapsible>

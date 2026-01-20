@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS uefa_club_team_map (
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
     PRIMARY KEY (uefa_club_key, as_of_season),
-    FOREIGN KEY (team_id) REFERENCES teams(id)
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_uefa_club_map_api_id

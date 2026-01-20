@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useColorScheme, View } from "react-native";
 import Svg, { Circle, G, Path, Text as SvgText } from "react-native-svg";
+import { clamp } from "../utils/helpers";
 import type { GoalSimulation } from "./types";
 
 type GoalLinePoint = {
@@ -8,10 +9,6 @@ type GoalLinePoint = {
 	over: number;
 	under: number;
 };
-
-function clamp(value: number, min: number, max: number) {
-	return Math.min(max, Math.max(min, value));
-}
 
 function toPointKey(line: number) {
 	return String(line);

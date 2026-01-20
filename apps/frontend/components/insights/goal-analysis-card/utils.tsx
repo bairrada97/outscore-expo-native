@@ -17,6 +17,12 @@ export const formatPercent = (value?: number) => {
 export const isWatchOutInsight = (insight: GoalInsight) =>
 	insight.category === "WARNING" || insight.severity === "CRITICAL";
 
+export function splitInsights(insights: GoalInsight[]) {
+	const supporting = insights.filter((insight) => !isWatchOutInsight(insight));
+	const watchOuts = insights.filter((insight) => isWatchOutInsight(insight));
+	return { supporting, watchOuts };
+}
+
 export const renderInsightText = (insight: GoalInsight) => {
 	if (insight.parts && insight.parts.length > 0) {
 		return insight.parts.map((part, idx) => (

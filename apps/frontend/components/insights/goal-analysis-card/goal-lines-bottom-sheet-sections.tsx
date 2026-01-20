@@ -119,10 +119,26 @@ export function GoalLinesSeasonTrends({
 								{homePct !== null ? `${homePct.toFixed(0)}%` : "—"}
 							</Text>
 						</View>
-						<View className="h-8 bg-neu-03 dark:bg-neu-12 rounded-full overflow-hidden">
+						<View
+							className="h-8 bg-neu-03 dark:bg-neu-12 rounded-full overflow-hidden"
+							accessibilityRole="progressbar"
+							accessibilityValue={{
+								min: 0,
+								max: 100,
+								now: Math.round(clampPct(homePct)),
+							}}
+							accessibilityLabel="Home progress"
+						>
 							<View
 								style={{ width: `${clampPct(homePct)}%` }}
 								className="h-8 bg-m-01 dark:bg-m-01-light-04"
+								accessibilityRole="progressbar"
+								accessibilityValue={{
+									min: 0,
+									max: 100,
+									now: Math.round(clampPct(homePct)),
+								}}
+								accessibilityLabel="Home progress"
 							/>
 						</View>
 					</View>
@@ -142,10 +158,26 @@ export function GoalLinesSeasonTrends({
 								{awayPct !== null ? `${awayPct.toFixed(0)}%` : "—"}
 							</Text>
 						</View>
-						<View className="h-8 bg-neu-03 dark:bg-neu-12 rounded-full overflow-hidden">
+						<View
+							className="h-8 bg-neu-03 dark:bg-neu-12 rounded-full overflow-hidden"
+							accessibilityRole="progressbar"
+							accessibilityValue={{
+								min: 0,
+								max: 100,
+								now: Math.round(clampPct(awayPct)),
+							}}
+							accessibilityLabel="Away progress"
+						>
 							<View
 								style={{ width: `${clampPct(awayPct)}%` }}
 								className="h-8 bg-neu-06 dark:bg-neu-09"
+								accessibilityRole="progressbar"
+								accessibilityValue={{
+									min: 0,
+									max: 100,
+									now: Math.round(clampPct(awayPct)),
+								}}
+								accessibilityLabel="Away progress"
 							/>
 						</View>
 					</View>
