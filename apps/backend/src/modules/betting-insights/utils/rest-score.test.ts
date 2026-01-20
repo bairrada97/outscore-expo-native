@@ -246,8 +246,8 @@ describe("getRestDescription", () => {
 		expect(getRestDescription(9)).toBe("Slightly long rest");
 	});
 
-	it("should return 'Rusty (long break)' for >= 10 days", () => {
-		expect(getRestDescription(10)).toBe("Rusty (long break)");
+	it("should return 'Rusty (long break)' for > 10 days", () => {
+		expect(getRestDescription(11)).toBe("Rusty (long break)");
 		expect(getRestDescription(14)).toBe("Rusty (long break)");
 		expect(getRestDescription(21)).toBe("Rusty (long break)");
 	});

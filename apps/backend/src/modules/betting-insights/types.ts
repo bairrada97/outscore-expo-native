@@ -348,6 +348,13 @@ export interface TeamData {
   dna: DNALayer;
   /** Safety flags */
   safetyFlags: SafetyFlags;
+  /** Global strength signal */
+  elo?: {
+    rating: number;
+    games: number;
+    asOf?: string;
+    confidence: number;
+  };
   /** Days since last competitive match */
   daysSinceLastMatch: number;
   /** Last home matches (for home-specific analysis) */
@@ -882,6 +889,11 @@ export interface TeamContext {
     goalLineOverPct: GoalLineOverPctMap;
     cleanSheetPercentage: number;
     isLateStarter: boolean;
+  };
+  elo?: {
+    rating: number;
+    games: number;
+    confidence: number;
   };
 }
 

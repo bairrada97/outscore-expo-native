@@ -25,6 +25,8 @@ import {
 	hasInsightsSnapshot,
 	type InputsSnapshotData,
 	insertInsightsSnapshot,
+	getLeagueStatsByProviderId,
+	getCurrentTeamElo,
 	makeH2HPairKey,
 	type StandingsCurrentRowInsert,
 	type TeamSeasonContextInsert,
@@ -66,6 +68,7 @@ import { simulateBTTS } from "../simulations/simulate-btts";
 import { simulateFirstHalfActivity } from "../simulations/simulate-first-half-activity";
 import { simulateMatchOutcome } from "../simulations/simulate-match-outcome";
 import { simulateTotalGoalsOverUnder } from "../simulations/simulate-total-goals-over-under";
+import { calculateEloConfidence } from "../../elo";
 import type {
 	MatchContext as ApiMatchContext,
 	BettingInsightsResponse,
@@ -495,6 +498,8 @@ export const insightsService = {
 				h2hMatches,
 				standings,
 				injuries,
+				homeEloRow,
+				awayEloRow,
 			] = await Promise.all([
 				this.fetchTeamStatistics(homeTeamId, leagueId, season, env),
 				this.fetchTeamStatistics(awayTeamId, leagueId, season, env),
@@ -503,6 +508,8 @@ export const insightsService = {
 				this.fetchH2HMatches(homeTeamId, awayTeamId, 5, env),
 				this.fetchStandings(leagueId, season, env),
 				this.fetchInjuries(fixtureId, homeTeamId, awayTeamId, env),
+				getCurrentTeamElo(env.ENTITIES_DB, homeTeamId),
+				getCurrentTeamElo(env.ENTITIES_DB, awayTeamId),
 			]);
 
 			// Step 2b: Extract team standings data
@@ -523,6 +530,14 @@ export const insightsService = {
 				homeMatches,
 				leagueId,
 				homeStandingsData,
+				homeEloRow
+					? {
+							rating: homeEloRow.elo,
+							games: homeEloRow.games,
+							asOf: homeEloRow.as_of_date,
+							confidence: calculateEloConfidence(homeEloRow.games),
+						}
+					: undefined,
 			);
 
 			const awayTeamData = this.processTeamData(
@@ -532,6 +547,14 @@ export const insightsService = {
 				awayMatches,
 				leagueId,
 				awayStandingsData,
+				awayEloRow
+					? {
+							rating: awayEloRow.elo,
+							games: awayEloRow.games,
+							asOf: awayEloRow.as_of_date,
+							confidence: calculateEloConfidence(awayEloRow.games),
+						}
+					: undefined,
 			);
 
 			// Step 4: Process H2H data
@@ -603,6 +626,12 @@ export const insightsService = {
 				),
 			};
 
+			const leagueStats = await this.getWeightedLeagueStats({
+				db: env.ENTITIES_DB,
+				leagueId,
+				season,
+			});
+
 			// Step 6: Generate simulations (with injury adjustments)
 			const simulations = this.generateSimulations(
 				homeTeamData,
@@ -610,6 +639,7 @@ export const insightsService = {
 				h2hData,
 				predictionContext,
 				injuries,
+				leagueStats,
 			);
 
 			// Step 7: Generate insights
@@ -1366,6 +1396,7 @@ export const insightsService = {
 		matches: ProcessedMatch[],
 		leagueId: number,
 		standingsData: TeamStandingsData | null = null,
+		elo?: TeamData["elo"],
 	): TeamData {
 		// Filter out friendly matches for analysis
 		const competitiveMatches = filterNonFriendlyMatches(matches);
@@ -1413,6 +1444,7 @@ export const insightsService = {
 			mood,
 			dna,
 			safetyFlags,
+			elo,
 			daysSinceLastMatch,
 			lastHomeMatches: homeMatches.slice(0, 10),
 			lastAwayMatches: awayMatches.slice(0, 10),
@@ -1666,6 +1698,7 @@ export const insightsService = {
 		h2h: H2HData,
 		context: PredictionMatchContext,
 		injuries: FixtureInjuries | null,
+		leagueStats?: { avgGoals: number; matches: number },
 	): Simulation[] {
 		const simulations: Simulation[] = [];
 
@@ -1686,6 +1719,7 @@ export const insightsService = {
 			h2h,
 			homeInjuryImpact: homeImpact,
 			awayInjuryImpact: awayImpact,
+			leagueStats,
 		});
 
 		// Both Teams To Score (injuries affect scoring likelihood)
@@ -1763,6 +1797,47 @@ export const insightsService = {
 
 		// Related scenarios (non-blocking, derived only from already computed simulations)
 		return attachRelatedScenarios(simulations);
+	},
+
+	/**
+	 * Build weighted league scoring profile (current + last season).
+	 */
+	async getWeightedLeagueStats(params: {
+		db: D1Database;
+		leagueId: number;
+		season: number;
+	}): Promise<{ avgGoals: number; matches: number } | undefined> {
+		const current = await getLeagueStatsByProviderId(
+			params.db,
+			"api_football",
+			params.leagueId,
+			params.season,
+		);
+		const previous = await getLeagueStatsByProviderId(
+			params.db,
+			"api_football",
+			params.leagueId,
+			params.season - 1,
+		);
+
+		if (!current && !previous) return undefined;
+		if (!current && previous) {
+			return { avgGoals: previous.avg_goals, matches: previous.matches };
+		}
+		if (current && !previous) {
+			return { avgGoals: current.avg_goals, matches: current.matches };
+		}
+
+		if (current && previous && current.matches < 10) {
+			return {
+				avgGoals: current.avg_goals * 0.3 + previous.avg_goals * 0.7,
+				matches: current.matches,
+			};
+		}
+
+		return current
+			? { avgGoals: current.avg_goals, matches: current.matches }
+			: undefined;
 	},
 
 	// ============================================================================
@@ -1975,6 +2050,15 @@ export const insightsService = {
 				cleanSheetPercentage: team.dna.cleanSheetPercentage,
 				isLateStarter: team.dna.isLateStarter,
 			},
+			...(team.elo
+				? {
+						elo: {
+							rating: team.elo.rating,
+							games: team.elo.games,
+							confidence: team.elo.confidence,
+						},
+					}
+				: {}),
 		};
 	},
 

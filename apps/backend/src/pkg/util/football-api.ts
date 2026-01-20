@@ -263,6 +263,82 @@ export const getFootballApiFixtures = async (
 };
 
 /**
+ * Fetch fixtures by league + season (bulk backfill).
+ */
+export const getFootballApiFixturesByLeagueSeason = async (
+	leagueId: number,
+	season: number,
+	apiUrl?: string,
+	apiKey?: string,
+): Promise<FixturesResponse> => {
+	if (!apiUrl || !apiKey) {
+		throw new Error("API URL or API Key not provided");
+	}
+
+	const url = new URL(`${apiUrl}/fixtures`);
+	url.searchParams.append("league", leagueId.toString());
+	url.searchParams.append("season", season.toString());
+
+	const response = await fetch(url.toString(), {
+		method: "GET",
+		headers: {
+			"x-rapidapi-host": "api-football-v1.p.rapidapi.com",
+			"x-rapidapi-key": apiKey,
+		},
+	});
+
+	if (!response.ok) {
+		const errorText = await response.text();
+		throw new Error(`API request failed: ${response.statusText} - ${errorText}`);
+	}
+
+	const data = await response.json();
+	if (data.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+		throw new Error(`API returned errors: ${JSON.stringify(data.errors)}`);
+	}
+
+	return data as FixturesResponse;
+};
+
+/**
+ * Fetch fixtures by date range (incremental updates).
+ */
+export const getFootballApiFixturesByDateRange = async (
+	fromDate: string,
+	toDate: string,
+	apiUrl?: string,
+	apiKey?: string,
+): Promise<FixturesResponse> => {
+	if (!apiUrl || !apiKey) {
+		throw new Error("API URL or API Key not provided");
+	}
+
+	const url = new URL(`${apiUrl}/fixtures`);
+	url.searchParams.append("from", fromDate);
+	url.searchParams.append("to", toDate);
+
+	const response = await fetch(url.toString(), {
+		method: "GET",
+		headers: {
+			"x-rapidapi-host": "api-football-v1.p.rapidapi.com",
+			"x-rapidapi-key": apiKey,
+		},
+	});
+
+	if (!response.ok) {
+		const errorText = await response.text();
+		throw new Error(`API request failed: ${response.statusText} - ${errorText}`);
+	}
+
+	const data = await response.json();
+	if (data.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+		throw new Error(`API returned errors: ${JSON.stringify(data.errors)}`);
+	}
+
+	return data as FixturesResponse;
+};
+
+/**
  * Fetch team's recent fixtures from the third-party Football API
  * Endpoint: /fixtures?team=${teamId}&last=${last}
  */

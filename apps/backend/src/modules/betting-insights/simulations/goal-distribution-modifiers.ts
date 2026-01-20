@@ -8,6 +8,7 @@ import type { InjuryImpactAssessment } from "../utils/injury-adjustments";
 import { calculateMotivationScore } from "../utils/motivation-score";
 import { calculatePositionScore } from "../utils/position-score";
 import { calculateRestScore } from "../utils/rest-score";
+import { calculateEloBalanceShift } from "../../elo";
 
 export interface GoalDistributionModifiers {
 	attackHomeMult: number;
@@ -28,6 +29,8 @@ const DEFAULT_MODIFIERS: GoalDistributionModifiers = {
 const MIN_MULTIPLIER = 0.85;
 const MAX_MULTIPLIER = 1.15;
 const MAX_BALANCE_SHIFT = 0.08; // max +/-8% shift in scoring balance
+const BASE_LEAGUE_AVG_GOALS = 2.6;
+const LEAGUE_GOALS_MAX_SHIFT = 0.1;
 
 const MATCH_RESULT_WEIGHTS = {
 	recentForm: 0.3,
@@ -45,6 +48,10 @@ export function buildGoalDistributionModifiers(params: {
 	h2h?: H2HData;
 	homeInjuryImpact?: InjuryImpactAssessment | null;
 	awayInjuryImpact?: InjuryImpactAssessment | null;
+	leagueStats?: {
+		avgGoals: number;
+		matches: number;
+	};
 }): GoalDistributionModifiers {
 	const modifiers: GoalDistributionModifiers = { ...DEFAULT_MODIFIERS };
 
@@ -55,6 +62,7 @@ export function buildGoalDistributionModifiers(params: {
 		params.awayInjuryImpact,
 	);
 	applyBalanceShift(modifiers, params.homeTeam, params.awayTeam, params.h2h);
+	applyLeagueScoringProfile(modifiers, params.leagueStats);
 
 	return clampModifiers(modifiers);
 }
@@ -118,6 +126,12 @@ function applyBalanceShift(
 	const motivationScore = calculateMotivationScore(homeTeam, awayTeam);
 	const restScore = calculateRestScore(homeTeam, awayTeam);
 	const positionScore = calculatePositionScore(homeTeam, awayTeam);
+	const eloGap = homeTeam.elo && awayTeam.elo
+		? homeTeam.elo.rating - awayTeam.elo.rating
+		: 0;
+	const eloConfidence = homeTeam.elo && awayTeam.elo
+		? Math.min(homeTeam.elo.confidence, awayTeam.elo.confidence)
+		: 0;
 
 	// Weighted home advantage signal (-100..100-ish)
 	const weightSum = Object.values(MATCH_RESULT_WEIGHTS).reduce(
@@ -139,9 +153,29 @@ function applyBalanceShift(
 		-MAX_BALANCE_SHIFT,
 		MAX_BALANCE_SHIFT,
 	);
+	const eloShift = calculateEloBalanceShift(
+		eloGap,
+		eloConfidence,
+		MAX_BALANCE_SHIFT,
+	);
 
-	modifiers.attackHomeMult *= 1 + balanceShift;
-	modifiers.attackAwayMult *= 1 - balanceShift;
+	modifiers.attackHomeMult *= 1 + balanceShift + eloShift;
+	modifiers.attackAwayMult *= 1 - balanceShift - eloShift;
+}
+
+function applyLeagueScoringProfile(
+	modifiers: GoalDistributionModifiers,
+	leagueStats?: { avgGoals: number; matches: number },
+): void {
+	if (!leagueStats || leagueStats.matches <= 0) return;
+
+	const ratio = clamp(
+		leagueStats.avgGoals / BASE_LEAGUE_AVG_GOALS,
+		0.8,
+		1.2,
+	);
+	const shift = clamp((ratio - 1) * 0.5, -LEAGUE_GOALS_MAX_SHIFT, LEAGUE_GOALS_MAX_SHIFT);
+	modifiers.globalGoalsMult *= 1 + shift;
 }
 
 function clampModifiers(

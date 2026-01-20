@@ -47,45 +47,34 @@ interface ValidationErrorResponse {
 	success: boolean;
 }
 
-// Use vi.hoisted() to create variables that can be referenced in vi.mock()
-// This is required because vi.mock() is hoisted to the top of the file
-const { mockGenerateInsights, MockInsightsNotAvailableError } = vi.hoisted(
-	() => {
-		// Define the mock error class inside vi.hoisted
-		class InsightsNotAvailableErrorMock extends Error {
-			code = "INSIGHTS_NOT_AVAILABLE";
-			fixtureStatus: string;
-			constructor(
-				message: string,
-				_fixtureId: number,
-				fixtureStatus: string,
-			) {
-				super(message);
-				this.name = "InsightsNotAvailableError";
-				this.fixtureStatus = fixtureStatus;
-			}
-		}
-
-		return {
-			mockGenerateInsights: vi.fn(),
-			MockInsightsNotAvailableError: InsightsNotAvailableErrorMock,
-		};
-	},
-);
-
 // Mock the insights service module
-vi.mock("../services/insights.service", () => ({
-	insightsService: {
-		generateInsights: mockGenerateInsights,
-	},
-	InsightsNotAvailableError: MockInsightsNotAvailableError,
-}));
+vi.mock("../services/insights.service", () => {
+	class InsightsNotAvailableErrorMock extends Error {
+		code = "INSIGHTS_NOT_AVAILABLE";
+		fixtureStatus: string;
+		constructor(message: string, _fixtureId: number, fixtureStatus: string) {
+			super(message);
+			this.name = "InsightsNotAvailableError";
+			this.fixtureStatus = fixtureStatus;
+		}
+	}
+
+	return {
+		insightsService: {
+			generateInsights: vi.fn(),
+		},
+		InsightsNotAvailableError: InsightsNotAvailableErrorMock,
+	};
+});
 
 // Import after mock is set up
+import {
+	InsightsNotAvailableError,
+	insightsService,
+} from "../services/insights.service";
 import { createInsightsRoutes } from "./insights.routes";
 
-// Alias for clarity in tests
-const InsightsNotAvailableError = MockInsightsNotAvailableError;
+const mockGenerateInsights = vi.mocked(insightsService.generateInsights);
 
 /**
  * Create a test app with proper execution context mocking
@@ -356,11 +345,7 @@ describe("GET /fixtures/:fixtureId/insights", () => {
 
 		it("should include error message in response", async () => {
 			mockGenerateInsights.mockRejectedValueOnce(
-				new InsightsNotAvailableError(
-					"This match has finished",
-					1234567,
-					"FT",
-				),
+				new InsightsNotAvailableError("This match has finished", 1234567, "FT"),
 			);
 
 			const res = await app.request("/fixtures/1234567/insights");

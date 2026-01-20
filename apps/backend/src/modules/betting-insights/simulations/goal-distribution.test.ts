@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TeamData } from "../types";
 import { buildGoalDistribution } from "./goal-distribution";
+import { buildGoalDistributionModifiers } from "./goal-distribution-modifiers";
 
 function createTeamData(overrides: Partial<TeamData> = {}): TeamData {
 	return {
@@ -193,6 +194,47 @@ describe("goal distribution", () => {
 		expect(resultWithXg.lambdaHome).toBeGreaterThan(
 			resultWithoutXg.lambdaHome,
 		);
+	});
+
+	it("should adjust lambdas using league scoring profile", () => {
+		const homeTeam = createTeamData({ name: "Home Team" });
+		const awayTeam = createTeamData({ id: 2, name: "Away Team" });
+
+		const base = buildGoalDistribution(homeTeam, awayTeam, {
+			maxGoals: 6,
+			recentFormWeight: 0.15,
+			recentMatchesCount: 8,
+			dixonColesRho: -0.05,
+		});
+
+		const highScoringModifiers = buildGoalDistributionModifiers({
+			homeTeam,
+			awayTeam,
+			leagueStats: { avgGoals: 3.2, matches: 20 },
+		});
+		const high = buildGoalDistribution(homeTeam, awayTeam, {
+			maxGoals: 6,
+			recentFormWeight: 0.15,
+			recentMatchesCount: 8,
+			dixonColesRho: -0.05,
+		}, highScoringModifiers);
+
+		const lowScoringModifiers = buildGoalDistributionModifiers({
+			homeTeam,
+			awayTeam,
+			leagueStats: { avgGoals: 2.0, matches: 20 },
+		});
+		const low = buildGoalDistribution(homeTeam, awayTeam, {
+			maxGoals: 6,
+			recentFormWeight: 0.15,
+			recentMatchesCount: 8,
+			dixonColesRho: -0.05,
+		}, lowScoringModifiers);
+
+		expect(high.lambdaHome).toBeGreaterThan(base.lambdaHome);
+		expect(high.lambdaAway).toBeGreaterThan(base.lambdaAway);
+		expect(low.lambdaHome).toBeLessThan(base.lambdaHome);
+		expect(low.lambdaAway).toBeLessThan(base.lambdaAway);
 	});
 
 	it("should apply Dixon-Coles correction to low-score cells", () => {

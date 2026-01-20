@@ -7,6 +7,7 @@ import type {
 import {
   getFootballApiFixtureDetail,
   getFootballApiFixtures,
+  getFootballApiFixturesByDateRange,
   getFootballApiH2HFixtures,
   getFootballApiInjuries,
   getFootballApiTeamFixtures,
@@ -68,6 +69,40 @@ export interface InjuriesServiceResult {
 }
 
 export const fixturesService = {
+	async getFixturesRange({
+		fromDate,
+		toDate,
+		timezone = "UTC",
+		env,
+		ctx: _ctx,
+	}: {
+		fromDate: string;
+		toDate: string;
+		timezone: string;
+		env: FixturesEnv;
+		ctx: ExecutionContext;
+	}): Promise<FixturesServiceResult> {
+		console.log(
+			`📆 [FixturesRange] Request: from=${fromDate}, to=${toDate}, timezone=${timezone}`,
+		);
+
+		const data = await getFootballApiFixturesByDateRange(
+			fromDate,
+			toDate,
+			env.FOOTBALL_API_URL,
+			env.RAPIDAPI_KEY,
+		);
+
+		const fixtures = data.response ?? [];
+		const originalMatchCount = fixtures.length;
+		const formattedData = formatFixtures(fixtures, timezone);
+
+		return {
+			data: formattedData,
+			source: "API",
+			originalMatchCount,
+		};
+	},
 	async getFixtures({
 		date,
 		timezone = "UTC",
