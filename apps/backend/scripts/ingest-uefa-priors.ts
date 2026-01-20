@@ -178,7 +178,18 @@ DO UPDATE SET
 const main = () => {
   const { payloadPath, dbName, apply, sqlPath } = parseArgs();
   const raw = readFileSync(payloadPath, "utf-8");
-  const payload = JSON.parse(raw) as PriorsPayload;
+  let payload: PriorsPayload;
+  try {
+    payload = JSON.parse(raw) as PriorsPayload;
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : String(error);
+    const preview = raw.slice(0, 200).replace(/\s+/g, " ");
+    console.error(
+      `❌ Failed to parse JSON payload at ${payloadPath}: ${message}\nPreview: ${preview}`,
+    );
+    throw error;
+  }
 
   if (!payload.asOfSeason) {
     throw new Error("Payload is missing asOfSeason.");

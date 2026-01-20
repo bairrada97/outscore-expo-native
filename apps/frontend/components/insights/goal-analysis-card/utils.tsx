@@ -18,8 +18,17 @@ export const isWatchOutInsight = (insight: GoalInsight) =>
 	insight.category === "WARNING" || insight.severity === "CRITICAL";
 
 export function splitInsights(insights: GoalInsight[]) {
-	const supporting = insights.filter((insight) => !isWatchOutInsight(insight));
-	const watchOuts = insights.filter((insight) => isWatchOutInsight(insight));
+	const supporting: GoalInsight[] = [];
+	const watchOuts: GoalInsight[] = [];
+
+	for (const insight of insights) {
+		if (isWatchOutInsight(insight)) {
+			watchOuts.push(insight);
+		} else {
+			supporting.push(insight);
+		}
+	}
+
 	return { supporting, watchOuts };
 }
 

@@ -12,8 +12,14 @@ import { View } from "react-native";
 import type { GoalInsight, GoalSimulation } from "./types";
 import { formatPercent, renderInsightText, splitInsights } from "./utils";
 
-function GoalLineSignals({ insights }: { insights: GoalInsight[] }) {
-	const { supporting, watchOuts } = splitInsights(insights);
+function GoalLineSignals({
+	insights,
+	watchOuts,
+}: {
+	insights: GoalInsight[];
+	watchOuts: GoalInsight[];
+}) {
+	const { supporting } = splitInsights(insights);
 
 	return (
 		<View className="gap-y-16 pt-8">
@@ -161,7 +167,7 @@ export function GoalLinesAccordion({
 						</AccordionTrigger>
 
 						<AccordionContent className="pt-0">
-							<GoalLineSignals insights={insights} />
+							<GoalLineSignals insights={insights} watchOuts={watchOuts} />
 						</AccordionContent>
 					</AccordionItem>
 				);

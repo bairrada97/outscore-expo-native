@@ -90,6 +90,7 @@ export function GoalLinesGraph({
 	const paddingTop = 16;
 	const paddingBottom = 16;
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: include layout constants for clarity
 	const points = useMemo(() => {
 		if (!data.length || width <= 0 || height <= 0) return [];
 		const usableW = Math.max(1, width - paddingX * 2);
@@ -103,7 +104,7 @@ export function GoalLinesGraph({
 			const y = paddingTop + ((100 - clamp(p.over, 0, 100)) / 100) * usableH;
 			return { key: toPointKey(p.line), line: p.line, x, y };
 		});
-	}, [data, width]);
+	}, [data, width, height, paddingTop, paddingBottom]);
 
 	const pathD = useMemo(() => buildSmoothPath(points), [points]);
 

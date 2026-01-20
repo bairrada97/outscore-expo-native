@@ -14,6 +14,9 @@ function Bar({ label, value, isSelected, onPress }: BarProps) {
 	return (
 		<Pressable
 			onPress={onPress}
+			accessibilityRole="button"
+			accessibilityLabel={`${label} ${formatPercent(value)}`}
+			accessibilityState={{ selected: isSelected }}
 			className={`flex-1 rounded-lg border overflow-hidden ${
 				isSelected
 					? "border-m-01/40 bg-neu-01 dark:bg-neu-11"

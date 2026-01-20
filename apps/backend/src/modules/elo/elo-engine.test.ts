@@ -26,6 +26,51 @@ describe("elo-engine", () => {
 		expect(result.homeDelta).toBeCloseTo(-result.awayDelta, 5);
 	});
 
+	it("does not shift elo on a neutral draw", () => {
+		const result = updateElo({
+			homeElo: 1500,
+			awayElo: 1500,
+			matchType: "LEAGUE",
+			goalDiff: 0,
+			homeAdvantage: 0,
+		});
+
+		expect(result.homeDelta).toBeCloseTo(0, 5);
+		expect(result.awayDelta).toBeCloseTo(0, 5);
+	});
+
+	it("updates elo in favor of away side on away win", () => {
+		const result = updateElo({
+			homeElo: 1500,
+			awayElo: 1500,
+			matchType: "LEAGUE",
+			goalDiff: -1,
+			homeAdvantage: 0,
+		});
+
+		expect(result.homeElo).toBeLessThan(1500);
+		expect(result.awayElo).toBeGreaterThan(1500);
+		expect(result.homeDelta).toBeLessThan(0);
+		expect(result.awayDelta).toBeGreaterThan(0);
+	});
+
+	it("applies different K-factors by match type", () => {
+		const base = {
+			homeElo: 1500,
+			awayElo: 1500,
+			goalDiff: 1,
+			homeAdvantage: 0,
+		} as const;
+		const league = updateElo({ ...base, matchType: "LEAGUE" });
+		const cup = updateElo({ ...base, matchType: "CUP" });
+		const international = updateElo({ ...base, matchType: "INTERNATIONAL" });
+
+		expect(Math.abs(cup.homeDelta)).toBeLessThan(Math.abs(league.homeDelta));
+		expect(Math.abs(international.homeDelta)).toBeGreaterThan(
+			Math.abs(league.homeDelta),
+		);
+	});
+
 	it("caps goal multiplier for large margins", () => {
 		expect(calculateGoalMultiplier(1)).toBe(1);
 		expect(calculateGoalMultiplier(4)).toBeLessThanOrEqual(1.5);
@@ -51,6 +96,11 @@ describe("elo-engine", () => {
 	it("calculates priors offsets with bounds", () => {
 		expect(calculateAssociationOffset(100)).toBeLessThanOrEqual(120);
 		expect(calculateClubOffset(120)).toBeLessThanOrEqual(120);
+	});
+
+	it("does not exceed minimum association offset", () => {
+		const offset = calculateAssociationOffset(0);
+		expect(offset).toBeGreaterThanOrEqual(-120);
 	});
 
 	it("builds starting elo with priors", () => {

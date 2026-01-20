@@ -96,7 +96,7 @@ export interface TeamEloRatingInsert {
   as_of_date: string;
   elo: number;
   games: number;
-  last_fixture_provider?: Provider;
+  last_fixture_provider: Provider;
   last_fixture_id: string;
 }
 

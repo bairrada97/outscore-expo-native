@@ -32,6 +32,7 @@ import {
 	type TeamSeasonContextInsert,
 	getLeagueById,
 	getTeamByProviderId,
+	resolveExternalId,
 	upsertH2HCache,
 	upsertInjuriesCache,
 	upsertLeague,
@@ -126,6 +127,102 @@ const INSIGHTS_FINISHED_STATUSES = [
 	"AWD", // Awarded
 	"WO", // Walkover
 ];
+
+const HIGH_ELO_MIDWEEK_GAP = 150;
+const HIGH_ELO_MIDWEEK_MAX_DAYS = 5;
+
+function getMostRecentTeamMatch(team: TeamData): ProcessedMatch | null {
+	const all = [...(team.lastHomeMatches ?? []), ...(team.lastAwayMatches ?? [])];
+	if (!all.length) return null;
+	const sorted = all
+		.slice()
+		.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+	return sorted[0] ?? null;
+}
+
+function isMidweekUTC(dateIso: string): boolean {
+	const d = new Date(dateIso);
+	const day = d.getUTCDay(); // 0 Sun ... 6 Sat
+	return day === 2 || day === 3 || day === 4;
+}
+
+function classifyCompetition(
+	leagueName: string,
+): "international" | "domestic_cup" | "other" {
+	const t = (leagueName ?? "").toLowerCase();
+	if (
+		t.includes("champions league") ||
+		t.includes("europa league") ||
+		t.includes("conference league") ||
+		t.includes("nations league") ||
+		t.includes("world cup") ||
+		t.includes("copa america") ||
+		t.includes("afc champions") ||
+		t.includes("caf champions") ||
+		t.includes("concacaf") ||
+		t.includes("libertadores") ||
+		t.includes("sudamericana")
+	) {
+		return "international";
+	}
+	if (
+		t.includes(" cup") ||
+		t.startsWith("cup ") ||
+		t.includes("copa") ||
+		t.includes("taça") ||
+		t.includes("taca") ||
+		t.includes("coupe") ||
+		t.includes("coppa") ||
+		t.includes("pokal") ||
+		t.includes("beker")
+	) {
+		return "domestic_cup";
+	}
+	return "other";
+}
+
+async function buildHighEloOpponentContext(
+	db: D1Database,
+	team: TeamData,
+): Promise<TeamData["recentHighEloOpponent"] | undefined> {
+	if (!team.elo) return undefined;
+	const last = getMostRecentTeamMatch(team);
+	if (!last) return undefined;
+	if (!isMidweekUTC(last.date)) return undefined;
+
+	const days = team.daysSinceLastMatch ?? 7;
+	if (days > HIGH_ELO_MIDWEEK_MAX_DAYS) return undefined;
+
+	const leagueName = last.league?.name ?? "";
+	const kind = classifyCompetition(leagueName);
+	if (kind === "other") return undefined;
+
+	const opponentProviderId =
+		last.homeTeam.id === team.id ? last.awayTeam.id : last.homeTeam.id;
+	const opponentName =
+		last.homeTeam.id === team.id ? last.awayTeam.name : last.homeTeam.name;
+	const opponentInternalId = await resolveExternalId(
+		db,
+		"api_football",
+		"team",
+		opponentProviderId,
+	);
+	if (!opponentInternalId) return undefined;
+
+	const opponentElo = await getCurrentTeamElo(db, opponentInternalId);
+	if (!opponentElo) return undefined;
+
+	const gap = opponentElo.elo - team.elo.rating;
+	if (gap < HIGH_ELO_MIDWEEK_GAP) return undefined;
+
+	return {
+		opponentName,
+		opponentElo: opponentElo.elo,
+		gap,
+		leagueName,
+		daysSince: days,
+	};
+}
 
 const FINISHED_STATUSES = new Set(["FT", "AET", "PEN"]);
 
@@ -555,6 +652,13 @@ export const insightsService = {
 						}
 					: undefined,
 			);
+
+			const [homeHighElo, awayHighElo] = await Promise.all([
+				buildHighEloOpponentContext(env.ENTITIES_DB, homeTeamData),
+				buildHighEloOpponentContext(env.ENTITIES_DB, awayTeamData),
+			]);
+			if (homeHighElo) homeTeamData.recentHighEloOpponent = homeHighElo;
+			if (awayHighElo) awayTeamData.recentHighEloOpponent = awayHighElo;
 
 			// Step 4: Process H2H data
 			const h2hData = processH2HData(h2hMatches, homeTeamId, awayTeamId);

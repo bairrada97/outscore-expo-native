@@ -1,16 +1,15 @@
 // Must be the first import (before React / navigation / screens).
 import "react-native-gesture-handler";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { registerRootComponent } from "expo";
-import { ExpoRoot } from "expo-router";
+import "expo-router/entry";
 
-function Root() {
+function Root({ children }) {
 	return (
 		<GestureHandlerRootView style={{ flex: 1 }}>
-			<ExpoRoot context={require.context("./app")} />
+			{children}
 		</GestureHandlerRootView>
 	);
 }
 
-export default registerRootComponent(Root);
+export default Root;
 

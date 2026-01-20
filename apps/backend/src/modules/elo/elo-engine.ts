@@ -110,6 +110,10 @@ export const calculateEloBalanceShift = (
 	return clamp(normalized * maxShift * gamesConfidence, -maxShift, maxShift);
 };
 
+// calculateAssociationOffset:
+// - Baseline 30 is the coefficient reference point.
+// - Multiply by 2 to convert coefficient deltas into Elo offset units.
+// - Clamp (-120..120) caps association influence.
 export const calculateAssociationOffset = (
 	coefficient5y: number | null,
 ) => {
@@ -117,6 +121,10 @@ export const calculateAssociationOffset = (
 	return clamp((coefficient5y - 30) * 2, -120, 120);
 };
 
+// calculateClubOffset:
+// - Baseline 40 is the club coefficient reference point.
+// - Multiply by 2 to convert coefficient deltas into Elo offset units.
+// - Clamp (-80..120) caps club influence.
 export const calculateClubOffset = (clubCoefficient: number | null) => {
 	if (clubCoefficient === null || clubCoefficient === undefined) return 0;
 	return clamp((clubCoefficient - 40) * 2, -80, 120);

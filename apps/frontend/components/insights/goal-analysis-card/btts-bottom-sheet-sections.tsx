@@ -203,6 +203,9 @@ function OutcomeRow({
 	return (
 		<Pressable
 			onPress={onPress}
+			accessibilityRole="button"
+			accessibilityLabel={`${label} ${formatPercent(value)}`}
+			accessibilityState={{ selected: isSelected }}
 			className={`px-16 py-16 rounded-lg border flex-row items-center justify-between ${
 				isSelected
 					? "border-m-01/40 bg-neu-01 dark:bg-neu-11"

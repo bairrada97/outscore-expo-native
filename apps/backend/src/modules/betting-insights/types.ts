@@ -355,6 +355,14 @@ export interface TeamData {
     asOf?: string;
     confidence: number;
   };
+  /** Recent midweek high-elo opponent context (fatigue watch-out) */
+  recentHighEloOpponent?: {
+    opponentName: string;
+    opponentElo: number;
+    gap: number;
+    leagueName: string;
+    daysSince: number;
+  };
   /** Days since last competitive match */
   daysSinceLastMatch: number;
   /** Last home matches (for home-specific analysis) */

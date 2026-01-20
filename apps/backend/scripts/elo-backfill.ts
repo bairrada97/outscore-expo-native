@@ -5,11 +5,17 @@ import { resolve } from "node:path";
 import {
 	calculateDivisionOffset,
 	calculateStartingElo,
-	type EloMatchType,
 	inferDivisionLevel,
 	updateElo,
 } from "../src/modules/elo/elo-engine";
 import { getFootballApiFixturesByLeagueSeason } from "../src/pkg/util/football-api";
+import {
+	buildCurrentUpsertSql,
+	buildInsertSql,
+	buildWranglerArgs,
+	detectMatchType,
+	loadRows,
+} from "./lib/elo-utils";
 
 type UefaPriorsPayload = {
 	asOfSeason: number;
@@ -56,47 +62,6 @@ const parseLeagueIds = (raw: string | null) => {
 
 const hasFlag = (args: string[], key: string) => args.includes(key);
 
-const buildWranglerArgs = (params: {
-	dbName: string;
-	configPath?: string | null;
-	isRemote?: boolean;
-}): string[] => {
-	const base = ["wrangler", "d1", "execute", params.dbName];
-	if (params.configPath) {
-		base.push("--config", params.configPath);
-	}
-	if (params.isRemote) {
-		base.push("--remote");
-	}
-	return base;
-};
-
-const detectMatchType = (leagueName: string): EloMatchType => {
-	const name = leagueName.toLowerCase();
-	if (
-		name.includes("champions league") ||
-		name.includes("europa league") ||
-		name.includes("conference league") ||
-		name.includes("libertadores") ||
-		name.includes("sudamericana") ||
-		name.includes("club world cup")
-	) {
-		return "INTERNATIONAL";
-	}
-	if (
-		name.includes(" cup") ||
-		name.includes("copa") ||
-		name.includes("taça") ||
-		name.includes("taca") ||
-		name.includes("coupe") ||
-		name.includes("coppa") ||
-		name.includes("pokal") ||
-		name.includes("beker")
-	) {
-		return "CUP";
-	}
-	return "LEAGUE";
-};
 
 const loadPriorsPayload = (payloadPath: string) => {
 	const content = readFileSync(payloadPath, "utf-8");
@@ -128,24 +93,6 @@ const buildPriorsIndex = (payload: UefaPriorsPayload) => {
 	return { association, clubCoeff, teamToClub };
 };
 
-const extractWranglerResults = (
-	payload: unknown,
-): Array<Record<string, unknown>> => {
-	if (Array.isArray(payload)) {
-		return (payload[0]?.results as Array<Record<string, unknown>>) ?? [];
-	}
-	const parsed = payload as {
-		result?: Array<{ results?: Array<Record<string, unknown>> }>;
-		results?: Array<Record<string, unknown>>;
-	};
-	return parsed?.result?.[0]?.results ?? parsed?.results ?? [];
-};
-
-const loadRows = (args: string[]) => {
-	const raw = execFileSync("bunx", args, { encoding: "utf-8" });
-	const parsed = JSON.parse(raw);
-	return extractWranglerResults(parsed);
-};
 
 const loadExternalTeamMap = (params: {
 	dbName: string;
@@ -211,44 +158,6 @@ const loadCurrentEloState = (params: {
 	}
 };
 
-const buildInsertSql = (
-	rows: Array<{
-		teamId: number;
-		asOf: string;
-		elo: number;
-		games: number;
-		fixtureId: number;
-	}>,
-) =>
-	rows
-		.map(
-			(row) => `INSERT INTO team_elo_ratings
-  (team_id, as_of_date, elo, games, last_fixture_provider, last_fixture_id, updated_at)
-  VALUES (${row.teamId}, '${row.asOf}', ${row.elo.toFixed(4)}, ${row.games}, 'api_football', '${row.fixtureId}', datetime('now'))
-  ON CONFLICT(team_id, last_fixture_provider, last_fixture_id) DO NOTHING;`,
-		)
-		.join("\n");
-
-const buildCurrentUpsertSql = (
-	rows: Array<{
-		teamId: number;
-		asOf: string;
-		elo: number;
-		games: number;
-	}>,
-) =>
-	rows
-		.map(
-			(row) => `INSERT INTO team_elo_current
-  (team_id, elo, games, as_of_date, updated_at)
-  VALUES (${row.teamId}, ${row.elo.toFixed(4)}, ${row.games}, '${row.asOf}', datetime('now'))
-  ON CONFLICT(team_id) DO UPDATE SET
-    elo = excluded.elo,
-    games = excluded.games,
-    as_of_date = excluded.as_of_date,
-    updated_at = datetime('now');`,
-		)
-		.join("\n");
 
 const resolveStartingElo = (params: {
 	apiFootballTeamId: number;

@@ -295,10 +295,10 @@ async function handleFixturesList(
 
 		const dateToUse = !isRangeRequest ? (date ?? from) : undefined;
 
-		const result = isRangeRequest
+		const result = isRangeRequest && from && to
 			? await fixturesService.getFixturesRange({
-					fromDate: from as string,
-					toDate: to as string,
+					fromDate: from,
+					toDate: to,
 					timezone,
 					env: context.env,
 					ctx: context.executionCtx,

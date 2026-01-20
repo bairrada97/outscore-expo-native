@@ -220,3 +220,5 @@ yarn-error.log*
 # Wrangler local vars (often contains secrets)
 dev.vars
 .dev.vars
+
+apps/backend/scripts/*.sql

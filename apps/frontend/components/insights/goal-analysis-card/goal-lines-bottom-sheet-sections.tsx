@@ -132,13 +132,6 @@ export function GoalLinesSeasonTrends({
 							<View
 								style={{ width: `${clampPct(homePct)}%` }}
 								className="h-8 bg-m-01 dark:bg-m-01-light-04"
-								accessibilityRole="progressbar"
-								accessibilityValue={{
-									min: 0,
-									max: 100,
-									now: Math.round(clampPct(homePct)),
-								}}
-								accessibilityLabel="Home progress"
 							/>
 						</View>
 					</View>
@@ -171,13 +164,6 @@ export function GoalLinesSeasonTrends({
 							<View
 								style={{ width: `${clampPct(awayPct)}%` }}
 								className="h-8 bg-neu-06 dark:bg-neu-09"
-								accessibilityRole="progressbar"
-								accessibilityValue={{
-									min: 0,
-									max: 100,
-									now: Math.round(clampPct(awayPct)),
-								}}
-								accessibilityLabel="Away progress"
 							/>
 						</View>
 					</View>

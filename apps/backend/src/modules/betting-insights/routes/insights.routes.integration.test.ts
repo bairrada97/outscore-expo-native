@@ -51,10 +51,12 @@ interface ValidationErrorResponse {
 vi.mock("../services/insights.service", () => {
 	class InsightsNotAvailableErrorMock extends Error {
 		code = "INSIGHTS_NOT_AVAILABLE";
+		fixtureId: number;
 		fixtureStatus: string;
-		constructor(message: string, _fixtureId: number, fixtureStatus: string) {
+		constructor(message: string, fixtureId: number, fixtureStatus: string) {
 			super(message);
 			this.name = "InsightsNotAvailableError";
+			this.fixtureId = fixtureId;
 			this.fixtureStatus = fixtureStatus;
 		}
 	}

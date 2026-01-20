@@ -51,6 +51,7 @@ Indexes:
 #### 2) UEFA priors storage
 
 ##### `uefa_association_coefficients`
+
 - `season` (e.g. 2025)
 - `country_code` (UEFA country key; store mapping from API-Football country to UEFA country if needed)
 - `rank` (optional)
@@ -58,6 +59,7 @@ Indexes:
 - `updated_at`
 
 ##### `uefa_club_coefficients`
+
 - `season`
 - `uefa_club_key` (string; canonical identifier in our system)
 - `club_name` (for display/debug)
@@ -65,6 +67,7 @@ Indexes:
 - `updated_at`
 
 ##### `uefa_club_team_map`
+
 - `uefa_club_key`
 - `team_id` (internal)
 - `confidence` (0–1)

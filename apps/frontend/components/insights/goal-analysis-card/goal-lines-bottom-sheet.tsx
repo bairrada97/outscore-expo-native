@@ -30,12 +30,12 @@ function SheetBackground({ style }: BottomSheetBackgroundProps) {
 
 type SheetHandleProps = BottomSheetHandleProps & { style?: ViewStyle };
 
-function SheetHandle(props: BottomSheetHandleProps) {
-	const { style } = props as SheetHandleProps;
+function SheetHandle({ style, ...rest }: SheetHandleProps) {
 	return (
 		<View
 			style={style}
 			className="bg-neu-01 dark:bg-neu-11 rounded-t-2xl pt-12 pb-8 items-center"
+			{...rest}
 		>
 			<View className="h-4 w-48 rounded-full bg-neu-04 dark:bg-neu-09" />
 		</View>

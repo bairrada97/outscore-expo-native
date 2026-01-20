@@ -1,6 +1,11 @@
-import { writeFileSync } from "node:fs";
+import {
+	closeSync,
+	fsyncSync,
+	openSync,
+	renameSync,
+	writeFileSync,
+} from "node:fs";
 import { resolve } from "node:path";
-import { execFileSync } from "node:child_process";
 import {
 	getFootballApiFixturesByDateRange,
 } from "../src/pkg/util/football-api";
@@ -9,6 +14,13 @@ import {
 	inferDivisionLevel,
 	updateElo,
 } from "../src/modules/elo/elo-engine";
+import {
+	buildCurrentUpsertSql,
+	buildInsertSql,
+	buildWranglerArgs,
+	detectMatchType,
+	loadRows,
+} from "./lib/elo-utils";
 
 type EloState = {
 	elo: number;
@@ -24,39 +36,7 @@ const parseArg = (args: string[], key: string) => {
 	return args[index + 1] ?? null;
 };
 
-const extractWranglerResults = (payload: unknown): Array<Record<string, unknown>> => {
-	if (Array.isArray(payload)) {
-		return (payload[0]?.results as Array<Record<string, unknown>>) ?? [];
-	}
-	const parsed = payload as {
-		result?: Array<{ results?: Array<Record<string, unknown>> }>;
-		results?: Array<Record<string, unknown>>;
-	};
-	return parsed?.result?.[0]?.results ?? parsed?.results ?? [];
-};
-
 const hasFlag = (args: string[], key: string) => args.includes(key);
-
-const buildWranglerArgs = (params: {
-	dbName: string;
-	configPath?: string | null;
-	isRemote?: boolean;
-}): string[] => {
-	const base = ["wrangler", "d1", "execute", params.dbName];
-	if (params.configPath) {
-		base.push("--config", params.configPath);
-	}
-	if (params.isRemote) {
-		base.push("--remote");
-	}
-	return base;
-};
-
-const loadRows = (args: string[]) => {
-	const raw = execFileSync("bunx", args, { encoding: "utf-8" });
-	const parsed = JSON.parse(raw);
-	return extractWranglerResults(parsed);
-};
 
 const loadExternalTeamMap = (params: {
 	dbName: string;
@@ -139,67 +119,6 @@ const loadProcessedFixtureIds = (params: {
 	return new Set(rows.map((row: { last_fixture_id: string }) => row.last_fixture_id));
 };
 
-const buildInsertSql = (rows: Array<{
-	teamId: number;
-	asOf: string;
-	elo: number;
-	games: number;
-	fixtureId: number;
-}>) =>
-	rows
-		.map(
-			(row) => `INSERT INTO team_elo_ratings
-  (team_id, as_of_date, elo, games, last_fixture_provider, last_fixture_id, updated_at)
-  VALUES (${row.teamId}, '${row.asOf}', ${row.elo.toFixed(4)}, ${row.games}, 'api_football', '${row.fixtureId}', datetime('now'))
-  ON CONFLICT(team_id, last_fixture_provider, last_fixture_id) DO NOTHING;`,
-		)
-		.join("\n");
-
-const buildCurrentUpsertSql = (rows: Array<{
-	teamId: number;
-	asOf: string;
-	elo: number;
-	games: number;
-}>) =>
-	rows
-		.map(
-			(row) => `INSERT INTO team_elo_current
-  (team_id, elo, games, as_of_date, updated_at)
-  VALUES (${row.teamId}, ${row.elo.toFixed(4)}, ${row.games}, '${row.asOf}', datetime('now'))
-  ON CONFLICT(team_id) DO UPDATE SET
-    elo = excluded.elo,
-    games = excluded.games,
-    as_of_date = excluded.as_of_date,
-    updated_at = datetime('now');`,
-		)
-		.join("\n");
-
-const detectMatchType = (leagueName: string) => {
-	const name = leagueName.toLowerCase();
-	if (
-		name.includes("champions league") ||
-		name.includes("europa league") ||
-		name.includes("conference league") ||
-		name.includes("libertadores") ||
-		name.includes("sudamericana") ||
-		name.includes("club world cup")
-	) {
-		return "INTERNATIONAL" as const;
-	}
-	if (
-		name.includes(" cup") ||
-		name.includes("copa") ||
-		name.includes("taça") ||
-		name.includes("taca") ||
-		name.includes("coupe") ||
-		name.includes("coppa") ||
-		name.includes("pokal") ||
-		name.includes("beker")
-	) {
-		return "CUP" as const;
-	}
-	return "LEAGUE" as const;
-};
 
 const main = async () => {
 	const args = process.argv.slice(2);
@@ -255,7 +174,12 @@ const main = async () => {
 	for (const fixture of fixtures) {
 		const homeId = externalTeamMap.get(fixture.teams.home.id);
 		const awayId = externalTeamMap.get(fixture.teams.away.id);
-		if (!homeId || !awayId) continue;
+		if (!homeId || !awayId) {
+			console.warn(
+				`⚠️ Missing team mapping for fixture ${fixture.fixture.id} (${fixture.fixture.date}): home=${fixture.teams.home.id}, away=${fixture.teams.away.id}`,
+			);
+			continue;
+		}
 
 		const matchType = detectMatchType(fixture.league.name);
 		const baseDivisionOffset =
@@ -329,10 +253,13 @@ const main = async () => {
 		})
 		.filter((row): row is NonNullable<typeof row> => Boolean(row));
 	const currentSql = buildCurrentUpsertSql(currentRows);
-	writeFileSync(outputPath, sql);
-	if (currentSql) {
-		writeFileSync(outputPath, `\n${currentSql}`, { flag: "a" });
-	}
+	const combinedSql = currentSql ? `${sql}\n${currentSql}` : sql;
+	const tmpPath = `${outputPath}.tmp`;
+	writeFileSync(tmpPath, combinedSql);
+	const fd = openSync(tmpPath, "r+");
+	fsyncSync(fd);
+	closeSync(fd);
+	renameSync(tmpPath, outputPath);
 	console.log(`✅ wrote ${inserts.length} Elo inserts to ${outputPath}`);
 
 	if (apply) {

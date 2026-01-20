@@ -1059,6 +1059,27 @@ function buildMatchOutcomeInsights(params: {
 		}
 	}
 
+	let hasHighEloMidweek = false;
+	const highEloPick =
+		pick === "home"
+			? homeTeam.recentHighEloOpponent
+			: pick === "away"
+				? awayTeam.recentHighEloOpponent
+				: null;
+	if (pick !== "draw" && highEloPick) {
+		watchOuts.push({
+			abs: Math.min(30, 12 + Math.round(highEloPick.gap / 20)),
+			insight: {
+				text: `${pickTeam} faced a much stronger ${highEloPick.leagueName} opponent (${highEloPick.opponentName}) midweek, which can reduce freshness going into this match.`,
+				emoji: "⚡",
+				priority: 67,
+				category: "WARNING",
+				severity: "MEDIUM",
+			},
+		});
+		hasHighEloMidweek = true;
+	}
+
 	// Injuries uncertainty: only when the situation is materially unbalanced or severe.
 	if (
 		(homeInjuryImpact || awayInjuryImpact) &&
@@ -1089,7 +1110,7 @@ function buildMatchOutcomeInsights(params: {
 	}
 
 	// Midweek competition load: highlight potential rotation/freshness effects without rest-day talk.
-	if (!watchOuts.some((w) => w.insight.emoji === "🗓️")) {
+	if (!hasHighEloMidweek && !watchOuts.some((w) => w.insight.emoji === "🗓️")) {
 		const homeLoad = buildMidweekLoadAdjustment(homeTeam);
 		const awayLoad = buildMidweekLoadAdjustment(awayTeam);
 		const pickLoad =

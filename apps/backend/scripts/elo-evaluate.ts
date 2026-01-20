@@ -10,9 +10,35 @@ type EvalRow = {
 const clamp = (value: number, min: number, max: number) =>
 	Math.max(min, Math.min(max, value));
 
+const isValidActual = (value: EvalRow["actual"]) =>
+	value === "HOME" || value === "DRAW" || value === "AWAY";
+
+const assertProb = (value: number, key: string, index: number) => {
+	if (!Number.isFinite(value) || value < 0 || value > 1) {
+		throw new Error(
+			`Invalid probability for ${key} at row ${index}: ${JSON.stringify(
+				value,
+			)}`,
+		);
+	}
+};
+
+const assertActual = (value: EvalRow["actual"], index: number) => {
+	if (!isValidActual(value)) {
+		throw new Error(
+			`Invalid actual value at row ${index}: ${JSON.stringify(value)}`,
+		);
+	}
+};
+
 const brierScore = (rows: EvalRow[]) => {
 	let sum = 0;
-	for (const row of rows) {
+	for (const [index, row] of rows.entries()) {
+		assertActual(row.actual, index);
+		assertProb(row.probHomeWin, "probHomeWin", index);
+		assertProb(row.probDraw, "probDraw", index);
+		assertProb(row.probAwayWin, "probAwayWin", index);
+
 		const actual = [
 			row.actual === "HOME" ? 1 : 0,
 			row.actual === "DRAW" ? 1 : 0,
@@ -27,13 +53,21 @@ const brierScore = (rows: EvalRow[]) => {
 
 const logLoss = (rows: EvalRow[]) => {
 	let sum = 0;
-	for (const row of rows) {
+	for (const [index, row] of rows.entries()) {
+		assertActual(row.actual, index);
 		const p =
 			row.actual === "HOME"
 				? row.probHomeWin
 				: row.actual === "DRAW"
 					? row.probDraw
 					: row.probAwayWin;
+		if (!Number.isFinite(p) || p <= 0 || p > 1) {
+			throw new Error(
+				`Invalid probability for actual=${row.actual} at row ${index}: ${JSON.stringify(
+					p,
+				)}`,
+			);
+		}
 		sum += -Math.log(clamp(p, 1e-6, 1));
 	}
 	return sum / rows.length;
