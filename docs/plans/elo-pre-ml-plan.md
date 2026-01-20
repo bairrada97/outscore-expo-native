@@ -334,6 +334,42 @@ Expose and log:
 
 ---
 
+## Concrete task list (with progress)
+
+### Phase A — Data foundations (0% / not started)
+- [ ] Add D1 migrations for `team_elo_ratings` and UEFA coefficient tables.
+- [ ] Add D1 access helpers (read/write latest Elo; insert snapshots; upsert UEFA rows).
+- [ ] Define idempotency keys and indexes (fixture id, team id, date).
+
+### Phase B — Elo core (0% / not started)
+- [ ] Implement Elo update engine (expected score, K by match type, margin multiplier).
+- [ ] Add season carry-over regression (10–20% toward mean).
+- [ ] Add tests for determinism + bounds.
+
+### Phase C — Backfill (0% / not started)
+- [ ] Build 5-season backfill runner (league+season fixtures, chronological ordering).
+- [ ] Filter to finished competitive fixtures only.
+- [ ] Persist Elo snapshots and games count (idempotent).
+
+### Phase D — Incremental updates (0% / not started)
+- [ ] Daily/periodic updater for newly finished fixtures.
+- [ ] Skip already-processed fixtures via idempotency key.
+
+### Phase E — Priors (0% / not started)
+- [ ] Implement UEFA association + club priors ingestion (CLI/admin payload).
+- [ ] Map UEFA club → internal team id (manual + confidence).
+- [ ] Apply priors at initialization, then decay with games count.
+
+### Phase F — Model integration (0% / not started)
+- [ ] Inject Elo-gap into MatchOutcome (bounded adjustment).
+- [ ] Add small Elo modifiers to goal distribution (keep <= ±8% lambda effect).
+- [ ] Expose Elo + games in TeamContext for explainability.
+
+### Phase G — Evaluation & calibration readiness (0% / not started)
+- [ ] Run before/after backtests (Brier/logloss) on domestic + international slices.
+- [ ] Sanity checks: promoted teams, cross-league (UCL) mismatches.
+- [ ] Document calibration readiness (per-market calibrators to be added after Elo).
+
 ## Appendix A — Suggested UEFA priors payload schema (semi-manual ingestion)
 
 Use a single JSON document you can paste into a CLI/admin command.

@@ -1,0 +1,151 @@
+position,team_name,country_code,apiFootballTeamId,total_points,total_value,trend,national_association_points,matches_played,teams_in_comp,teams_still_in,competition,2022,2023,2024,2025,2026
+1,Real Madrid,ESP,541,131.5,131.5,STABLE,17.203,56,8,8,UEFA Champions League,30,29,34,24.5,14
+2,Bayern München,GER,157,124.25,124.25,STABLE,16.595,50,7,7,UEFA Champions League,26,27,28,27.25,16
+3,Inter,ITA,505,121.25,121.25,STABLE,18.425,50,7,7,UEFA Champions League,18,29,20,40.25,14
+4,Man City,ENG,50,117.75,117.75,STABLE,20.732,49,9,9,UEFA Champions League,27,33,28,14.75,15
+5,Liverpool,ENG,40,115.5,115.5,STABLE,20.732,47,9,9,UEFA Champions League,33,19,20,29.5,14
+6,Paris,FRA,85,109.5,109.5,STABLE,15.121,49,7,7,UEFA Champions League,19,19,23,33.5,15
+7,B. Dortmund,GER,165,98.75,98.75,STABLE,16.595,45,7,7,UEFA Champions League,10,18,29,27.75,14
+8,Leverkusen,GER,168,98.25,98.25,STABLE,16.595,49,7,7,UEFA Champions League,14,19,29,23.25,13
+9,Barcelona,ESP,529,96.25,96.25,STABLE,17.203,46,8,8,UEFA Champions League,15,9,23,36.25,13
+10,Arsenal,ENG,42,93,93,STABLE,20.732,38,9,9,UEFA Champions League,,17,22,36,18
+11,Atleti,ESP,530,91.5,91.5,STABLE,17.203,42,8,8,UEFA Champions League,19,8,24,26.5,14
+12,Chelsea,ENG,49,89,89,STABLE,20.732,39,9,9,UEFA Champions League,25,21,,30,13
+13,Roma,ITA,22590,88.5,88.5,STABLE,18.425,54,7,7,UEFA Europa League,23,22,21,14.5,8
+14,Benfica,POR,211,87.75,87.75,STABLE,12.653,46,5,4,UEFA Champions League,20,25,14,18.75,10
+15,Frankfurt,GER,169,83,83,STABLE,16.595,45,7,7,UEFA Champions League,28,16,7,23,9
+16,Atalanta,ITA,499,80,80,STABLE,18.425,37,7,7,UEFA Champions League,16,,28,21,15
+17,Man Utd,ENG,33,76.5,76.5,STABLE,18.168,39,9,9,,18,19,7,32.5,
+18,PSV,NED,197,71.25,71.25,STABLE,13.152,40,6,6,UEFA Champions League,10,11,17,21.25,12
+19,Club Brugge,BEL,569,69.75,69.75,STABLE,11.55,42,5,3,UEFA Champions League,7,17,21,15.75,9
+20,Sporting CP,POR,228,69.5,69.5,STABLE,12.653,40,5,4,UEFA Champions League,16,14,12,14.5,13
+21,Tottenham,ENG,47,69.25,69.25,STABLE,20.732,34,9,9,UEFA Champions League,5,18,18,32.25,14
+22,Fiorentina,ITA,502,69.25,69.25,STABLE,18.425,44,7,7,UEFA Conference League,,20,22,20,7.25
+23,Feyenoord,NED,209,69,69,STABLE,13.152,45,6,6,UEFA Europa League,24,17,8,18,2
+24,West Ham,ENG,48,69,69,STABLE,12.275,35,9,9,,21,29,19,,
+25,Juventus,ITA,496,66.25,66.25,STABLE,18.425,34,7,7,UEFA Champions League,20,17,17,16.25,13
+26,Milan,ITA,489,66,66,STABLE,16.189,36,7,7,,7,24,16,19,9
+27,Porto,POR,20782,65.75,65.75,STABLE,12.653,38,5,4,UEFA Europa League,10,18,19,9.75,9
+28,Lille,FRA,79,64,64,STABLE,15.121,34,7,7,UEFA Europa League,17,17,17,24,6
+29,Real Betis,ESP,543,62.25,62.25,STABLE,17.203,41,8,8,UEFA Europa League,11,16,6,19.25,10
+30,Napoli,ITA,492,62,62,STABLE,18.425,30,7,7,UEFA Champions League,9,25,17,,11
+31,Leipzig,GER,173,61,61,STABLE,14.223,34,7,7,UEFA Champions League,17,18,18,8,
+32,Villarreal,ESP,533,59,59,STABLE,17.203,34,8,8,UEFA Champions League,24,12,16,5,7
+33,Lazio,ITA,487,59,59,STABLE,16.189,34,7,7,UEFA Champions League,9,6,18,26,8
+34,Aston Villa,ENG,66,57.25,57.25,STABLE,20.732,30,9,9,UEFA Europa League,,17,17,30.25,10
+35,Rangers,SCO,257,57.25,57.25,STABLE,6.09,45,5,2,UEFA Europa League,19,4,14,19.25,1
+36,Real Sociedad,ESP,548,57,57,STABLE,14.991,32,8,8,,9,16,18,14,
+37,AZ Alkmaar,NED,201,56.875,56.875,STABLE,13.152,42,6,6,UEFA Conference League,13,19,4,12.5,8.375
+38,Olympiacos,GRE,553,56.5,56.5,STABLE,8.742,41,5,4,UEFA Champions League,8,3,17,18.5,10
+39,Ajax,NED,194,56.25,56.25,STABLE,13.152,38,6,6,UEFA Champions League,22,8,5,13.25,8
+40,Bodø/Glimt,NOR,327,56,56,STABLE,7.717,42,5,2,UEFA Champions League,15,3,8,21,9
+41,Fenerbahçe,TUR,611,55.25,55.25,STABLE,9.625,40,5,3,UEFA Europa League,5,17,14,11.25,8
+42,Monaco,FRA,91,54,54,STABLE,15.121,28,7,7,UEFA Champions League,15,9,17,17,13
+43,Marseille,FRA,81,54,54,STABLE,15.121,36,7,7,UEFA Champions League,16,8,18,18,12
+44,Lyon,FRA,80,53.75,53.75,STABLE,15.121,28,7,7,UEFA Europa League,21,21,,22.75,10
+45,Copenhagen,DEN,400,53.375,53.375,STABLE,7.796,36,4,2,UEFA Champions League,13,7,15,7.375,11
+46,Shakhtar,UKR,550,50.25,50.25,STABLE,4.882,34,4,1,UEFA Conference League,6,11,10,11,12.25
+47,Galatasaray,TUR,645,47.75,47.75,STABLE,9.625,28,5,3,UEFA Champions League,15,8,8,12.75,12
+48,Union SG,BEL,1393,46,46,STABLE,11.55,32,5,3,UEFA Champions League,,19,8,9,10
+49,Braga,POR,217,46,46,STABLE,12.653,36,5,4,UEFA Europa League,16,7,7,,9
+50,Viktoria Plzeň,CZE,567,44.75,44.75,STABLE,9.215,32,5,4,UEFA Europa League,2.5,4,17,13.25,8
+51,PAOK,GRE,619,44.25,44.25,STABLE,8.742,34,5,4,UEFA Europa League,13,1.5,15,7.75,7
+52,Ferencváros,HUN,10888,44,44,STABLE,4.975,34,4,1,UEFA Europa League,3,12,9,10,10
+53,Slavia Praha,CZE,560,44,44,STABLE,9.215,38,5,4,UEFA Champions League,10,6,15,4,9
+54,GNK Dinamo,CRO,620,44,44,STABLE,5.181,34,4,2,UEFA Europa League,9,7,9,14,5
+55,Salzburg,AUT,571,43,43,STABLE,6.61,34,5,2,UEFA Europa League,17,9,7,8,2
+56,Crvena Zvezda,SRB,598,41,41,STABLE,4.775,34,4,1,UEFA Europa League,15,4,5,10,7
+57,Qarabağ,AZE,556,40,40,STABLE,4.45,34,4,1,UEFA Champions League,9,6,11,3,11
+58,Celtic,SCO,247,40,40,STABLE,6.09,32,5,2,UEFA Europa League,6,6,7,16,5
+59,Gent,BEL,631,39,39,STABLE,10.17,30,5,3,,11,11,10,7,
+60,Sevilla,ESP,536,39,39,STABLE,10.212,27,8,8,UEFA Europa League,12,21,6,,
+61,Sparta Praha,CZE,628,38.25,38.25,STABLE,9.215,28,5,4,UEFA Conference League,5,1.5,10,9,12.75
+62,Freiburg,GER,160,38,38,STABLE,16.595,22,7,7,UEFA Europa League,,15,13,,
+63,Athletic Club,ESP,531,36.75,36.75,STABLE,17.203,20,8,8,UEFA Champions League,,26.75,,10,
+64,Midtjylland,DEN,397,36.75,36.75,STABLE,7.796,26,4,2,UEFA Europa League,7,8,2.5,9.25,10
+65,S. Bratislava,SVK,656,36,36,STABLE,4.475,34,4,0,UEFA Conference League,6,12,8,6,4
+66,Rennes,FRA,94,35,35,STABLE,9.45,19,7,7,UEFA Europa League,14,11,10,,
+67,Basel,SUI,551,34.5,34.5,STABLE,6.9,26,5,3,UEFA Europa League,12,17,1.5,,
+68,Legia Warszawa,POL,339,32.5,32.5,STABLE,8.925,28,4,3,UEFA Conference League,4,,9,15.5,4
+69,Djurgården,SWE,11076,32,32,STABLE,4.925,20,4,1,UEFA Conference League,,13,,17.5,
+70,Anderlecht,BEL,554,30.75,30.75,STABLE,11.55,18,5,3,UEFA Conference League,2.5,12,13.75,,
+71,M. Tel-Aviv,ISR,604,30.5,30.5,STABLE,5.5,28,4,1,UEFA Europa League,9,2.5,14,,1
+72,SK Rapid,AUT,781,29.75,29.75,STABLE,6.61,22,5,2,UEFA Conference League,4,2.5,2.5,18.25,2.5
+73,Young Boys,SUI,15917,29.5,29.5,STABLE,6.9,26,5,3,UEFA Europa League,8,2.5,7,6,6
+74,Ludogorets,BUL,566,26,26,STABLE,3.975,32,4,1,UEFA Europa League,3,5,9,4,5
+75,Sturm Graz,AUT,637,26,26,STABLE,6.61,34,5,2,UEFA Europa League,3,6,4,10,3
+76,Lech Poznań,POL,347,24.75,24.75,STABLE,8.925,16,4,3,UEFA Conference League,,14,,2,8.75
+77,FCSB,ROU,559,24.5,24.5,STABLE,5,22,4,1,UEFA Europa League,1.5,2.5,2,14.5,4
+78,Panathinaikos,GRE,617,23,23,STABLE,8.742,20,5,4,UEFA Europa League,,2,,11,7
+79,Union Berlin,GER,182,23,23,STABLE,10.539,20,7,7,,5,12,6,,
+80,Raków,POL,3491,22.25,22.25,STABLE,8.925,12,4,3,UEFA Conference League,2.5,2.5,3,14.25,
+81,Pafos,CYP,3403,22.125,22.125,STABLE,6.989,14,4,3,UEFA Champions League,,11.125,11,,
+82,Jagiellonia,POL,336,22,22,STABLE,8.925,16,4,3,UEFA Conference League,,14,8,,
+83,Partizan,SRB,6395,22,22,STABLE,4.775,14,4,1,UEFA Conference League,7,8,2.5,2.5,2
+84,Molde,NOR,329,21.75,21.75,STABLE,6.637,22,5,2,UEFA Conference League,2,5,7,7.75,0.75
+85,Omonoia,CYP,3402,21.25,21.25,STABLE,6.989,24,4,3,UEFA Conference League,4,3,2,5.375,6.875
+86,Lugano,SUI,8396,21.25,21.25,STABLE,6.9,14,5,3,UEFA Conference League,,2,3,14.25,2
+87,Newcastle,ENG,34,21,21,STABLE,20.732,12,9,9,UEFA Champions League,,8,13,,
+88,Stuttgart,GER,24130,21,21,STABLE,16.595,14,7,7,UEFA Europa League,,13,8,,
+89,LASK,AUT,24440,21,21,STABLE,5.95,20,5,2,UEFA Conference League,15,3,3,,
+90,Crystal Palace,ENG,52,8.875,20.732,STABLE,20.732,6,9,9,UEFA Conference League,,,8.875,,
+91,Nott'm Forest,ENG,65,8,20.732,STABLE,20.732,6,9,9,UEFA Europa League,,,8,,
+92,Celje,SVN,4360,20.5,20.5,STABLE,4.569,16,4,1,UEFA Conference League,2,2.5,4,9.5,8.5
+93,Sheriff,MDA,568,20,20,STABLE,2.925,20,4,0,UEFA Conference League,9,4,3,2,2
+94,AEK Athens,GRE,575,19.5,19.5,STABLE,8.742,12,5,4,UEFA Conference League,1.5,1.5,3,2,13
+95,Başakşehir,TUR,564,19.5,19.5,STABLE,9.625,14,5,3,UEFA Conference League,,12,,5,2.5
+96,Shamrock Rovers,IRL,652,19.375,19.375,STABLE,3.469,18,4,0,UEFA Conference League,2.5,2.5,1.5,9.875,3
+97,AEK Larnaca,CYP,614,19.25,19.25,STABLE,6.989,14,4,3,UEFA Conference League,4,4,2,1.5,11.75
+98,Bologna,ITA,500,19,19,STABLE,18.425,14,7,7,UEFA Europa League,,,11,8,
+99,Vitória SC,POR,224,18.75,18.75,STABLE,10.533,8,5,4,UEFA Europa League,,,1.5,15.25,
+100,Olimpija,SVN,677,18.375,18.375,STABLE,4.569,12,4,1,UEFA Conference League,2,1.5,4,8.375,2.5
+101,Genk,BEL,742,18,18,STABLE,11.55,18,5,3,UEFA Europa League,4,,7,,7
+102,Dynamo Kyiv,UKR,572,17.5,17.5,STABLE,4.882,26,4,1,UEFA Conference League,5,3,2.5,3,4
+103,CFR Cluj,ROU,2246,17.5,17.5,STABLE,5,12,4,1,UEFA Conference League,3,8,1.5,2.5,2.5
+104,Maccabi Haifa,ISR,4195,17.5,17.5,STABLE,5.5,20,4,1,UEFA Conference League,3,6,5,1.5,2
+105,Rayo Vallecano,ESP,728,12.5,17.203,STABLE,17.203,6,8,8,UEFA Conference League,,,,,
+106,Celta,ESP,538,6,17.203,STABLE,17.203,6,8,8,UEFA Europa League,,,,,
+107,Rijeka,CRO,561,17.125,17.125,STABLE,5.181,6,4,2,UEFA Conference League,2.5,1.5,2.5,2.5,8.125
+108,Nice,FRA,84,17,17,STABLE,15.121,24,7,7,UEFA Europa League,,14,,3,0
+109,Brest,FRA,106,16.75,16.75,STABLE,13.035,8,7,7,UEFA Conference League,,,,,
+110,Mainz,GER,164,12,16.595,STABLE,16.595,6,7,7,UEFA Conference League,,,,,
+111,Brighton,ENG,51,16,16,STABLE,12.275,8,9,9,UEFA Conference League,,,,16,
+112,Strasbourg,FRA,95,15.5,15.5,STABLE,15.121,6,7,7,UEFA Conference League,,,,,
+113,Beşiktaş,TUR,549,15.5,15.5,STABLE,9.625,20,5,3,UEFA Conference League,4,,3,6,2.5
+114,Girona,ESP,547,8,14.991,STABLE,14.991,8,8,8,UEFA Conference League,,,,,
+115,APOEL,CYP,557,14.75,14.75,STABLE,4.707,6,4,3,UEFA Conference League,,,2.5,9.75,
+116,Heidenheim,GER,180,8.125,14.223,STABLE,14.223,6,8,8,UEFA Conference League,,,,,
+117,Hoffenheim,GER,167,7,14.223,STABLE,14.223,8,8,8,UEFA Conference League,,,,,
+118,KuPS Kuopio,FIN,1165,14,14,STABLE,2.8,6,4,1,UEFA Conference League,2.5,2,1.5,1.5,6.5
+119,HJK,FIN,649,14,14,STABLE,2.8,24,4,1,UEFA Conference League,4,3,2.5,3,1.5
+120,H. Beer-Sheva,ISR,563,14,14,STABLE,5.5,6,4,1,UEFA Conference League,2.5,6,2,2,1.5
+121,Drita,KOS,14281,13.625,13.625,STABLE,2.798,6,4,1,UEFA Conference League,1.5,1.5,1.5,2.5,6.625
+122,L. Red Imps,GIB,667,13.5,13.5,STABLE,1.425,12,3,0,UEFA Conference League,2.5,1.5,2,2.5,5
+123,Twente,NED,415,13.5,13.5,STABLE,11.59,8,6,6,UEFA Conference League,,2.5,2.5,8.5,0.5
+124,Zrinjski,BIH,588,13.25,13.25,STABLE,2.694,12,4,1,UEFA Conference League,2.5,2.5,3,2.5,5.25
+125,Go Ahead Eagles,NED,410,5.5,13.152,STABLE,13.152,6,6,6,UEFA Europa League,,,1.5,4,
+126,Utrecht,NED,207,1,13.152,STABLE,13.152,6,6,6,UEFA Europa League,,,,,
+127,Borac,BIH,3364,13.125,13.125,STABLE,2.694,8,4,1,UEFA Conference League,1.5,1,1.5,8.125,1
+128,Lens,FRA,116,12.5,13.035,STABLE,13.035,6,7,7,UEFA Conference League,,,10,2.5,
+129,Malmö,SWE,375,13,13,STABLE,5.925,26,4,1,UEFA Europa League,5,3,,4,1
+130,Leicester,ENG,46,13,13,STABLE,4.2,12,9,9,UEFA Conference League,13,,,,
+131,Cercle Brugge,BEL,741,12.75,12.75,STABLE,10.17,8,5,3,UEFA Conference League,,,,,
+132,Santa Clara,POR,227,5,12.653,STABLE,12.653,0,5,4,UEFA Conference League,2.5,,,,2.5
+133,RFS,LVA,21382,12.5,12.5,STABLE,2.575,14,4,0,UEFA Conference League,2,2.5,1.5,4,2.5
+134,Servette,SUI,2184,12.5,12.5,STABLE,6.9,8,5,3,UEFA Conference League,1.5,6,,2.5,2.5
+135,Astana,KAZ,562,12.5,12.5,STABLE,2.75,12,4,1,UEFA Conference League,2,1.5,3,4,2
+136,Antwerp,BEL,740,12.5,12.5,STABLE,7.04,12,5,3,UEFA Conference League,4,2.5,6,,
+137,Sivasspor,TUR,1002,12.5,12.5,STABLE,3.7,8,5,3,UEFA Conference League,2.5,,10,,
+138,Breiðablik,ISL,276,12,12,STABLE,3.304,12,4,0,UEFA Conference League,2,2,2.5,1.5,4
+139,Žalgiris,LTU,586,12,12,STABLE,1.55,6,4,0,UEFA Conference League,2.5,4,2.5,1.5,1.5
+140,Zorya Luhansk,UKR,599,12,12,STABLE,2.8,12,5,1,UEFA Conference League,5,2,,5,
+141,Spartak Moskva,RUS,558,12,12,STABLE,1.06,6,5,0,UEFA Conference League,12,,,,
+142,Víkingur R.,ISL,278,11.75,11.75,STABLE,3.304,6,4,0,UEFA Conference League,2,2,1,6.75,2
+143,Charleroi,BEL,736,1.5,11.55,STABLE,11.55,0,5,3,UEFA Conference League,1.5,,,,
+144,Hearts,SCO,254,11.5,11.5,STABLE,5.41,12,5,2,UEFA Conference League,,4,2.5,5,
+145,Kairat Almaty,KAZ,664,11,11,STABLE,2.75,12,4,1,UEFA Champions League,2.5,1.5,,7,
+146,Brann,NOR,319,11,11,STABLE,7.717,6,5,2,UEFA Europa League,,2.5,2.5,6,
+147,Elfsborg,SWE,21693,11,11,STABLE,4.925,8,4,1,UEFA Conference League,2.5,1.5,,7,
+148,Trabzonspor,TUR,998,11,11,STABLE,8.16,6,5,3,UEFA Europa League,2.5,6,,2.5,
+149,Shkëndija,MKD,609,10.875,10.875,STABLE,1.552,6,4,1,UEFA Conference League,1.5,2,1,1,5.375
+150,Noah,ARM,3684,10.75,10.75,STABLE,2.912,12,4,1,UEFA Conference League,1,,3,3,6.75

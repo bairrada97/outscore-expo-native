@@ -8,7 +8,8 @@
     "deploy": "wrangler deploy",
     "tail": "wrangler tail",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "ingest:uefa-priors": "bun scripts/ingest-uefa-priors.ts"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.4.3",
