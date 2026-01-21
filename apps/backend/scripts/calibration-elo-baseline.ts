@@ -1,6 +1,7 @@
 import type { Fixture, FixturesResponse } from "@outscore/shared-types";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { z } from "zod";
 import {
 	calculateDivisionOffset,
 	calculateExpectedScore,
@@ -9,6 +10,7 @@ import {
 	updateElo,
 } from "../src/modules/elo/elo-engine";
 import { getFootballApiFixturesByLeagueSeason } from "../src/pkg/util/football-api";
+import { clamp } from "../src/modules/betting-insights/utils/calibration-utils";
 import { detectMatchType } from "./lib/elo-utils";
 
 type EvalRow = {
@@ -43,6 +45,33 @@ type UefaPriorsPayload = {
 		method?: string | null;
 	}>;
 };
+
+const UefaPriorsSchema = z.object({
+	asOfSeason: z.number(),
+	associations: z.array(
+		z.object({
+			countryCode: z.string().min(1),
+			rank: z.number().nullable().optional(),
+			coefficient5y: z.number().nullable().optional(),
+		}),
+	),
+	clubs: z.array(
+		z.object({
+			uefaClubKey: z.string().min(1),
+			name: z.string().min(1),
+			countryCode: z.string().min(1).nullable().optional(),
+			coefficient: z.number().nullable().optional(),
+		}),
+	),
+	clubTeamMap: z.array(
+		z.object({
+			uefaClubKey: z.string().min(1),
+			apiFootballTeamId: z.number().int(),
+			confidence: z.number().nullable().optional(),
+			method: z.string().min(1).nullable().optional(),
+		}),
+	),
+});
 
 type EloState = {
 	elo: number;
@@ -150,7 +179,15 @@ const fetchFixturesWithRetry = async (
 const loadPriorsPayload = (payloadPath: string): UefaPriorsPayload => {
 	const content = readFileSync(payloadPath, "utf-8");
 	const parsed = JSON.parse(content);
-	return parsed as UefaPriorsPayload;
+	const result = UefaPriorsSchema.safeParse(parsed);
+	if (!result.success) {
+		throw new Error(
+			`[Calibration] Invalid priors payload at ${payloadPath}: ${result.error.issues
+				.map((issue) => `${issue.path.join(".") || "<root>"} ${issue.message}`)
+				.join("; ")}`,
+		);
+	}
+	return result.data;
 };
 
 const buildPriorsIndex = (payload: UefaPriorsPayload) => {
@@ -213,9 +250,6 @@ const getActualOutcome = (fixture: Fixture): EvalRow["actual"] => {
 	if (home < away) return "AWAY";
 	return "DRAW";
 };
-
-const clamp = (value: number, min: number, max: number) =>
-	Math.max(min, Math.min(max, value));
 
 const computeDrawProbability = (eloGap: number) => {
 	const base = 0.28 * Math.exp(-Math.abs(eloGap) / 400);

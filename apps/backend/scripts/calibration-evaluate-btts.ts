@@ -27,6 +27,12 @@ const brierScore = (rows: EvalRow[], temperature = 1) => {
 		}
 		assertProb(row.probYes, "probYes", index);
 		assertProb(row.probNo, "probNo", index);
+		const probSum = row.probYes + row.probNo;
+		if (Math.abs(probSum - 1) > 1e-6) {
+			throw new Error(
+				`Invalid probYes/probNo sum at row ${index}: probYes=${row.probYes}, probNo=${row.probNo}, sum=${probSum}`,
+			);
+		}
 		const yes = applyBinaryTemperatureScaling(row.probYes, temperature);
 		const target = row.actual === "YES" ? 1 : 0;
 		sum += (yes - target) ** 2;
@@ -122,11 +128,19 @@ const main = () => {
 	const byLeague = new Map<number, EvalRow[]>();
 	const byMatchType = new Map<string, EvalRow[]>();
 	for (const row of rows) {
-		byLeague.set(row.leagueId, [...(byLeague.get(row.leagueId) ?? []), row]);
-		byMatchType.set(
-			row.matchType,
-			[...(byMatchType.get(row.matchType) ?? []), row],
-		);
+		let leagueRows = byLeague.get(row.leagueId);
+		if (!leagueRows) {
+			leagueRows = [];
+			byLeague.set(row.leagueId, leagueRows);
+		}
+		leagueRows.push(row);
+
+		let matchTypeRows = byMatchType.get(row.matchType);
+		if (!matchTypeRows) {
+			matchTypeRows = [];
+			byMatchType.set(row.matchType, matchTypeRows);
+		}
+		matchTypeRows.push(row);
 	}
 
 	console.log(`== League slices (min ${minCount}) ==`);

@@ -37,31 +37,36 @@
 ## Recent Major Changes (2026-01-15)
 
 ### API Integration Tests (NEW)
+
 - **`routes/insights.routes.integration.test.ts`** - 23 tests for full endpoint testing
 - Tests cover request validation, response structure, cache headers, error handling
 - Uses Hono test client with mock execution context
 - Verifies all 4 simulations, headers (X-Source, X-Generated-At, X-Response-Time), and error codes
 
 ### Documentation Update
+
 - Added D1 Database Layer section to `docs/backend-architecture-guidelines.md`
 - Updated module structure to include betting-insights and entities modules
 - Added `ENTITIES_DB` to environment bindings
 
 ## Recent Major Changes (2026-01-21)
 
-### Pre-Phase2 Quick Checks completed
+### Pre-Phase 2 Quick Checks completed
+
 - Added `sanityWarnings` in API response with logging
 - Added data-quality guards + invariant checks with regression tests
 - Added minimal backtest harness with R2 artifacts + D1 `backtest_runs`
 - Added admin endpoint to list and run backtests
 
 ### Per-market calibration complete
+
 - MatchOutcome + BTTS + Total Goals temperature scaling
 - Season-split evaluations completed
 
 ## Major Changes (2026-01-14)
 
 ### Comprehensive Test Coverage
+
 Added 857 tests across 27 test files covering all major components:
 - **`simulations/simulate-match-outcome.test.ts`** - 24 tests for 1X2 predictions
 - **`simulations/simulate-total-goals-over-under.test.ts`** - 28 tests for multi-line Over/Under

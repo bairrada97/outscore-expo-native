@@ -157,6 +157,10 @@ const buildStatsFromMatches = (
 	const goalsForAway = sum(away.map((m) => m.goalsScored));
 	const goalsAgainstHome = sum(home.map((m) => m.goalsConceded));
 	const goalsAgainstAway = sum(away.map((m) => m.goalsConceded));
+	const cleanSheetsHome = home.filter((m) => m.goalsConceded === 0).length;
+	const cleanSheetsAway = away.filter((m) => m.goalsConceded === 0).length;
+	const failedToScoreHome = home.filter((m) => m.goalsScored === 0).length;
+	const failedToScoreAway = away.filter((m) => m.goalsScored === 0).length;
 
 	return {
 		team: { id: meta.teamId, name: meta.teamName },
@@ -209,8 +213,16 @@ const buildStatsFromMatches = (
 				},
 			},
 		},
-		clean_sheet: { total: cleanSheets, home: 0, away: 0 },
-		failed_to_score: { total: failedToScore, home: 0, away: 0 },
+		clean_sheet: {
+			total: cleanSheets,
+			home: cleanSheetsHome,
+			away: cleanSheetsAway,
+		},
+		failed_to_score: {
+			total: failedToScore,
+			home: failedToScoreHome,
+			away: failedToScoreAway,
+		},
 	};
 };
 
@@ -405,6 +417,25 @@ const writeR2Text = async (env: BacktestEnv, key: string, value: string) => {
 	await env.FOOTBALL_CACHE.put(key, value, {
 		httpMetadata: { contentType: "text/plain" },
 	});
+};
+
+const deleteR2Prefix = async (env: BacktestEnv, prefix: string) => {
+	let cursor: string | undefined;
+	try {
+		do {
+			const listed = await env.FOOTBALL_CACHE.list({ prefix, cursor });
+			const keys = listed.objects.map((obj) => obj.key);
+			for (const key of keys) {
+				await env.FOOTBALL_CACHE.delete(key);
+			}
+			cursor = listed.truncated ? listed.cursor : undefined;
+		} while (cursor);
+	} catch (error) {
+		console.warn(
+			`[Backtests] Failed to cleanup R2 prefix ${prefix}:`,
+			error,
+		);
+	}
 };
 
 const runBacktest = async (env: BacktestEnv, config: RunConfig) => {
@@ -696,18 +727,27 @@ const runBacktest = async (env: BacktestEnv, config: RunConfig) => {
 		anomalies.map((row) => JSON.stringify(row)).join("\n"),
 	);
 
-	await env.ENTITIES_DB.prepare(
-		`INSERT INTO backtest_runs (run_id, created_at, r2_prefix, config_json, metrics_json)
-		 VALUES (?, ?, ?, ?, ?)`,
-	)
-		.bind(
-			runId,
-			new Date().toISOString(),
-			r2Prefix,
-			JSON.stringify(config),
-			JSON.stringify(metrics),
+	try {
+		await env.ENTITIES_DB.prepare(
+			`INSERT INTO backtest_runs (run_id, created_at, r2_prefix, config_json, metrics_json)
+			 VALUES (?, ?, ?, ?, ?)`,
 		)
-		.run();
+			.bind(
+				runId,
+				new Date().toISOString(),
+				r2Prefix,
+				JSON.stringify(config),
+				JSON.stringify(metrics),
+			)
+			.run();
+	} catch (error) {
+		console.warn(
+			`[Backtests] Failed to persist run ${runId}, cleaning up R2 artifacts...`,
+			error,
+		);
+		await deleteR2Prefix(env, r2Prefix);
+		throw error;
+	}
 
 	return { runId, r2Prefix, metrics };
 };

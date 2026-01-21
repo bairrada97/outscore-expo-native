@@ -75,8 +75,13 @@ const isEvalRow = (value: unknown): value is EvalRow => {
 	const row = value as Record<string, unknown>;
 	return (
 		typeof row.probOver === "number" &&
+		Number.isFinite(row.probOver) &&
 		typeof row.probUnder === "number" &&
-		typeof row.actual === "string" &&
+		Number.isFinite(row.probUnder) &&
+		(row.actual === "OVER" || row.actual === "UNDER") &&
+		typeof row.date === "string" &&
+		row.date.length > 0 &&
+		Number.isFinite(Date.parse(row.date)) &&
 		typeof row.fixtureId === "number" &&
 		Number.isFinite(row.fixtureId) &&
 		typeof row.leagueId === "number" &&
@@ -128,12 +133,26 @@ const main = () => {
 	const byMatchType = new Map<string, EvalRow[]>();
 	const byLine = new Map<number, EvalRow[]>();
 	for (const row of rows) {
-		byLeague.set(row.leagueId, [...(byLeague.get(row.leagueId) ?? []), row]);
-		byMatchType.set(
-			row.matchType,
-			[...(byMatchType.get(row.matchType) ?? []), row],
-		);
-		byLine.set(row.line, [...(byLine.get(row.line) ?? []), row]);
+		let leagueRows = byLeague.get(row.leagueId);
+		if (!leagueRows) {
+			leagueRows = [];
+			byLeague.set(row.leagueId, leagueRows);
+		}
+		leagueRows.push(row);
+
+		let matchTypeRows = byMatchType.get(row.matchType);
+		if (!matchTypeRows) {
+			matchTypeRows = [];
+			byMatchType.set(row.matchType, matchTypeRows);
+		}
+		matchTypeRows.push(row);
+
+		let lineRows = byLine.get(row.line);
+		if (!lineRows) {
+			lineRows = [];
+			byLine.set(row.line, lineRows);
+		}
+		lineRows.push(row);
 	}
 
 	console.log(`== Line slices (min ${minCount}) ==`);

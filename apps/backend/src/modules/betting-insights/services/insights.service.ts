@@ -11,51 +11,52 @@
 import type { Fixture } from "@outscore/shared-types";
 import type { CacheEnv } from "../../cache";
 import {
-	cacheGet,
-	cacheSet,
-	getCacheKey,
-	isStale,
-	withDeduplication,
+    cacheGet,
+    cacheSet,
+    getCacheKey,
+    isStale,
+    withDeduplication,
 } from "../../cache";
+import { calculateEloConfidence } from "../../elo";
 import {
-	createInputsSnapshotJson,
-	getH2HCache,
-	getInjuriesCache,
-	H2H_CACHE_TTL_MS,
-	hasInsightsSnapshot,
-	type InputsSnapshotData,
-	insertInsightsSnapshot,
-	getLeagueStatsByProviderId,
-	getCurrentTeamElo,
-	makeH2HPairKey,
-	type StandingsCurrentRowInsert,
-	type TeamSeasonContextInsert,
-	getLeagueById,
-	getTeamByProviderId,
-	resolveExternalId,
-	upsertH2HCache,
-	upsertInjuriesCache,
-	upsertLeague,
-	upsertStandings,
-	upsertTeam,
-	upsertTeamSeasonContext,
+    createInputsSnapshotJson,
+    getCurrentTeamElo,
+    getH2HCache,
+    getInjuriesCache,
+    getLeagueById,
+    getLeagueStatsByProviderId,
+    getTeamByProviderId,
+    H2H_CACHE_TTL_MS,
+    hasInsightsSnapshot,
+    type InputsSnapshotData,
+    insertInsightsSnapshot,
+    makeH2HPairKey,
+    resolveExternalId,
+    type StandingsCurrentRowInsert,
+    type TeamSeasonContextInsert,
+    upsertH2HCache,
+    upsertInjuriesCache,
+    upsertLeague,
+    upsertStandings,
+    upsertTeam,
+    upsertTeamSeasonContext,
 } from "../../entities";
 import {
-	fetchInjuriesForFixture,
-	type FixtureInjuries,
-	processInjuries,
+    fetchInjuriesForFixture,
+    type FixtureInjuries,
+    processInjuries,
 } from "../data/injuries";
 import {
-	generateInsights,
-	getTopInsights,
+    generateInsights,
+    getTopInsights,
 } from "../insights/insight-generator";
 import type { MatchContext as PredictionMatchContext } from "../match-context/context-adjustments";
 import { buildMatchContext } from "../match-context/context-adjustments";
 import { detectH2HPatterns } from "../patterns/h2h-patterns";
 import {
-	detectTeamPatterns,
-	getTopPatterns,
-	type Pattern,
+    detectTeamPatterns,
+    getTopPatterns,
+    type Pattern,
 } from "../patterns/team-patterns";
 import { enrichInsights } from "../presentation/insight-enricher";
 import { attachInsightPartsToList } from "../presentation/insight-parts";
@@ -68,45 +69,44 @@ import { simulateBTTS } from "../simulations/simulate-btts";
 import { simulateFirstHalfActivity } from "../simulations/simulate-first-half-activity";
 import { simulateMatchOutcome } from "../simulations/simulate-match-outcome";
 import { simulateTotalGoalsOverUnder } from "../simulations/simulate-total-goals-over-under";
-import { calculateEloConfidence } from "../../elo";
 import type {
-	MatchContext as ApiMatchContext,
-	BettingInsightsResponse,
-	ConfidenceLevel,
-	DataQuality,
-	DNALayer,
-	GoalLineKey,
-	GoalLineOverPctMap,
-	H2HData,
-	Insight,
-	MatchType,
-	ProcessedMatch,
-	Simulation,
-	TeamContext,
-	TeamData,
-	TeamStatistics,
+    MatchContext as ApiMatchContext,
+    BettingInsightsResponse,
+    ConfidenceLevel,
+    DataQuality,
+    DNALayer,
+    GoalLineKey,
+    GoalLineOverPctMap,
+    H2HData,
+    Insight,
+    MatchType,
+    ProcessedMatch,
+    Simulation,
+    TeamContext,
+    TeamData,
+    TeamStatistics,
 } from "../types";
 import { DEFAULT_GOAL_LINES } from "../types";
 import { calculateFormationStabilityContext } from "../utils/formation-helpers";
 import { processH2HData } from "../utils/h2h-helpers";
 import {
-	calculateDaysSinceLastMatch,
-	determineMatchResult,
-	extractRoundNumber,
-	filterNonFriendlyMatches,
+    calculateDaysSinceLastMatch,
+    determineMatchResult,
+    extractRoundNumber,
+    filterNonFriendlyMatches,
 } from "../utils/helpers";
 import {
-	calculateInjuryAdjustments,
-	getInjurySituationSummary,
+    calculateInjuryAdjustments,
+    getInjurySituationSummary,
 } from "../utils/injury-adjustments";
 import {
-	calculateDNALayer,
-	calculateSafetyFlags,
+    calculateDNALayer,
+    calculateSafetyFlags,
 } from "../utils/stats-calculator";
 import {
-	assessMindDataQuality,
-	calculateMindLayer,
-	calculateMoodLayer,
+    assessMindDataQuality,
+    calculateMindLayer,
+    calculateMoodLayer,
 } from "../utils/tier-helpers";
 
 // ============================================================================
@@ -133,7 +133,10 @@ const HIGH_ELO_MIDWEEK_MAX_DAYS = 5;
 const MIN_RELIABLE_STATS_GAMES = 8;
 
 function getMostRecentTeamMatch(team: TeamData): ProcessedMatch | null {
-	const all = [...(team.lastHomeMatches ?? []), ...(team.lastAwayMatches ?? [])];
+	const all = [
+		...(team.lastHomeMatches ?? []),
+		...(team.lastAwayMatches ?? []),
+	];
 	if (!all.length) return null;
 	const sorted = all
 		.slice()
@@ -633,18 +636,12 @@ export const insightsService = {
 					`Away team stats sample is small (${awayPlayed} matches)`,
 				);
 			}
-			if (
-				homePlayed > 0 &&
-				(homePlayedHome === 0 || homePlayedAway === 0)
-			) {
+			if (homePlayed > 0 && (homePlayedHome === 0 || homePlayedAway === 0)) {
 				sanityWarnings.push(
 					"Home team stats missing home/away split; using fallback rates",
 				);
 			}
-			if (
-				awayPlayed > 0 &&
-				(awayPlayedHome === 0 || awayPlayedAway === 0)
-			) {
+			if (awayPlayed > 0 && (awayPlayedHome === 0 || awayPlayedAway === 0)) {
 				sanityWarnings.push(
 					"Away team stats missing home/away split; using fallback rates",
 				);
@@ -702,9 +699,7 @@ export const insightsService = {
 			const lowHistory =
 				homeTeamData.mind.matchCount < 15 || awayTeamData.mind.matchCount < 15;
 			if (lowHistory) {
-				sanityWarnings.push(
-					"Limited match history; confidence downgraded",
-				);
+				sanityWarnings.push("Limited match history; confidence downgraded");
 				dataQualityWarnings.push("Limited match history");
 			}
 
@@ -1842,10 +1837,7 @@ export const insightsService = {
 	/**
 	 * Validate team stat sanity and surface warnings.
 	 */
-	validateTeamStatsSanity(
-		homeTeam: TeamData,
-		awayTeam: TeamData,
-	): string[] {
+	validateTeamStatsSanity(homeTeam: TeamData, awayTeam: TeamData): string[] {
 		const warnings: string[] = [];
 		const MAX_AVG_GOALS = 4.0;
 
@@ -1889,8 +1881,7 @@ export const insightsService = {
 			const dist = sim.probabilityDistribution;
 			let sum = 0;
 			if (sim.scenarioType === "MatchOutcome") {
-				sum =
-					(dist.home ?? 0) + (dist.draw ?? 0) + (dist.away ?? 0);
+				sum = (dist.home ?? 0) + (dist.draw ?? 0) + (dist.away ?? 0);
 			} else if (
 				sim.scenarioType === "BothTeamsToScore" ||
 				sim.scenarioType === "FirstHalfActivity"
@@ -2520,9 +2511,11 @@ export const insightsService = {
 				: undefined;
 
 		// If the team already has a country in D1, do not fetch.
-		const existing = await getTeamByProviderId(db, "api_football", team.id).catch(
-			() => null,
-		);
+		const existing = await getTeamByProviderId(
+			db,
+			"api_football",
+			team.id,
+		).catch(() => null);
 		const existingCountry = existing?.country ?? null;
 
 		let country: string | undefined = leagueCountry;
@@ -2536,7 +2529,11 @@ export const insightsService = {
 		// 1. Upsert team entity
 		const teamInternalId = await upsertTeam(
 			db,
-			{ name: team.name, logo: team.logo, country: country ?? existingCountry ?? undefined },
+			{
+				name: team.name,
+				logo: team.logo,
+				country: country ?? existingCountry ?? undefined,
+			},
 			"api_football",
 			team.id,
 		);
