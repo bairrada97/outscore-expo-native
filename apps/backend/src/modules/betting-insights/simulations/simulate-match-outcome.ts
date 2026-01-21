@@ -17,6 +17,7 @@
  */
 
 import { DEFAULT_ALGORITHM_CONFIG } from "../config/algorithm-config";
+import { MATCH_OUTCOME_CALIBRATION } from "../config/match-outcome-calibration";
 import type { MatchContext } from "../match-context/context-adjustments";
 import { detectDerby } from "../match-context/derby-detector";
 import { finalizeSimulation } from "../presentation/simulation-presenter";
@@ -231,6 +232,9 @@ export function simulateMatchOutcome(
 		awayImpact?: InjuryImpactAssessment | null;
 	},
 	distributionModifiers?: GoalDistributionModifiers,
+	options?: {
+		skipCalibration?: boolean;
+	},
 ): Simulation {
 	// =========================================================================
 	// STEP 1: Calculate factor scores (Section 4.6.1)
@@ -330,9 +334,12 @@ export function simulateMatchOutcome(
 		distribution.probDraw,
 		awayResult.finalProbability,
 	);
+	const calibrated = options?.skipCalibration
+		? normalized
+		: applyTemperatureScaling(normalized, MATCH_OUTCOME_CALIBRATION.temperature);
 
 	return buildMatchResultPrediction(
-		normalized,
+		calibrated,
 		homeResult,
 		awayResult,
 		homeTeam,
@@ -578,6 +585,33 @@ function normalizeProbabilities(
 		home: (home / total) * 100,
 		draw: (draw / total) * 100,
 		away: (away / total) * 100,
+	};
+}
+
+function applyTemperatureScaling(
+	probs: { home: number; draw: number; away: number },
+	temperature: number,
+): { home: number; draw: number; away: number } {
+	if (!Number.isFinite(temperature) || temperature <= 0 || temperature === 1) {
+		return probs;
+	}
+
+	const home = Math.max(0, probs.home) / 100;
+	const draw = Math.max(0, probs.draw) / 100;
+	const away = Math.max(0, probs.away) / 100;
+	const logits = [home, draw, away].map((p) =>
+		Math.log(Math.max(p, 1e-12)) / temperature,
+	);
+	const exp = logits.map((value) => Math.exp(value));
+	const sum = exp.reduce((acc, value) => acc + value, 0);
+	if (!Number.isFinite(sum) || sum <= 0) {
+		return probs;
+	}
+
+	return {
+		home: (exp[0] / sum) * 100,
+		draw: (exp[1] / sum) * 100,
+		away: (exp[2] / sum) * 100,
 	};
 }
 
