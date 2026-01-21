@@ -6,7 +6,6 @@
 
 import { describe, expect, it } from "vitest";
 import type { H2HData, TeamData } from "../types";
-import type { MatchContext } from "../match-context/context-adjustments";
 import { simulateMatchOutcome } from "./simulate-match-outcome";
 
 // Helper to create minimal team data for testing
@@ -166,7 +165,7 @@ describe("simulateMatchOutcome", () => {
 	});
 
 	describe("season scoring impact", () => {
-		it("should increase home win probability when home attack and away defense are strong", () => {
+		it("should ignore season scoring stats for match outcome", () => {
 			const strongHome = createTeamData({
 				stats: {
 					...createTeamData().stats,
@@ -189,8 +188,9 @@ describe("simulateMatchOutcome", () => {
 			);
 			const strong = simulateMatchOutcome(strongHome, weakAway);
 
-			expect(strong.probabilityDistribution.home ?? 0).toBeGreaterThan(
+			expect(strong.probabilityDistribution.home ?? 0).toBeCloseTo(
 				base.probabilityDistribution.home ?? 0,
+				1,
 			);
 		});
 	});

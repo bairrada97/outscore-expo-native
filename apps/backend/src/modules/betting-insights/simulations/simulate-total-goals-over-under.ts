@@ -9,6 +9,7 @@
  */
 
 import { DEFAULT_ALGORITHM_CONFIG } from "../config/algorithm-config";
+import { TOTAL_GOALS_CALIBRATION } from "../config/total-goals-calibration";
 import type { MatchContext } from "../match-context/context-adjustments";
 import { getMaxConfidenceForContext } from "../match-context/context-adjustments";
 import { finalizeSimulation } from "../presentation/simulation-presenter";
@@ -24,6 +25,7 @@ import type {
 	TeamData,
 } from "../types";
 import { applyCappedAsymmetricAdjustments } from "../utils/capped-adjustments";
+import { applyBinaryTemperatureScaling } from "../utils/calibration-utils";
 import { clamp } from "../utils/helpers";
 import { buildGoalDistribution } from "./goal-distribution";
 import type { GoalDistributionModifiers } from "./goal-distribution-modifiers";
@@ -44,6 +46,9 @@ export function simulateTotalGoalsOverUnder(
 	line: GoalLine,
 	config: AlgorithmConfig = DEFAULT_ALGORITHM_CONFIG,
 	distributionModifiers?: GoalDistributionModifiers,
+	options?: {
+		skipCalibration?: boolean;
+	},
 ): Simulation {
 	const distribution = buildGoalDistribution(
 		homeTeam,
@@ -74,7 +79,14 @@ export function simulateTotalGoalsOverUnder(
 		baseConfidence,
 	);
 
-	const overProbability = clamp(result.finalProbability, 0, 100);
+	const rawOverProbability = clamp(result.finalProbability, 0, 100);
+	const overProbability = options?.skipCalibration
+		? rawOverProbability
+		: applyBinaryTemperatureScaling(
+				rawOverProbability,
+				TOTAL_GOALS_CALIBRATION.temperature,
+				"percent",
+			);
 	const underProbability = clamp(100 - overProbability, 0, 100);
 
 	return finalizeSimulation({

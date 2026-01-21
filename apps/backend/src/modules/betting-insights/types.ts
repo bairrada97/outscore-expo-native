@@ -961,6 +961,8 @@ export interface BettingInsightsResponse {
   dataQuality: DataQuality;
   /** Overall confidence */
   overallConfidence: ConfidenceLevel;
+  /** Data sanity warnings (debug/quality signals) */
+  sanityWarnings?: string[];
   /** Generated timestamp */
   generatedAt: string;
   /** Cache source (for debugging) */

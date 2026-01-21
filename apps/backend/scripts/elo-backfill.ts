@@ -53,7 +53,9 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const shouldRetryRequest = (error: unknown) => {
 	const message =
-		error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+		error instanceof Error
+			? error.message.toLowerCase()
+			: String(error).toLowerCase();
 	const statusMatch = message.match(/\b([45]\d{2})\b/);
 	const status = statusMatch ? Number(statusMatch[1]) : null;
 	if (status === 429 || (status !== null && status >= 500)) {
@@ -112,7 +114,6 @@ const parseLeagueIds = (raw: string | null) => {
 
 const hasFlag = (args: string[], key: string) => args.includes(key);
 
-
 const loadPriorsPayload = (payloadPath: string): UefaPriorsPayload => {
 	const content = readFileSync(payloadPath, "utf-8");
 	const parsed = JSON.parse(content);
@@ -121,17 +122,25 @@ const loadPriorsPayload = (payloadPath: string): UefaPriorsPayload => {
 	}
 	const payload = parsed as Partial<UefaPriorsPayload>;
 	if (!Array.isArray(payload.associations)) {
-		throw new Error("Invalid UEFA priors payload: associations must be an array.");
+		throw new Error(
+			"Invalid UEFA priors payload: associations must be an array.",
+		);
 	}
 	if (!Array.isArray(payload.clubs)) {
 		throw new Error("Invalid UEFA priors payload: clubs must be an array.");
 	}
 	if (!Array.isArray(payload.clubTeamMap)) {
-		throw new Error("Invalid UEFA priors payload: clubTeamMap must be an array.");
+		throw new Error(
+			"Invalid UEFA priors payload: clubTeamMap must be an array.",
+		);
 	}
 
 	for (const assoc of payload.associations) {
-		if (!assoc || typeof assoc !== "object" || typeof assoc.countryCode !== "string") {
+		if (
+			!assoc ||
+			typeof assoc !== "object" ||
+			typeof assoc.countryCode !== "string"
+		) {
 			throw new Error(
 				"Invalid UEFA priors payload: association.countryCode must be a string.",
 			);
@@ -189,7 +198,6 @@ const buildPriorsIndex = (payload: UefaPriorsPayload) => {
 
 	return { association, clubCoeff, teamToClub };
 };
-
 
 const loadExternalTeamMap = (params: {
 	dbName: string;
@@ -254,7 +262,6 @@ const loadCurrentEloState = (params: {
 		return new Map<number, EloState>();
 	}
 };
-
 
 const resolveStartingElo = (params: {
 	apiFootballTeamId: number;

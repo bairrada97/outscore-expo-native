@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ProcessedMatch, TeamStatistics } from "../types";
+import type { ProcessedMatch, Simulation, TeamData, TeamStatistics } from "../types";
 import { insightsService } from "./insights.service";
 
 function createMatch(params: {
@@ -69,6 +69,102 @@ describe("insightsService.calculateTeamStats", () => {
 		// Overall averages should be derived from matches, not inflated cup totals (e.g. 3.0 from 1 match)
 		// Our match sample: goalsScored = (2+1+1+3)/4 = 1.75
 		expect(result.avgGoalsScored).toBeCloseTo(1.75, 2);
+	});
+});
+
+describe("insightsService sanity validators", () => {
+	it("should flag off-range goal averages", () => {
+		const validateTeamStatsSanity = (insightsService as unknown as {
+			validateTeamStatsSanity: (home: TeamData, away: TeamData) => string[];
+		}).validateTeamStatsSanity;
+
+		const baseTeam: TeamData = {
+			id: 1,
+			name: "Team",
+			stats: {
+				form: "",
+				leaguePosition: 1,
+				avgGoalsScored: 5.2,
+				avgGoalsConceded: 4.5,
+				homeAvgScored: 1,
+				homeAvgConceded: 1,
+				awayAvgScored: 1,
+				awayAvgConceded: 1,
+				pointsFromCL: 0,
+				pointsFromRelegation: 0,
+				pointsFromFirst: 0,
+				gamesPlayed: 10,
+				cleanSheetsTotal: 0,
+			},
+			mind: {
+				tier: 2,
+				efficiencyIndex: 1,
+				avgPointsPerGame: 1,
+				goalDifference: 0,
+				matchCount: 20,
+				hasSufficientData: true,
+			},
+			mood: {
+				tier: 2,
+				mindMoodGap: 0,
+				isSleepingGiant: false,
+				isOverPerformer: false,
+				isOneSeasonWonder: false,
+				formString: "",
+				last10Points: 10,
+				last10GoalsScored: 10,
+				last10GoalsConceded: 10,
+			},
+			dna: {
+				mostPlayedFormation: "4-3-3",
+				formationFrequency: { "4-3-3": 100 },
+				goalLineOverPct: {},
+				cleanSheetPercentage: 0,
+				failedToScorePercentage: 0,
+				bttsYesRate: 0,
+				goalMinutesScoring: {},
+				goalMinutesConceding: {},
+				isLateStarter: false,
+				dangerZones: [],
+				firstHalfGoalPercentage: 0,
+				avgGoalsPerGame: 0,
+				avgGoalsConcededPerGame: 0,
+			},
+			safetyFlags: {
+				regressionRisk: false,
+				motivationClash: false,
+				liveDog: false,
+				motivation: "MID_TABLE",
+				consecutiveWins: 0,
+			},
+			daysSinceLastMatch: 5,
+			lastHomeMatches: [],
+			lastAwayMatches: [],
+			seasonsInLeague: 1,
+		};
+
+		const warnings = validateTeamStatsSanity(baseTeam, { ...baseTeam, id: 2 });
+		expect(warnings.length).toBeGreaterThan(0);
+	});
+
+	it("should flag probability sums outside tolerance", () => {
+		const validateSimulationSanity = (insightsService as unknown as {
+			validateSimulationSanity: (sims: Simulation[]) => string[];
+		}).validateSimulationSanity;
+
+		const sims: Simulation[] = [
+			{
+				scenarioType: "MatchOutcome",
+				probabilityDistribution: { home: 60, draw: 20, away: 10 },
+				signalStrength: "MEDIUM",
+				modelReliability: "MEDIUM",
+				insights: [],
+				mostProbableOutcome: "home",
+			},
+		];
+
+		const warnings = validateSimulationSanity(sims);
+		expect(warnings.length).toBeGreaterThan(0);
 	});
 });
 

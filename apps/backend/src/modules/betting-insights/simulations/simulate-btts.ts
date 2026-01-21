@@ -14,6 +14,7 @@
  */
 
 import { DEFAULT_ALGORITHM_CONFIG } from "../config/algorithm-config";
+import { BTTS_CALIBRATION } from "../config/btts-calibration";
 import type { MatchContext } from "../match-context/context-adjustments";
 import { getMaxConfidenceForContext } from "../match-context/context-adjustments";
 import { finalizeSimulation } from "../presentation/simulation-presenter";
@@ -30,6 +31,7 @@ import { buildGoalDistribution } from "./goal-distribution";
 import type { GoalDistributionModifiers } from "./goal-distribution-modifiers";
 import { applyCappedAsymmetricAdjustments } from "../utils/capped-adjustments";
 import { clamp } from "../utils/helpers";
+import { applyBinaryTemperatureScaling } from "../utils/calibration-utils";
 
 // ============================================================================
 // CONSTANTS
@@ -140,6 +142,9 @@ export function simulateBTTS(
 	context?: MatchContext,
 	config: AlgorithmConfig = DEFAULT_ALGORITHM_CONFIG,
 	distributionModifiers?: GoalDistributionModifiers,
+	options?: {
+		skipCalibration?: boolean;
+	},
 ): Simulation {
 	// Shared goal distribution (Poisson + Dixon-Coles)
 	const distribution = buildGoalDistribution(
@@ -168,7 +173,14 @@ export function simulateBTTS(
 		baseConfidence,
 	);
 
-	const yesProbability = result.finalProbability;
+	const rawYesProbability = result.finalProbability;
+	const yesProbability = options?.skipCalibration
+		? rawYesProbability
+		: applyBinaryTemperatureScaling(
+				rawYesProbability,
+				BTTS_CALIBRATION.temperature,
+				"percent",
+			);
 	const noProbability = 100 - yesProbability;
 
 	return finalizeSimulation({

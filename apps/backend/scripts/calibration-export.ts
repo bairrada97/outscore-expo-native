@@ -2,9 +2,12 @@ import type { Fixture, FixturesResponse } from "@outscore/shared-types";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
-    insightsService,
-    type ProcessedMatch,
-    simulateMatchOutcome,
+	insightsService,
+	type GoalLine,
+	type ProcessedMatch,
+	simulateBTTS,
+	simulateMatchOutcome,
+	simulateTotalGoalsOverUnder,
 } from "../src/modules/betting-insights";
 import { buildMatchContext } from "../src/modules/betting-insights/match-context/context-adjustments";
 import { buildGoalDistributionModifiers } from "../src/modules/betting-insights/simulations/goal-distribution-modifiers";
@@ -30,6 +33,29 @@ type EvalRow = {
 	probDraw: number;
 	probAwayWin: number;
 	actual: "HOME" | "DRAW" | "AWAY";
+};
+
+type BttsEvalRow = {
+	fixtureId: number;
+	date: string;
+	leagueId: number;
+	season: number;
+	matchType: string;
+	probYes: number;
+	probNo: number;
+	actual: "YES" | "NO";
+};
+
+type GoalsEvalRow = {
+	fixtureId: number;
+	date: string;
+	leagueId: number;
+	season: number;
+	matchType: string;
+	line: number;
+	probOver: number;
+	probUnder: number;
+	actual: "OVER" | "UNDER";
 };
 
 type UefaPriorsPayload = {
@@ -115,12 +141,15 @@ const RETRY_BASE_MS = 500;
 const MAX_MATCH_HISTORY = 50;
 const H2H_API_LIMIT = 25;
 const H2H_MODEL_LIMIT = 5;
+const ALLOWED_GOAL_LINES = new Set([0.5, 1.5, 2.5, 3.5, 4.5, 5.5]);
 
 const parseArg = (args: string[], key: string) => {
 	const index = args.findIndex((a) => a === key);
 	if (index === -1) return null;
 	return args[index + 1] ?? null;
 };
+
+const hasFlag = (args: string[], key: string) => args.includes(key);
 
 const parseLeagueIds = (raw: string | null) => {
 	if (!raw) return [];
@@ -322,6 +351,21 @@ const getActualOutcome = (fixture: Fixture): EvalRow["actual"] => {
 	if (home > away) return "HOME";
 	if (home < away) return "AWAY";
 	return "DRAW";
+};
+
+const getActualBtts = (fixture: Fixture): BttsEvalRow["actual"] => {
+	const home = fixture.goals.home ?? 0;
+	const away = fixture.goals.away ?? 0;
+	return home > 0 && away > 0 ? "YES" : "NO";
+};
+
+const getActualTotalGoals = (
+	fixture: Fixture,
+	line: number,
+): GoalsEvalRow["actual"] => {
+	const home = fixture.goals.home ?? 0;
+	const away = fixture.goals.away ?? 0;
+	return home + away > line ? "OVER" : "UNDER";
 };
 
 const toProb = (value?: number) => {
@@ -539,15 +583,39 @@ const main = async () => {
 	const args = process.argv.slice(2);
 	const leagueIds = parseLeagueIds(parseArg(args, "--league-ids"));
 	const seasons = parseSeasons(args);
+	const disableH2h = hasFlag(args, "--disable-h2h");
+	const disableStandings = hasFlag(args, "--disable-standings");
+	const disableTeamStats = hasFlag(args, "--disable-team-stats");
+	const market =
+		(parseArg(args, "--market") ?? "match-outcome") as
+			| "match-outcome"
+			| "btts"
+			| "total-goals";
+	const lineRaw = parseArg(args, "--line");
+	const goalLine = Number(lineRaw ?? 2.5);
+	const outputPathRaw = parseArg(args, "--output");
 	const outputPath =
-		parseArg(args, "--output") ?? resolve(__dirname, "calibration-eval.json");
+		outputPathRaw ??
+		resolve(
+			__dirname,
+			market === "match-outcome"
+				? "calibration-eval.json"
+				: market === "btts"
+					? "calibration-eval-btts.json"
+					: "calibration-eval-goals.json",
+		);
 	const payloadPath =
 		parseArg(args, "--payload") ??
 		resolve(__dirname, "../../../docs/plans/uefa-priors-payload.json");
 
-	if (!leagueIds.length || !seasons.length) {
+	if (
+		!leagueIds.length ||
+		!seasons.length ||
+		(market === "total-goals" &&
+			(!Number.isFinite(goalLine) || !ALLOWED_GOAL_LINES.has(goalLine)))
+	) {
 		throw new Error(
-			"Usage: --league-ids 39,140 --seasons 2024,2025 [--payload path] [--output path] (or --from-season 2024 --to-season 2025)",
+			"Usage: --league-ids 39,140 --seasons 2024,2025 [--market match-outcome|btts|total-goals] [--line 0.5|1.5|2.5|3.5|4.5|5.5] [--payload path] [--output path] [--disable-h2h] [--disable-standings] [--disable-team-stats] (or --from-season 2024 --to-season 2025)",
 		);
 	}
 
@@ -557,7 +625,7 @@ const main = async () => {
 	const apiUrl = process.env.FOOTBALL_API_URL;
 	const apiKey = process.env.RAPIDAPI_KEY;
 
-	const evalRows: EvalRow[] = [];
+	const evalRows: Array<EvalRow | BttsEvalRow | GoalsEvalRow> = [];
 
 	for (const leagueId of leagueIds) {
 		for (const season of seasons) {
@@ -587,19 +655,23 @@ const main = async () => {
 				continue;
 			}
 
-			const teamMap = new Map<number, string>();
-			for (const fixture of fixtures) {
-				teamMap.set(fixture.teams.home.id, fixture.teams.home.name);
-				teamMap.set(fixture.teams.away.id, fixture.teams.away.name);
+			let standings: Map<number, StandingsRow> | null = null;
+			let leagueSize = 0;
+			if (!disableStandings) {
+				const teamMap = new Map<number, string>();
+				for (const fixture of fixtures) {
+					teamMap.set(fixture.teams.home.id, fixture.teams.home.name);
+					teamMap.set(fixture.teams.away.id, fixture.teams.away.name);
+				}
+				leagueSize = teamMap.size;
+				standings = initStandings(
+					Array.from(teamMap.entries()).map(([id, name]) => ({ id, name })),
+				);
 			}
-			const leagueSize = teamMap.size;
-			const standings = initStandings(
-				Array.from(teamMap.entries()).map(([id, name]) => ({ id, name })),
-			);
 
 			const leagueStats = computeLeagueStats(fixtures);
 			const teamHistory = new Map<number, ProcessedMatch[]>();
-			const h2hCache = new Map<string, Fixture[]>();
+			const h2hCache = disableH2h ? null : new Map<string, Fixture[]>();
 			const eloState = new Map<number, EloState>();
 
 			for (const fixture of fixtures) {
@@ -635,41 +707,47 @@ const main = async () => {
 				};
 
 				{
-					const standingsSnapshot = buildStandingsSnapshot(
-						standings,
-						leagueSize,
-					);
-					const homeStandings = getTeamStandingsData(standingsSnapshot, homeId);
-					const awayStandings = getTeamStandingsData(standingsSnapshot, awayId);
+					const standingsSnapshot = standings
+						? buildStandingsSnapshot(standings, leagueSize)
+						: null;
+					const homeStandings = standingsSnapshot
+						? getTeamStandingsData(standingsSnapshot, homeId)
+						: null;
+					const awayStandings = standingsSnapshot
+						? getTeamStandingsData(standingsSnapshot, awayId)
+						: null;
 
-					let h2hRaw = h2hCache.get(key);
-					if (!h2hRaw) {
-						h2hRaw = await fetchH2HMatchesWithRetry(
-							homeId,
-							awayId,
-							apiUrl,
-							apiKey,
-						);
-						h2hRaw = h2hRaw
-							.filter((match) =>
-								FINISHED_STATUSES.has(match.fixture.status.short),
-							)
-							.sort(
-								(a, b) =>
-									new Date(b.fixture.date).getTime() -
-									new Date(a.fixture.date).getTime(),
+					let h2hMatches: ProcessedMatch[] = [];
+					if (!disableH2h && h2hCache) {
+						let h2hRaw = h2hCache.get(key);
+						if (!h2hRaw) {
+							h2hRaw = await fetchH2HMatchesWithRetry(
+								homeId,
+								awayId,
+								apiUrl,
+								apiKey,
 							);
-						h2hCache.set(key, h2hRaw);
-						await sleep(REQUEST_DELAY_MS);
-					}
+							h2hRaw = h2hRaw
+								.filter((match) =>
+									FINISHED_STATUSES.has(match.fixture.status.short),
+								)
+								.sort(
+									(a, b) =>
+										new Date(b.fixture.date).getTime() -
+										new Date(a.fixture.date).getTime(),
+								);
+							h2hCache.set(key, h2hRaw);
+							await sleep(REQUEST_DELAY_MS);
+						}
 
-					const fixtureTime = new Date(fixture.fixture.date).getTime();
-					const h2hMatches = h2hRaw
-						.filter(
-							(match) => new Date(match.fixture.date).getTime() <= fixtureTime,
-						)
-						.slice(0, H2H_MODEL_LIMIT)
-						.map((match) => buildProcessedMatch(match, homeId));
+						const fixtureTime = new Date(fixture.fixture.date).getTime();
+						h2hMatches = h2hRaw
+							.filter(
+								(match) => new Date(match.fixture.date).getTime() <= fixtureTime,
+							)
+							.slice(0, H2H_MODEL_LIMIT)
+							.map((match) => buildProcessedMatch(match, homeId));
+					}
 					const h2hData = processH2HData(h2hMatches, homeId, awayId);
 
 					const homeElo = {
@@ -685,8 +763,12 @@ const main = async () => {
 						confidence: calculateEloConfidence(awayEloState.games),
 					};
 
-					const homeStats = buildStatsFromMatches(homeMatches);
-					const awayStats = buildStatsFromMatches(awayMatches);
+					const homeStats = disableTeamStats
+						? null
+						: buildStatsFromMatches(homeMatches);
+					const awayStats = disableTeamStats
+						? null
+						: buildStatsFromMatches(awayMatches);
 
 					const homeTeam = insightsService.processTeamData(
 						homeId,
@@ -734,28 +816,71 @@ const main = async () => {
 						leagueStats,
 					});
 
-					const simulation = simulateMatchOutcome(
-						homeTeam,
-						awayTeam,
-						h2hData,
-						context,
-						undefined,
-						undefined,
-						distributionModifiers,
-						{ skipCalibration: true },
-					);
-
-					evalRows.push({
-						fixtureId: fixture.fixture.id,
-						date: normalizeDate(fixture.fixture.date),
-						leagueId,
-						season,
-						matchType: context.matchType.type,
-						probHomeWin: toProb(simulation.probabilityDistribution.home),
-						probDraw: toProb(simulation.probabilityDistribution.draw),
-						probAwayWin: toProb(simulation.probabilityDistribution.away),
-						actual: getActualOutcome(fixture),
-					});
+					if (market === "match-outcome") {
+						const simulation = simulateMatchOutcome(
+							homeTeam,
+							awayTeam,
+							h2hData,
+							context,
+							undefined,
+							undefined,
+							distributionModifiers,
+							{ skipCalibration: true },
+						);
+						evalRows.push({
+							fixtureId: fixture.fixture.id,
+							date: normalizeDate(fixture.fixture.date),
+							leagueId,
+							season,
+							matchType: context.matchType.type,
+							probHomeWin: toProb(simulation.probabilityDistribution.home),
+							probDraw: toProb(simulation.probabilityDistribution.draw),
+							probAwayWin: toProb(simulation.probabilityDistribution.away),
+							actual: getActualOutcome(fixture),
+						});
+					} else if (market === "btts") {
+						const simulation = simulateBTTS(
+							homeTeam,
+							awayTeam,
+							h2hData,
+							context,
+							undefined,
+							distributionModifiers,
+							{ skipCalibration: true },
+						);
+						evalRows.push({
+							fixtureId: fixture.fixture.id,
+							date: normalizeDate(fixture.fixture.date),
+							leagueId,
+							season,
+							matchType: context.matchType.type,
+							probYes: toProb(simulation.probabilityDistribution.yes),
+							probNo: toProb(simulation.probabilityDistribution.no),
+							actual: getActualBtts(fixture),
+						});
+					} else {
+						const simulation = simulateTotalGoalsOverUnder(
+							homeTeam,
+							awayTeam,
+							h2hData,
+							context,
+							goalLine as GoalLine,
+							undefined,
+							distributionModifiers,
+							{ skipCalibration: true },
+						);
+						evalRows.push({
+							fixtureId: fixture.fixture.id,
+							date: normalizeDate(fixture.fixture.date),
+							leagueId,
+							season,
+							matchType: context.matchType.type,
+							line: goalLine,
+							probOver: toProb(simulation.probabilityDistribution.over),
+							probUnder: toProb(simulation.probabilityDistribution.under),
+							actual: getActualTotalGoals(fixture, goalLine),
+						});
+					}
 				}
 
 				const goalDiff = (fixture.goals.home ?? 0) - (fixture.goals.away ?? 0);
@@ -791,22 +916,24 @@ const main = async () => {
 				teamHistory.set(homeId, nextHomeHistory);
 				teamHistory.set(awayId, nextAwayHistory);
 
-				const homeGoals = fixture.goals.home ?? 0;
-				const awayGoals = fixture.goals.away ?? 0;
-				updateStandings(
-					standings,
-					homeId,
-					fixture.teams.home.name,
-					homeGoals,
-					awayGoals,
-				);
-				updateStandings(
-					standings,
-					awayId,
-					fixture.teams.away.name,
-					awayGoals,
-					homeGoals,
-				);
+				if (standings) {
+					const homeGoals = fixture.goals.home ?? 0;
+					const awayGoals = fixture.goals.away ?? 0;
+					updateStandings(
+						standings,
+						homeId,
+						fixture.teams.home.name,
+						homeGoals,
+						awayGoals,
+					);
+					updateStandings(
+						standings,
+						awayId,
+						fixture.teams.away.name,
+						awayGoals,
+						homeGoals,
+					);
+				}
 			}
 		}
 	}
