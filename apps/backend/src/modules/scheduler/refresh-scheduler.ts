@@ -328,8 +328,11 @@ async function backfillTeamCountries(env: SchedulerEnv): Promise<void> {
 		return;
 	}
 
+	const CONCURRENCY = 4;
 	let updated = 0;
-	for (const target of targets) {
+	let nextIndex = 0;
+
+	const processTarget = async (target: (typeof targets)[number]) => {
 		try {
 			const apiTeam = await getFootballApiTeamById(
 				Number(target.provider_id),
@@ -341,19 +344,40 @@ async function backfillTeamCountries(env: SchedulerEnv): Promise<void> {
 				typeof first?.country === "string" && first.country.trim()
 					? first.country.trim()
 					: null;
-			if (!country) continue;
+			if (!country) return false;
 
 			await env.ENTITIES_DB.prepare(
 				`UPDATE teams SET country = ?, updated_at = datetime('now') WHERE id = ?`,
 			)
 				.bind(country, target.team_id)
 				.run();
-			updated += 1;
+			return true;
 		} catch (error) {
 			console.warn(
 				`⚠️ [Scheduler] Failed to fetch country for team ${target.team_id} (${target.team_name})`,
 				error,
 			);
+			return false;
+		}
+	};
+
+	const results: Promise<boolean>[] = [];
+	const workers = Array.from(
+		{ length: Math.min(CONCURRENCY, targets.length) },
+		async () => {
+			while (nextIndex < targets.length) {
+				const current = targets[nextIndex];
+				nextIndex += 1;
+				results.push(processTarget(current));
+			}
+		},
+	);
+
+	await Promise.all(workers);
+	const settled = await Promise.allSettled(results);
+	for (const result of settled) {
+		if (result.status === "fulfilled" && result.value) {
+			updated += 1;
 		}
 	}
 
