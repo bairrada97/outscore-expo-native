@@ -368,7 +368,8 @@ async function backfillTeamCountries(env: SchedulerEnv): Promise<void> {
 			while (nextIndex < targets.length) {
 				const current = targets[nextIndex];
 				nextIndex += 1;
-				results.push(processTarget(current));
+				const ok = await processTarget(current);
+				results.push(Promise.resolve(ok));
 			}
 		},
 	);
