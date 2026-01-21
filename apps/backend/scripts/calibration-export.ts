@@ -59,6 +59,26 @@ type EloState = {
 	asOf: string;
 };
 
+type RawTeamStats = {
+	form?: string | null;
+	fixtures: {
+		played: { home: number; away: number; total: number };
+	};
+	goals: {
+		for: {
+			total: { total: number };
+			average: { total: string; home: string; away: string };
+		};
+		against: {
+			total: { total: number };
+			average: { total: string; home: string; away: string };
+		};
+	};
+	clean_sheet?: { total?: number };
+	failed_to_score?: { total?: number };
+	lineups?: Array<{ formation: string | null }>;
+};
+
 type StandingsRow = {
 	teamId: number;
 	teamName: string;
@@ -325,7 +345,7 @@ const buildProcessedMatch = (
 		teamId,
 	);
 
-const buildStatsFromMatches = (matches: ProcessedMatch[]) => {
+const buildStatsFromMatches = (matches: ProcessedMatch[]): RawTeamStats | null => {
 	if (!matches.length) return null;
 
 	const formatAvg = (value: number) => value.toFixed(2);
@@ -482,7 +502,7 @@ const getTeamStandingsData = (
 	const row = snapshot.rows.find((entry) => entry.teamId === teamId);
 	if (!row) return null;
 	return {
-		rank: snapshot.rankById.get(teamId) ?? row.rank ?? 1,
+		rank: snapshot.rankById.get(teamId) ?? 1,
 		points: row.points,
 		played: row.played,
 		win: row.win,
@@ -669,10 +689,13 @@ const main = async () => {
 						confidence: calculateEloConfidence(awayEloState.games),
 					};
 
+					const homeStats = buildStatsFromMatches(homeMatches);
+					const awayStats = buildStatsFromMatches(awayMatches);
+
 					const homeTeam = insightsService.processTeamData(
 						homeId,
 						fixture.teams.home.name,
-						(buildStatsFromMatches(homeMatches) ?? null) as unknown,
+						homeStats,
 						homeMatches,
 						leagueId,
 						homeStandings,
@@ -681,7 +704,7 @@ const main = async () => {
 					const awayTeam = insightsService.processTeamData(
 						awayId,
 						fixture.teams.away.name,
-						(buildStatsFromMatches(awayMatches) ?? null) as unknown,
+						awayStats,
 						awayMatches,
 						leagueId,
 						awayStandings,
