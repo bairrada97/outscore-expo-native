@@ -17,6 +17,8 @@
  */
 
 import { DEFAULT_ALGORITHM_CONFIG } from "../config/algorithm-config";
+import { MATCH_OUTCOME_CALIBRATION } from "../config/match-outcome-calibration";
+import { applyTemperatureScaling } from "../utils/calibration-utils";
 import type { MatchContext } from "../match-context/context-adjustments";
 import { detectDerby } from "../match-context/derby-detector";
 import { finalizeSimulation } from "../presentation/simulation-presenter";
@@ -231,6 +233,9 @@ export function simulateMatchOutcome(
 		awayImpact?: InjuryImpactAssessment | null;
 	},
 	distributionModifiers?: GoalDistributionModifiers,
+	options?: {
+		skipCalibration?: boolean;
+	},
 ): Simulation {
 	// =========================================================================
 	// STEP 1: Calculate factor scores (Section 4.6.1)
@@ -330,9 +335,16 @@ export function simulateMatchOutcome(
 		distribution.probDraw,
 		awayResult.finalProbability,
 	);
+	const calibrated = options?.skipCalibration
+		? normalized
+		: applyTemperatureScaling(
+				normalized,
+				MATCH_OUTCOME_CALIBRATION.temperature,
+				"percent",
+			);
 
 	return buildMatchResultPrediction(
-		normalized,
+		calibrated,
 		homeResult,
 		awayResult,
 		homeTeam,
@@ -580,6 +592,7 @@ function normalizeProbabilities(
 		away: (away / total) * 100,
 	};
 }
+
 
 // ============================================================================
 // CONFIDENCE & RESPONSE
