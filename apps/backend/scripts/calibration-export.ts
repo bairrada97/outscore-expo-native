@@ -2,20 +2,20 @@ import type { Fixture, FixturesResponse } from "@outscore/shared-types";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
-	insightsService,
-	simulateMatchOutcome,
-	type ProcessedMatch,
+    insightsService,
+    type ProcessedMatch,
+    simulateMatchOutcome,
 } from "../src/modules/betting-insights";
-import { buildGoalDistributionModifiers } from "../src/modules/betting-insights/simulations/goal-distribution-modifiers";
 import { buildMatchContext } from "../src/modules/betting-insights/match-context/context-adjustments";
-import { extractRoundNumber } from "../src/modules/betting-insights/utils/helpers";
+import { buildGoalDistributionModifiers } from "../src/modules/betting-insights/simulations/goal-distribution-modifiers";
 import { processH2HData } from "../src/modules/betting-insights/utils/h2h-helpers";
+import { extractRoundNumber } from "../src/modules/betting-insights/utils/helpers";
 import {
-	calculateDivisionOffset,
-	calculateEloConfidence,
-	calculateStartingElo,
-	inferDivisionLevel,
-	updateElo,
+    calculateDivisionOffset,
+    calculateEloConfidence,
+    calculateStartingElo,
+    inferDivisionLevel,
+    updateElo,
 } from "../src/modules/elo/elo-engine";
 import { getFootballApiFixturesByLeagueSeason } from "../src/pkg/util/football-api";
 import { detectMatchType } from "./lib/elo-utils";
@@ -64,7 +64,8 @@ const REQUEST_DELAY_MS = 250;
 const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 500;
 const MAX_MATCH_HISTORY = 50;
-const MAX_H2H_HISTORY = 10;
+const H2H_API_LIMIT = 25;
+const H2H_MODEL_LIMIT = 5;
 const STATS_CONCURRENCY = 4;
 
 const parseArg = (args: string[], key: string) => {
@@ -116,7 +117,9 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const shouldRetryRequest = (error: unknown) => {
 	const message =
-		error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+		error instanceof Error
+			? error.message.toLowerCase()
+			: String(error).toLowerCase();
 	const statusMatch = message.match(/\b([45]\d{2})\b/);
 	const status = statusMatch ? Number(statusMatch[1]) : null;
 	if (status === 429 || (status !== null && status >= 500)) {
@@ -157,6 +160,54 @@ const fetchFixturesWithRetry = async (
 		}
 	}
 	throw new Error("Failed to fetch fixtures after retries.");
+};
+
+const fetchH2HMatchesWithRetry = async (
+	homeId: number,
+	awayId: number,
+	apiUrl?: string,
+	apiKey?: string,
+): Promise<Fixture[]> => {
+	if (!apiUrl || !apiKey) {
+		throw new Error("API URL or API Key not provided");
+	}
+
+	const url = new URL(`${apiUrl}/fixtures/headtohead`);
+	url.searchParams.append("h2h", `${homeId}-${awayId}`);
+	url.searchParams.append("last", String(H2H_API_LIMIT));
+
+	for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
+		try {
+			const response = await fetch(url.toString(), {
+				headers: {
+					"x-rapidapi-host": "api-football-v1.p.rapidapi.com",
+					"x-rapidapi-key": apiKey,
+				},
+			});
+			if (!response.ok) {
+				const errorText = await response.text();
+				throw new Error(
+					`API request failed: ${response.statusText} - ${errorText}`,
+				);
+			}
+			const data = (await response.json()) as FixturesResponse;
+			if (data.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+				throw new Error(`API returned errors: ${JSON.stringify(data.errors)}`);
+			}
+			return data.response ?? [];
+		} catch (error) {
+			if (attempt >= MAX_RETRIES || !shouldRetryRequest(error)) {
+				throw error;
+			}
+			const delay = RETRY_BASE_MS * 2 ** attempt;
+			console.warn(
+				`⚠️ [Calibration] Retry ${attempt + 1}/${MAX_RETRIES} for h2h ${homeId}-${awayId} in ${delay}ms.`,
+			);
+			await sleep(delay);
+		}
+	}
+
+	throw new Error("Failed to fetch H2H after retries.");
 };
 
 const loadPriorsPayload = (payloadPath: string): UefaPriorsPayload => {
@@ -227,11 +278,21 @@ const getActualOutcome = (fixture: Fixture): EvalRow["actual"] => {
 };
 
 const toProb = (value?: number) => {
-	const safe = Number.isFinite(value) ? Number(value) : 0;
-	return Math.max(0, Math.min(1, safe / 100));
+	const raw = Number.isFinite(value) ? Number(value) : NaN;
+	const normalized = Number.isFinite(raw) ? raw / 100 : 0;
+	const clamped = Math.max(0, Math.min(1, normalized));
+	if (!Number.isFinite(raw) || raw < 0 || raw > 100 || clamped !== normalized) {
+		console.warn(
+			`⚠️ [Calibration] Invalid probability value ${String(value)}; clamped to ${clamped}.`,
+		);
+	}
+	return clamped;
 };
 
-const buildProcessedMatch = (fixture: Fixture, teamId: number): ProcessedMatch =>
+const buildProcessedMatch = (
+	fixture: Fixture,
+	teamId: number,
+): ProcessedMatch =>
 	insightsService.convertToProcessedMatch(
 		fixture as Parameters<typeof insightsService.convertToProcessedMatch>[0],
 		teamId,
@@ -243,7 +304,7 @@ const fetchTeamStats = async (
 	season: number,
 	apiUrl?: string,
 	apiKey?: string,
-): Promise<unknown | null> => {
+): Promise<unknown> => {
 	if (!apiUrl || !apiKey) {
 		throw new Error("API URL or API Key not provided");
 	}
@@ -327,8 +388,7 @@ const main = async () => {
 	const leagueIds = parseLeagueIds(parseArg(args, "--league-ids"));
 	const seasons = parseSeasons(args);
 	const outputPath =
-		parseArg(args, "--output") ??
-		resolve(__dirname, "calibration-eval.json");
+		parseArg(args, "--output") ?? resolve(__dirname, "calibration-eval.json");
 	const payloadPath =
 		parseArg(args, "--payload") ??
 		resolve(__dirname, "../../../docs/plans/uefa-priors-payload.json");
@@ -349,11 +409,18 @@ const main = async () => {
 
 	for (const leagueId of leagueIds) {
 		for (const season of seasons) {
-			const data = await fetchFixturesWithRetry(leagueId, season, apiUrl, apiKey);
+			const data = await fetchFixturesWithRetry(
+				leagueId,
+				season,
+				apiUrl,
+				apiKey,
+			);
 			await sleep(REQUEST_DELAY_MS);
 
 			const fixtures = (data.response ?? [])
-				.filter((fixture) => FINISHED_STATUSES.has(fixture.fixture.status.short))
+				.filter((fixture) =>
+					FINISHED_STATUSES.has(fixture.fixture.status.short),
+				)
 				.filter(
 					(fixture) =>
 						fixture.goals.home !== null && fixture.goals.away !== null,
@@ -386,7 +453,7 @@ const main = async () => {
 			});
 
 			const teamHistory = new Map<number, ProcessedMatch[]>();
-			const h2hHistory = new Map<string, Fixture[]>();
+			const h2hCache = new Map<string, Fixture[]>();
 			const eloState = new Map<number, EloState>();
 
 			for (const fixture of fixtures) {
@@ -422,10 +489,34 @@ const main = async () => {
 				};
 
 				{
-					const h2hRaw = h2hHistory.get(key) ?? [];
-					const h2hMatches = h2hRaw.map((match) =>
-						buildProcessedMatch(match, homeId),
-					);
+					let h2hRaw = h2hCache.get(key);
+					if (!h2hRaw) {
+						h2hRaw = await fetchH2HMatchesWithRetry(
+							homeId,
+							awayId,
+							apiUrl,
+							apiKey,
+						);
+						h2hRaw = h2hRaw
+							.filter((match) =>
+								FINISHED_STATUSES.has(match.fixture.status.short),
+							)
+							.sort(
+								(a, b) =>
+									new Date(b.fixture.date).getTime() -
+									new Date(a.fixture.date).getTime(),
+							);
+						h2hCache.set(key, h2hRaw);
+						await sleep(REQUEST_DELAY_MS);
+					}
+
+					const fixtureTime = new Date(fixture.fixture.date).getTime();
+					const h2hMatches = h2hRaw
+						.filter(
+							(match) => new Date(match.fixture.date).getTime() <= fixtureTime,
+						)
+						.slice(0, H2H_MODEL_LIMIT)
+						.map((match) => buildProcessedMatch(match, homeId));
 					const h2hData = processH2HData(h2hMatches, homeId, awayId);
 
 					const homeElo = {
@@ -543,13 +634,6 @@ const main = async () => {
 				);
 				teamHistory.set(homeId, nextHomeHistory);
 				teamHistory.set(awayId, nextAwayHistory);
-
-				const h2hRaw = h2hHistory.get(key) ?? [];
-				if (h2hRaw.length >= MAX_H2H_HISTORY) {
-					h2hRaw.pop();
-				}
-				h2hRaw.unshift(fixture);
-				h2hHistory.set(key, h2hRaw);
 			}
 		}
 	}

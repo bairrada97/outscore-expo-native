@@ -135,13 +135,30 @@ const main = () => {
 	for (const [leagueId, list] of byLeague.entries()) {
 		if (list.length < minCount) continue;
 		summarize(`league=${leagueId}`, list);
+		if (MATCH_OUTCOME_CALIBRATION.temperature !== 1) {
+			summarize(
+				`league=${leagueId} (calibrated)`,
+				list,
+				MATCH_OUTCOME_CALIBRATION.temperature,
+			);
+		}
 	}
 
 	console.log(`== MatchType slices (min ${minCount}) ==`);
 	for (const [matchType, list] of byMatchType.entries()) {
 		if (list.length < minCount) continue;
 		summarize(`matchType=${matchType}`, list);
+		if (MATCH_OUTCOME_CALIBRATION.temperature !== 1) {
+			summarize(
+				`matchType=${matchType} (calibrated)`,
+				list,
+				MATCH_OUTCOME_CALIBRATION.temperature,
+			);
+		}
 	}
 };
 
-main();
+main().catch((err) => {
+	console.error("Error in main:", err);
+	process.exit(1);
+});
