@@ -208,12 +208,13 @@ const main = async () => {
 		!leagueIds.length ||
 		!fromSeasonRaw ||
 		!toSeasonRaw ||
-		!Number.isFinite(fromSeason) ||
-		!Number.isFinite(toSeason) ||
+		!Number.isInteger(fromSeason) ||
+		!Number.isInteger(toSeason) ||
+		fromSeason > toSeason ||
 		!dbName
 	) {
 		throw new Error(
-			"Usage: --league-ids 39,140 --from-season 2021 --to-season 2025 --db ENTITIES_DB [--payload path] [--output path] [--config path] [--remote] [--resume] [--apply]",
+			"Usage: --league-ids 39,140 --from-season 2021 --to-season 2025 --db ENTITIES_DB [--payload path] [--output path] [--config path] [--remote] [--resume] [--apply] (seasons must be integers with from-season <= to-season)",
 		);
 	}
 

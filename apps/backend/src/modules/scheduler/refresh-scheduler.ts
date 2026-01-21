@@ -470,7 +470,13 @@ function detectMatchType(leagueName: string) {
 		name.includes("coupe") ||
 		name.includes("coppa") ||
 		name.includes("pokal") ||
-		name.includes("beker")
+		name.includes("beker") ||
+		name.includes("super cup") ||
+		name.includes("supercup") ||
+		name.includes("super-cup") ||
+		name.includes("supercopa") ||
+		name.includes("supercoppa") ||
+		name.includes("shield")
 	) {
 		return "CUP" as const;
 	}
