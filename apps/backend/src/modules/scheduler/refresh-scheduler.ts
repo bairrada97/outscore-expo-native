@@ -361,7 +361,6 @@ async function backfillTeamCountries(env: SchedulerEnv): Promise<void> {
 		}
 	};
 
-	const results: Promise<boolean>[] = [];
 	const workers = Array.from(
 		{ length: Math.min(CONCURRENCY, targets.length) },
 		async () => {
@@ -369,18 +368,14 @@ async function backfillTeamCountries(env: SchedulerEnv): Promise<void> {
 				const current = targets[nextIndex];
 				nextIndex += 1;
 				const ok = await processTarget(current);
-				results.push(Promise.resolve(ok));
+				if (ok) {
+					updated += 1;
+				}
 			}
 		},
 	);
 
 	await Promise.all(workers);
-	const settled = await Promise.allSettled(results);
-	for (const result of settled) {
-		if (result.status === "fulfilled" && result.value) {
-			updated += 1;
-		}
-	}
 
 	await env.FOOTBALL_KV.put(TEAM_COUNTRY_BACKFILL_KEY, today);
 	console.log(
