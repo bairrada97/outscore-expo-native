@@ -245,6 +245,7 @@ export function createMockInsightsResponse(
 			overallConfidenceMultiplier: 0.9,
 			warnings: [],
 		},
+		sanityWarnings: [],
 		overallConfidence: "MEDIUM",
 		generatedAt: new Date().toISOString(),
 		source: "API",

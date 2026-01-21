@@ -4,6 +4,7 @@
 export {
   createInsightsRoutes, insightsService, type InsightsEnv
 } from "./betting-insights";
+export { createBacktestsRoutes } from "./backtests";
 export * from "./cache";
 // Entities module (D1 canonical storage)
 export * from "./entities";

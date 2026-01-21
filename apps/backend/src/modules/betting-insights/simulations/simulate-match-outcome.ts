@@ -53,6 +53,25 @@ import { buildGoalDistribution } from "./goal-distribution";
 import type { GoalDistributionModifiers } from "./goal-distribution-modifiers";
 import { calculateEloGapAdjustment } from "../../elo";
 
+const MATCH_OUTCOME_NEUTRAL_GOAL_STATS = {
+	avgGoalsScored: 1.2,
+	avgGoalsConceded: 1.2,
+	homeAvgScored: 1.4,
+	homeAvgConceded: 1.0,
+	awayAvgScored: 1.0,
+	awayAvgConceded: 1.4,
+} as const;
+
+function withNeutralGoalStats(team: TeamData): TeamData {
+	return {
+		...team,
+		stats: {
+			...team.stats,
+			...MATCH_OUTCOME_NEUTRAL_GOAL_STATS,
+		},
+	};
+}
+
 // ============================================================================
 // MIDWEEK LOAD (competition context)
 // ============================================================================
@@ -237,34 +256,44 @@ export function simulateMatchOutcome(
 		skipCalibration?: boolean;
 	},
 ): Simulation {
+	// Ignore season goal-rate stats for MatchOutcome calculations.
+	const homeOutcomeTeam = withNeutralGoalStats(homeTeam);
+	const awayOutcomeTeam = withNeutralGoalStats(awayTeam);
+
 	// =========================================================================
 	// STEP 1: Calculate factor scores (Section 4.6.1)
 	// =========================================================================
 
 	// Factor 1: Recent Form Comparison (30% weight)
-	const formScore = calculateFormScore(homeTeam, awayTeam);
+	const formScore = calculateFormScore(homeOutcomeTeam, awayOutcomeTeam);
 
 	// Factor 2: H2H Record (25% weight)
 	const h2hScore = calculateH2HScore(h2h);
 
 	// Factor 3: Dynamic Home Advantage (20% weight)
-	const homeAdvantageScore = calculateHomeAdvantageScore(homeTeam, awayTeam);
+	const homeAdvantageScore = calculateHomeAdvantageScore(
+		homeOutcomeTeam,
+		awayOutcomeTeam,
+	);
 
 	// Factor 4: Motivation Score (18% weight)
-	const motivationScore = calculateMotivationScore(homeTeam, awayTeam);
+	const motivationScore = calculateMotivationScore(
+		homeOutcomeTeam,
+		awayOutcomeTeam,
+	);
 
 	// Factor 5: Rest Advantage (12% weight)
-	const restScore = calculateRestScore(homeTeam, awayTeam);
+	const restScore = calculateRestScore(homeOutcomeTeam, awayOutcomeTeam);
 
 	// Factor 6: League Position/Quality (10% weight)
-	const positionScore = calculatePositionScore(homeTeam, awayTeam);
+	const positionScore = calculatePositionScore(homeOutcomeTeam, awayOutcomeTeam);
 
 	// =========================================================================
 	// STEP 2: Shared goal distribution probabilities
 	// =========================================================================
 	const distribution = buildGoalDistribution(
-		homeTeam,
-		awayTeam,
+		homeOutcomeTeam,
+		awayOutcomeTeam,
 		config.goalDistribution,
 		distributionModifiers,
 	);
@@ -276,18 +305,28 @@ export function simulateMatchOutcome(
 	const homeAdjustments: Adjustment[] = [];
 	const awayAdjustments: Adjustment[] = [];
 
-	addMindMoodAdjustments(homeTeam, awayTeam, homeAdjustments, awayAdjustments);
-	addEloAdjustments(homeTeam, awayTeam, homeAdjustments, awayAdjustments);
+	addMindMoodAdjustments(
+		homeOutcomeTeam,
+		awayOutcomeTeam,
+		homeAdjustments,
+		awayAdjustments,
+	);
+	addEloAdjustments(
+		homeOutcomeTeam,
+		awayOutcomeTeam,
+		homeAdjustments,
+		awayAdjustments,
+	);
 	addFormationAdjustments(
-		homeTeam,
-		awayTeam,
+		homeOutcomeTeam,
+		awayOutcomeTeam,
 		homeAdjustments,
 		awayAdjustments,
 		1.0,
 	);
 	addSafetyFlagAdjustments(
-		homeTeam,
-		awayTeam,
+		homeOutcomeTeam,
+		awayOutcomeTeam,
 		homeAdjustments,
 		awayAdjustments,
 	);
@@ -295,17 +334,17 @@ export function simulateMatchOutcome(
 	const injuryAdjustmentsHome = injuries?.homeAdjustments ?? [];
 	const injuryAdjustmentsAway = injuries?.awayAdjustments ?? [];
 
-	const homeMidweek = buildMidweekLoadAdjustment(homeTeam);
+	const homeMidweek = buildMidweekLoadAdjustment(homeOutcomeTeam);
 	if (homeMidweek) homeAdjustments.push(homeMidweek.adj);
-	const awayMidweek = buildMidweekLoadAdjustment(awayTeam);
+	const awayMidweek = buildMidweekLoadAdjustment(awayOutcomeTeam);
 	if (awayMidweek) awayAdjustments.push(awayMidweek.adj);
 
 	const homeDerbyHangover = buildPostDerbyHangoverAdjustment({
-		team: homeTeam,
+		team: homeOutcomeTeam,
 	});
 	if (homeDerbyHangover) homeAdjustments.push(homeDerbyHangover.adj);
 	const awayDerbyHangover = buildPostDerbyHangoverAdjustment({
-		team: awayTeam,
+		team: awayOutcomeTeam,
 	});
 	if (awayDerbyHangover) awayAdjustments.push(awayDerbyHangover.adj);
 
@@ -313,7 +352,10 @@ export function simulateMatchOutcome(
 		addContextAdjustments(context, homeAdjustments, awayAdjustments);
 	}
 
-	const baseConfidence = calculateBaseConfidence(homeTeam, awayTeam);
+	const baseConfidence = calculateBaseConfidence(
+		homeOutcomeTeam,
+		awayOutcomeTeam,
+	);
 
 	const homeResult = applyCappedAsymmetricAdjustments(
 		distribution.probHomeWin,

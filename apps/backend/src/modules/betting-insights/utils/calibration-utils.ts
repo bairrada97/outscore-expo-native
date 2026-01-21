@@ -60,6 +60,28 @@ export const applyTemperatureScaling = (
 	return scaled;
 };
 
+export const applyBinaryTemperatureScaling = (
+	probYes: number,
+	temperature: number,
+	scale: CalibrationScale = "unit",
+): number => {
+	if (!Number.isFinite(temperature) || temperature <= 0 || temperature === 1) {
+		return probYes;
+	}
+
+	const divisor = scale === "percent" ? 100 : 1;
+	const raw = Math.max(0, probYes) / divisor;
+	const p = clamp(raw, 1e-6, 1 - 1e-6);
+	const logit = Math.log(p / (1 - p)) / temperature;
+	const scaled = 1 / (1 + Math.exp(-logit));
+
+	if (scale === "percent") {
+		return scaled * 100;
+	}
+
+	return scaled;
+};
+
 export const logLoss = (
 	rows: Array<{
 		probHomeWin: number;

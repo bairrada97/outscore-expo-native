@@ -161,6 +161,7 @@ describe("GET /fixtures/:fixtureId/insights", () => {
 			expect(body.data.homeTeamContext).toBeDefined();
 			expect(body.data.awayTeamContext).toBeDefined();
 			expect(body.data.matchContext).toBeDefined();
+			expect(Array.isArray(body.data.sanityWarnings)).toBe(true);
 		});
 
 		it("should include all 4 simulations", async () => {

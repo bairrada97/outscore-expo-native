@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { MATCH_OUTCOME_CALIBRATION } from "../src/modules/betting-insights/config/match-outcome-calibration";
 import {
 	applyTemperatureScaling,
+	assertActual,
+	assertProb,
 	logLoss,
 } from "../src/modules/betting-insights/utils/calibration-utils";
 

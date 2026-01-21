@@ -379,6 +379,88 @@ Expose and log:
 - [ ] Sanity checks: promoted teams, cross-league (UCL) mismatches. (TODO: Owner @joaobairrada, Priority P0, Target 2026-02-05)
 - [ ] Document calibration readiness (per-market calibrators to be added after Elo). (TODO: Owner @joaobairrada, Priority P1, Target 2026-02-07)
 
+## Phase H.1 — Evaluation protocol (rules + ML)
+
+### Goals
+
+- Prevent leakage while measuring real-world accuracy.
+- Compare rules baseline vs calibrated vs ML models on the same time-aware features.
+- Track accuracy stability by league and match type.
+
+### Data splits (season-based, no leakage)
+
+- **Primary split**: train on season N, validate on season N+1.
+- **Rolling split**: evaluate with a 2-season rolling window (e.g., train 2023-24, validate 2025).
+- **Do not** mix matches across the train/validation boundary within a season.
+
+### Required metrics
+
+- **Logloss** (primary) and **Brier** (secondary).
+- Report **overall**, **by league**, and **by match type**.
+- Track calibration with **reliability plots** or at least a **calibrated vs raw** summary.
+
+### Rules baseline evaluation
+
+- Use `calibration-export.ts` to generate time-aware eval rows.
+- Evaluate:
+  - **Raw** rules model (no temperature scaling).
+  - **Calibrated** rules model (global temperature).
+- Run the same evaluation on:
+  - **Elo-only baseline** (for a floor).
+  - **Ablations** (disable h2h, standings, team stats).
+
+### ML evaluation protocol (LightGBM)
+
+- Use the same export dataset as rules to avoid feature leakage.
+- Train **multiclass** (home/draw/away) and evaluate on holdout seasons.
+- Apply post-hoc calibration (temperature or isotonic) on the validation split.
+- Compare against rules model on identical slices.
+
+### Acceptance guidance (production readiness)
+
+- Global logloss improves vs rules baseline.
+- Calibration improves or is neutral on most leagues.
+- No large regressions on top leagues (min sample threshold).
+
+## Phase H.2 — ML dataset spec (MatchOutcome)
+
+### Row-level identifiers
+
+- `fixtureId`, `date`, `leagueId`, `season`, `matchType`
+
+### Targets
+
+- `actual` in `{ HOME, DRAW, AWAY }`
+
+### Core strength features
+
+- `eloHome`, `eloAway`, `eloGap`, `eloGamesHome`, `eloGamesAway`
+- `formScore`, `positionScore`, `restScore`, `h2hScore`
+
+### Team context features (time-aware)
+
+- `homeMoodTier`, `awayMoodTier`, `homeMindTier`, `awayMindTier`
+- `homeEfficiencyIndex`, `awayEfficiencyIndex`
+- `homeDaysSinceLastMatch`, `awayDaysSinceLastMatch`
+- `homeSeasonsInLeague`, `awaySeasonsInLeague`
+
+### H2H features (time-aware)
+
+- `h2hMatchCount`, `h2hHomeWins`, `h2hAwayWins`, `h2hDraws`
+- `h2hAvgGoals`, `h2hBTTSRate`, `h2hRecencyWeightedWinRate`
+
+### League context
+
+- `leagueAvgGoals`, `leagueOver25Rate`, `leagueBTTSRate`
+
+### Optional modifiers (keep off for MatchOutcome if harmful)
+
+- `teamStats*` fields (season goals scored/conceded, home/away rates)
+
+Notes:
+- All features must be **computed as-of the match date** from rolling history.
+- Exclude any feature sourced from end-of-season snapshots.
+
 ## Appendix A — Suggested UEFA priors payload schema (semi-manual ingestion)
 
 Use a single JSON document you can paste into a CLI/admin command.

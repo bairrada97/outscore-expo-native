@@ -6,6 +6,7 @@ import {
 	createFixturesRoutes,
 	createInsightsRoutes,
 	createLeaguesRegistryRoutes,
+	createBacktestsRoutes,
 	type FixturesEnv,
 	handleScheduledEvent,
 	type InsightsEnv,
@@ -148,6 +149,11 @@ app.route("/fixtures", createInsightsRoutes());
  * Admin cache routes (protected)
  */
 app.route("/admin/cache", createCacheAdminRoutes());
+
+/**
+ * Backtest routes (protected)
+ */
+app.route("/admin/backtests", createBacktestsRoutes());
 
 /**
  * 404 handler

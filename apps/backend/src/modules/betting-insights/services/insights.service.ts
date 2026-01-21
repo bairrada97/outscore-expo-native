@@ -579,6 +579,9 @@ export const insightsService = {
 			const awayTeamId = fixture.teams.away.id;
 			const leagueId = fixture.league.id;
 			const season = fixture.league.season;
+			const sanityWarnings: string[] = [];
+			const dataQualityWarnings: string[] = [];
+			const MIN_RELIABLE_STATS_GAMES = 8;
 
 			console.log(
 				`📊 [Insights] ${fixture.teams.home.name} vs ${fixture.teams.away.name} ` +
@@ -607,6 +610,44 @@ export const insightsService = {
 				getCurrentTeamElo(env.ENTITIES_DB, homeTeamId),
 				getCurrentTeamElo(env.ENTITIES_DB, awayTeamId),
 			]);
+
+			if (fixture.league.type === "League" && !standings) {
+				sanityWarnings.push("Standings missing for league match");
+				dataQualityWarnings.push("Standings missing for league match");
+			}
+
+			const homePlayed = homeStats?.fixtures?.played?.total ?? 0;
+			const awayPlayed = awayStats?.fixtures?.played?.total ?? 0;
+			const homePlayedHome = homeStats?.fixtures?.played?.home ?? 0;
+			const homePlayedAway = homeStats?.fixtures?.played?.away ?? 0;
+			const awayPlayedHome = awayStats?.fixtures?.played?.home ?? 0;
+			const awayPlayedAway = awayStats?.fixtures?.played?.away ?? 0;
+			if (homePlayed > 0 && homePlayed < MIN_RELIABLE_STATS_GAMES) {
+				sanityWarnings.push(
+					`Home team stats sample is small (${homePlayed} matches)`,
+				);
+			}
+			if (awayPlayed > 0 && awayPlayed < MIN_RELIABLE_STATS_GAMES) {
+				sanityWarnings.push(
+					`Away team stats sample is small (${awayPlayed} matches)`,
+				);
+			}
+			if (
+				homePlayed > 0 &&
+				(homePlayedHome === 0 || homePlayedAway === 0)
+			) {
+				sanityWarnings.push(
+					"Home team stats missing home/away split; using fallback rates",
+				);
+			}
+			if (
+				awayPlayed > 0 &&
+				(awayPlayedHome === 0 || awayPlayedAway === 0)
+			) {
+				sanityWarnings.push(
+					"Away team stats missing home/away split; using fallback rates",
+				);
+			}
 
 			// Step 2b: Extract team standings data
 			const homeStandingsData = this.getTeamStandingsData(
@@ -653,6 +694,19 @@ export const insightsService = {
 					: undefined,
 			);
 
+			sanityWarnings.push(
+				...this.validateTeamStatsSanity(homeTeamData, awayTeamData),
+			);
+
+			const lowHistory =
+				homeTeamData.mind.matchCount < 15 || awayTeamData.mind.matchCount < 15;
+			if (lowHistory) {
+				sanityWarnings.push(
+					"Limited match history; confidence downgraded",
+				);
+				dataQualityWarnings.push("Limited match history");
+			}
+
 			const [homeHighElo, awayHighElo] = await Promise.all([
 				buildHighEloOpponentContext(env.ENTITIES_DB, homeTeamData),
 				buildHighEloOpponentContext(env.ENTITIES_DB, awayTeamData),
@@ -674,6 +728,11 @@ export const insightsService = {
 			);
 
 			const roundNumber = extractRoundNumber(fixture.league.round) ?? undefined;
+			if (fixture.league.type === "League" && roundNumber === undefined) {
+				sanityWarnings.push(
+					"League round number unavailable; skipping early/end-of-season logic",
+				);
+			}
 			const daysSinceLastMatch = Math.min(
 				homeTeamData.daysSinceLastMatch,
 				awayTeamData.daysSinceLastMatch,
@@ -744,6 +803,7 @@ export const insightsService = {
 				injuries,
 				leagueStats,
 			);
+			sanityWarnings.push(...this.validateSimulationSanity(simulations));
 
 			// Step 7: Generate insights
 			const { homeInsights, awayInsights, h2hInsights } =
@@ -761,6 +821,17 @@ export const insightsService = {
 				awayTeamData,
 				h2hData,
 			);
+			const adjustedDataQuality =
+				dataQualityWarnings.length > 0
+					? {
+							...dataQuality,
+							overallConfidenceMultiplier: Math.min(
+								dataQuality.overallConfidenceMultiplier,
+								0.6,
+							),
+							warnings: [...dataQuality.warnings, ...dataQualityWarnings],
+						}
+					: dataQuality;
 
 			const homeTeamContext = this.buildTeamContext(
 				homeTeamData,
@@ -835,7 +906,7 @@ export const insightsService = {
 			// Step 9: Calculate overall confidence
 			const overallConfidence = this.calculateOverallConfidence(
 				simulations,
-				dataQuality,
+				adjustedDataQuality,
 			);
 
 			// Step 10: Build response
@@ -863,10 +934,17 @@ export const insightsService = {
 				h2hInsights: h2hInsightsWithParts,
 				matchFacts,
 				keyInsights: keyInsightsWithParts,
-				dataQuality,
+				dataQuality: adjustedDataQuality,
 				overallConfidence,
+				sanityWarnings,
 				generatedAt,
 			};
+
+			if (sanityWarnings.length > 0) {
+				console.warn(
+					`⚠️ [Insights] Sanity warnings: ${sanityWarnings.join("; ")}`,
+				);
+			}
 
 			// Build inputs snapshot for D1 (immutable freeze of context at generation time)
 			const inputsSnapshot = this.buildInputsSnapshot(
@@ -1759,6 +1837,104 @@ export const insightsService = {
 			gamesPlayed: playedTotal,
 			cleanSheetsTotal: stats.clean_sheet?.total ?? 0,
 		};
+	},
+
+	/**
+	 * Validate team stat sanity and surface warnings.
+	 */
+	validateTeamStatsSanity(
+		homeTeam: TeamData,
+		awayTeam: TeamData,
+	): string[] {
+		const warnings: string[] = [];
+		const MAX_AVG_GOALS = 4.0;
+
+		const checkTeam = (label: string, team: TeamData) => {
+			const avgScored = team.stats.avgGoalsScored;
+			const avgConceded = team.stats.avgGoalsConceded;
+			if (!Number.isFinite(avgScored) || !Number.isFinite(avgConceded)) {
+				warnings.push(`${label} team goal averages are not finite`);
+				return;
+			}
+			if (avgScored < 0 || avgConceded < 0) {
+				warnings.push(`${label} team goal averages are negative`);
+			}
+			if (avgScored > MAX_AVG_GOALS) {
+				warnings.push(
+					`${label} team avgGoalsScored unusually high (${avgScored.toFixed(2)})`,
+				);
+			}
+			if (avgConceded > MAX_AVG_GOALS) {
+				warnings.push(
+					`${label} team avgGoalsConceded unusually high (${avgConceded.toFixed(2)})`,
+				);
+			}
+		};
+
+		checkTeam("Home", homeTeam);
+		checkTeam("Away", awayTeam);
+
+		return warnings;
+	},
+
+	/**
+	 * Validate simulation invariants and surface warnings.
+	 */
+	validateSimulationSanity(simulations: Simulation[]): string[] {
+		const warnings: string[] = [];
+		const SUM_TOLERANCE = 0.5;
+		const MAX_TOTAL_ADJUSTMENT = 20;
+
+		for (const sim of simulations) {
+			const dist = sim.probabilityDistribution;
+			let sum = 0;
+			if (sim.scenarioType === "MatchOutcome") {
+				sum =
+					(dist.home ?? 0) + (dist.draw ?? 0) + (dist.away ?? 0);
+			} else if (
+				sim.scenarioType === "BothTeamsToScore" ||
+				sim.scenarioType === "FirstHalfActivity"
+			) {
+				sum = (dist.yes ?? 0) + (dist.no ?? 0);
+			} else if (sim.scenarioType === "TotalGoalsOverUnder") {
+				sum = (dist.over ?? 0) + (dist.under ?? 0);
+			}
+
+			if (!Number.isFinite(sum)) {
+				warnings.push(
+					`Probability distribution contains NaN for ${sim.scenarioType}`,
+				);
+			} else if (Math.abs(sum - 100) > SUM_TOLERANCE) {
+				warnings.push(
+					`Probability distribution sum off for ${sim.scenarioType} (${sum.toFixed(
+						2,
+					)})`,
+				);
+			}
+
+			if (
+				typeof sim.totalAdjustment === "number" &&
+				Math.abs(sim.totalAdjustment) > MAX_TOTAL_ADJUSTMENT
+			) {
+				warnings.push(
+					`Large total adjustment for ${sim.scenarioType} (${sim.totalAdjustment.toFixed(
+						2,
+					)})`,
+				);
+			}
+
+			if (sim.factorScores) {
+				for (const [key, value] of Object.entries(sim.factorScores)) {
+					if (!Number.isFinite(value)) {
+						warnings.push(
+							`Non-finite factor score for ${sim.scenarioType}: ${key}`,
+						);
+					}
+				}
+			}
+		}
+
+		return warnings;
 	},
 
 	/**
