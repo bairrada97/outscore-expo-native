@@ -45,6 +45,56 @@ type EloState = {
 };
 
 const FINISHED_STATUSES = new Set(["FT", "AET", "PEN"]);
+const REQUEST_DELAY_MS = 250;
+const MAX_RETRIES = 3;
+const RETRY_BASE_MS = 500;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const shouldRetryRequest = (error: unknown) => {
+	const message =
+		error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+	const statusMatch = message.match(/\b([45]\d{2})\b/);
+	const status = statusMatch ? Number(statusMatch[1]) : null;
+	if (status === 429 || (status !== null && status >= 500)) {
+		return true;
+	}
+	return (
+		message.includes("too many requests") ||
+		message.includes("rate limit") ||
+		message.includes("service unavailable") ||
+		message.includes("bad gateway") ||
+		message.includes("gateway timeout")
+	);
+};
+
+const getFixturesWithRetry = async (
+	leagueId: number,
+	season: number,
+	apiUrl?: string,
+	apiKey?: string,
+): Promise<FixturesResponse> => {
+	for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
+		try {
+			return await getFootballApiFixturesByLeagueSeason(
+				leagueId,
+				season,
+				apiUrl,
+				apiKey,
+			);
+		} catch (error) {
+			if (attempt >= MAX_RETRIES || !shouldRetryRequest(error)) {
+				throw error;
+			}
+			const delay = RETRY_BASE_MS * 2 ** attempt;
+			console.warn(
+				`⚠️ [Backfill] Retry ${attempt + 1}/${MAX_RETRIES} for league=${leagueId} season=${season} in ${delay}ms.`,
+			);
+			await sleep(delay);
+		}
+	}
+	throw new Error("Failed to fetch fixtures after retries.");
+};
 
 const parseArg = (args: string[], key: string) => {
 	const index = args.findIndex((a) => a === key);
@@ -63,9 +113,56 @@ const parseLeagueIds = (raw: string | null) => {
 const hasFlag = (args: string[], key: string) => args.includes(key);
 
 
-const loadPriorsPayload = (payloadPath: string) => {
+const loadPriorsPayload = (payloadPath: string): UefaPriorsPayload => {
 	const content = readFileSync(payloadPath, "utf-8");
-	return JSON.parse(content) as UefaPriorsPayload;
+	const parsed = JSON.parse(content);
+	if (!parsed || typeof parsed !== "object") {
+		throw new Error("Invalid UEFA priors payload: expected object.");
+	}
+	const payload = parsed as Partial<UefaPriorsPayload>;
+	if (!Array.isArray(payload.associations)) {
+		throw new Error("Invalid UEFA priors payload: associations must be an array.");
+	}
+	if (!Array.isArray(payload.clubs)) {
+		throw new Error("Invalid UEFA priors payload: clubs must be an array.");
+	}
+	if (!Array.isArray(payload.clubTeamMap)) {
+		throw new Error("Invalid UEFA priors payload: clubTeamMap must be an array.");
+	}
+
+	for (const assoc of payload.associations) {
+		if (!assoc || typeof assoc !== "object" || typeof assoc.countryCode !== "string") {
+			throw new Error(
+				"Invalid UEFA priors payload: association.countryCode must be a string.",
+			);
+		}
+	}
+	for (const club of payload.clubs) {
+		if (
+			!club ||
+			typeof club !== "object" ||
+			typeof club.uefaClubKey !== "string" ||
+			typeof club.name !== "string"
+		) {
+			throw new Error(
+				"Invalid UEFA priors payload: clubs require uefaClubKey and name.",
+			);
+		}
+	}
+	for (const map of payload.clubTeamMap) {
+		if (
+			!map ||
+			typeof map !== "object" ||
+			typeof map.uefaClubKey !== "string" ||
+			!Number.isFinite(map.apiFootballTeamId)
+		) {
+			throw new Error(
+				"Invalid UEFA priors payload: clubTeamMap requires uefaClubKey and apiFootballTeamId.",
+			);
+		}
+	}
+
+	return parsed as UefaPriorsPayload;
 };
 
 const buildPriorsIndex = (payload: UefaPriorsPayload) => {
@@ -252,12 +349,13 @@ const main = async () => {
 
 	for (let season = fromSeason; season <= toSeason; season += 1) {
 		for (const leagueId of leagueIds) {
-			const data: FixturesResponse = await getFootballApiFixturesByLeagueSeason(
+			const data = await getFixturesWithRetry(
 				leagueId,
 				season,
 				process.env.FOOTBALL_API_URL,
 				process.env.RAPIDAPI_KEY,
 			);
+			await sleep(REQUEST_DELAY_MS);
 
 			const fixtures = data.response
 				.filter((fixture) =>

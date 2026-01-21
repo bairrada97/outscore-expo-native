@@ -390,7 +390,11 @@ async function loadProcessedFixtureIds(
 		const placeholders = chunk.map(() => "?").join(",");
 		const rows = await db
 			.prepare(
-				`SELECT DISTINCT last_fixture_id FROM team_elo_ratings WHERE last_fixture_id IN (${placeholders})`,
+				`SELECT last_fixture_id
+				 FROM team_elo_ratings
+				 WHERE last_fixture_id IN (${placeholders})
+				 GROUP BY last_fixture_id
+				 HAVING COUNT(DISTINCT team_id) >= 2`,
 			)
 			.bind(...chunk)
 			.all<{ last_fixture_id: string }>();
