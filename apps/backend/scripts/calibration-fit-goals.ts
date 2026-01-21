@@ -61,7 +61,7 @@ const main = async () => {
 	if (!rows.length) throw new Error("No rows to evaluate.");
 
 	const minT = 0.5;
-	const maxT = 2.5;
+	const maxT = 4.5;
 	const step = 0.05;
 	let bestT = 1;
 	let bestLoss = Number.POSITIVE_INFINITY;

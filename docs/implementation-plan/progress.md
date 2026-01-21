@@ -2,7 +2,7 @@
 
 ## Overall Status
 
-**Last Updated:** 2026-01-15
+**Last Updated:** 2026-01-21
 
 **Current Phase:** Testing & Polish - Core algorithm complete with comprehensive test coverage
 
@@ -23,13 +23,8 @@
 
 ## Next TODOs (Planned)
 
-1. Pre-Phase2 Quick Checks (Gate 1 + Mini Backtest):
-   - Add `sanityWarnings` surfaced in API response for now.
-   - Add data-quality guards + invariant checks with regression tests.
-   - Add D1 `backtest_runs` schema + define R2 artifact layout.
-   - Implement minimal backtest runner (BTTS + Over 2.5) with Brier/logloss + calibration bins + anomaly reporting.
-   - Persist artifacts to R2 + run metadata to D1; add list/download endpoint.
-2. Per-market calibration layer using Brier/ECE (BTTS, O/U, 1X2, 1H) now that the shared goal-distribution backbone is in place.
+1. ML Phase 1: Dataset export + LightGBM baseline (MatchOutcome, BTTS, O/U).
+2. Add per-market calibration monitoring + re-fit cadence (post-ML).
 
 ## Status Legend
 
@@ -51,6 +46,18 @@
 - Added D1 Database Layer section to `docs/backend-architecture-guidelines.md`
 - Updated module structure to include betting-insights and entities modules
 - Added `ENTITIES_DB` to environment bindings
+
+## Recent Major Changes (2026-01-21)
+
+### Pre-Phase2 Quick Checks completed
+- Added `sanityWarnings` in API response with logging
+- Added data-quality guards + invariant checks with regression tests
+- Added minimal backtest harness with R2 artifacts + D1 `backtest_runs`
+- Added admin endpoint to list and run backtests
+
+### Per-market calibration complete
+- MatchOutcome + BTTS + Total Goals temperature scaling
+- Season-split evaluations completed
 
 ## Major Changes (2026-01-14)
 

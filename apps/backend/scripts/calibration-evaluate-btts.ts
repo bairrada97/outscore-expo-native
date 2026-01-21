@@ -81,8 +81,17 @@ const isEvalRow = (value: unknown): value is EvalRow => {
 const main = () => {
 	const file = process.argv[2];
 	const minCountArg = process.argv.findIndex((arg) => arg === "--min-count");
-	const minCount =
-		minCountArg !== -1 ? Number(process.argv[minCountArg + 1]) : 30;
+	let minCount = 30;
+	if (minCountArg !== -1) {
+		const raw = process.argv[minCountArg + 1];
+		const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
+		if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 0) {
+			throw new Error(
+				"Invalid --min-count value. Expected a non-negative integer.",
+			);
+		}
+		minCount = parsed;
+	}
 
 	if (!file) {
 		throw new Error("Usage: bun scripts/calibration-evaluate-btts.ts <eval.json>");

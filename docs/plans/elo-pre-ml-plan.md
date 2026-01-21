@@ -374,10 +374,10 @@ Expose and log:
 - [x] Compute league stats by season (current + last season).
 - [x] Apply bounded league scoring multiplier to goal distribution.
 
-### Phase H — Evaluation & calibration readiness (33% / in progress)
-- [ ] Run before/after backtests (Brier/logloss) on domestic + international slices. (TODO: Owner @joaobairrada, Priority P0, Target 2026-02-02)
-- [ ] Sanity checks: promoted teams, cross-league (UCL) mismatches. (TODO: Owner @joaobairrada, Priority P0, Target 2026-02-05)
-- [ ] Document calibration readiness (per-market calibrators to be added after Elo). (TODO: Owner @joaobairrada, Priority P1, Target 2026-02-07)
+### Phase H — Evaluation & calibration readiness (100% / done)
+- [x] Run before/after backtests (Brier/logloss) on domestic + international slices.
+- [x] Sanity checks: promoted teams, cross-league (UCL) mismatches.
+- [x] Document calibration readiness (per-market calibrators added for BTTS + O/U + MatchOutcome).
 
 ## Phase H.1 — Evaluation protocol (rules + ML)
 

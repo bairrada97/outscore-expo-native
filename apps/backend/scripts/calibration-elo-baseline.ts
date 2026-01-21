@@ -66,7 +66,7 @@ const parseLeagueIds = (raw: string | null) => {
 	return raw
 		.split(",")
 		.map((id) => Number(id.trim()))
-		.filter((id) => Number.isFinite(id));
+		.filter((id) => Number.isInteger(id) && id > 0);
 };
 
 const parseSeasons = (args: string[]) => {

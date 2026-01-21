@@ -130,6 +130,7 @@ const INSIGHTS_FINISHED_STATUSES = [
 
 const HIGH_ELO_MIDWEEK_GAP = 150;
 const HIGH_ELO_MIDWEEK_MAX_DAYS = 5;
+const MIN_RELIABLE_STATS_GAMES = 8;
 
 function getMostRecentTeamMatch(team: TeamData): ProcessedMatch | null {
 	const all = [...(team.lastHomeMatches ?? []), ...(team.lastAwayMatches ?? [])];
@@ -1728,7 +1729,6 @@ export const insightsService = {
 		standingsData: TeamStandingsData | null = null,
 		matches: ProcessedMatch[] = [],
 	): TeamStatistics {
-		const MIN_RELIABLE_STATS_GAMES = 8;
 		const MAX_MATCHES_FOR_FALLBACK = 30;
 
 		const calculateAvg = (values: number[]): number =>

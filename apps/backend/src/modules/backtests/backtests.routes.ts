@@ -288,7 +288,7 @@ const buildStandingsSnapshot = (
 		rankById.set(row.teamId, index + 1);
 	}
 
-	const clPosition = Math.max(4, Math.min(leagueSize, 4));
+	const clPosition = Math.max(1, Math.min(4, leagueSize));
 	const relegationPosition = Math.max(leagueSize - 2, 1);
 	const firstPlacePoints = rows[0]?.points ?? 0;
 	const clPoints = rows[clPosition - 1]?.points ?? 0;
@@ -492,11 +492,26 @@ const runBacktest = async (env: BacktestEnv, config: RunConfig) => {
 							"x-rapidapi-key": env.RAPIDAPI_KEY,
 						},
 					});
-					const json = (await response.json()) as {
-						response?: Fixture[];
-					};
-					h2hMatches = json.response ?? [];
-					h2hCache.set(key, h2hMatches);
+					if (!response.ok) {
+						const body = await response.text().catch(() => "");
+						console.warn(
+							`[Backtests] H2H fetch failed (${response.status} ${response.statusText}) for ${url.toString()}${body ? `: ${body}` : ""}`,
+						);
+						h2hMatches = [];
+					} else {
+						const json = (await response.json()) as {
+							response?: Fixture[];
+						};
+						if (!Array.isArray(json.response)) {
+							console.warn(
+								`[Backtests] H2H response missing data for ${url.toString()}`,
+							);
+							h2hMatches = [];
+						} else {
+							h2hMatches = json.response;
+							h2hCache.set(key, h2hMatches);
+						}
+					}
 					await new Promise((resolve) => setTimeout(resolve, REQUEST_DELAY_MS));
 				}
 
@@ -506,7 +521,9 @@ const runBacktest = async (env: BacktestEnv, config: RunConfig) => {
 						FINISHED_STATUSES.has(match.fixture.status.short),
 					)
 					.filter(
-						(match) => new Date(match.fixture.date).getTime() <= fixtureTime,
+						(match) =>
+							new Date(match.fixture.date).getTime() < fixtureTime &&
+							match.fixture.id !== fixture.fixture.id,
 					)
 					.sort(
 						(a, b) =>

@@ -46,7 +46,8 @@ const logLoss = (rows: EvalRow[], temperature = 1) => {
 		assertProb(row.probOver, "probOver", index);
 		assertProb(row.probUnder, "probUnder", index);
 		const over = applyBinaryTemperatureScaling(row.probOver, temperature);
-		const p = row.actual === "OVER" ? over : 1 - over;
+		const under = applyBinaryTemperatureScaling(row.probUnder, temperature);
+		const p = row.actual === "OVER" ? over : under;
 		if (!Number.isFinite(p) || p <= 0 || p > 1) {
 			throw new Error(
 				`Invalid probability for actual=${row.actual} at row ${index}: ${JSON.stringify(
@@ -75,7 +76,17 @@ const isEvalRow = (value: unknown): value is EvalRow => {
 	return (
 		typeof row.probOver === "number" &&
 		typeof row.probUnder === "number" &&
-		typeof row.actual === "string"
+		typeof row.actual === "string" &&
+		typeof row.fixtureId === "number" &&
+		Number.isFinite(row.fixtureId) &&
+		typeof row.leagueId === "number" &&
+		Number.isFinite(row.leagueId) &&
+		typeof row.season === "number" &&
+		Number.isFinite(row.season) &&
+		typeof row.matchType === "string" &&
+		row.matchType.length > 0 &&
+		typeof row.line === "number" &&
+		Number.isFinite(row.line)
 	);
 };
 
