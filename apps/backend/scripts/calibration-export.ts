@@ -59,6 +59,35 @@ type EloState = {
 	asOf: string;
 };
 
+type StandingsRow = {
+	teamId: number;
+	teamName: string;
+	played: number;
+	win: number;
+	draw: number;
+	loss: number;
+	goalsFor: number;
+	goalsAgainst: number;
+	points: number;
+	formResults: Array<"W" | "D" | "L">;
+};
+
+type TeamStandingsData = {
+	rank: number;
+	points: number;
+	played: number;
+	win: number;
+	draw: number;
+	loss: number;
+	goalsFor: number;
+	goalsAgainst: number;
+	goalDiff: number;
+	form: string | null;
+	pointsFromFirst: number;
+	pointsFromCL: number;
+	pointsFromRelegation: number;
+};
+
 const FINISHED_STATUSES = new Set(["FT", "AET", "PEN"]);
 const REQUEST_DELAY_MS = 250;
 const MAX_RETRIES = 3;
@@ -66,7 +95,6 @@ const RETRY_BASE_MS = 500;
 const MAX_MATCH_HISTORY = 50;
 const H2H_API_LIMIT = 25;
 const H2H_MODEL_LIMIT = 5;
-const STATS_CONCURRENCY = 4;
 
 const parseArg = (args: string[], key: string) => {
 	const index = args.findIndex((a) => a === key);
@@ -298,74 +326,177 @@ const buildProcessedMatch = (
 		teamId,
 	);
 
-const fetchTeamStats = async (
-	teamId: number,
-	leagueId: number,
-	season: number,
-	apiUrl?: string,
-	apiKey?: string,
-): Promise<unknown> => {
-	if (!apiUrl || !apiKey) {
-		throw new Error("API URL or API Key not provided");
-	}
-	const url = new URL(`${apiUrl}/teams/statistics`);
-	url.searchParams.append("team", teamId.toString());
-	url.searchParams.append("league", leagueId.toString());
-	url.searchParams.append("season", season.toString());
-	try {
-		const response = await fetch(url.toString(), {
-			headers: {
-				"x-rapidapi-host": "api-football-v1.p.rapidapi.com",
-				"x-rapidapi-key": apiKey,
+const buildStatsFromMatches = (matches: ProcessedMatch[]) => {
+	if (!matches.length) return null;
+
+	const formatAvg = (value: number) => value.toFixed(2);
+	const home = matches.filter((m) => m.isHome);
+	const away = matches.filter((m) => !m.isHome);
+
+	const sum = (values: number[]) => values.reduce((acc, val) => acc + val, 0);
+	const avg = (values: number[]) =>
+		values.length > 0 ? sum(values) / values.length : 0;
+
+	const goalsFor = sum(matches.map((m) => m.goalsScored));
+	const goalsAgainst = sum(matches.map((m) => m.goalsConceded));
+	const form = matches
+		.slice(0, 5)
+		.map((m) => m.result)
+		.join("");
+
+	const cleanSheets = matches.filter((m) => m.goalsConceded === 0).length;
+	const failedToScore = matches.filter((m) => m.goalsScored === 0).length;
+
+	return {
+		form,
+		fixtures: {
+			played: {
+				total: matches.length,
+				home: home.length,
+				away: away.length,
 			},
-		});
-		if (!response.ok) {
-			console.warn(`⚠️ [Calibration] Failed to fetch stats for team ${teamId}`);
-			return null;
-		}
-		const data = (await response.json()) as { response: unknown };
-		return data.response ?? null;
-	} catch (error) {
-		console.warn(
-			`⚠️ [Calibration] Error fetching stats for team ${teamId}:`,
-			error,
-		);
-		return null;
-	}
+		},
+		goals: {
+			for: {
+				total: { total: goalsFor },
+				average: {
+					total: formatAvg(avg(matches.map((m) => m.goalsScored))),
+					home: formatAvg(avg(home.map((m) => m.goalsScored))),
+					away: formatAvg(avg(away.map((m) => m.goalsScored))),
+				},
+			},
+			against: {
+				total: { total: goalsAgainst },
+				average: {
+					total: formatAvg(avg(matches.map((m) => m.goalsConceded))),
+					home: formatAvg(avg(home.map((m) => m.goalsConceded))),
+					away: formatAvg(avg(away.map((m) => m.goalsConceded))),
+				},
+			},
+		},
+		clean_sheet: { total: cleanSheets },
+		failed_to_score: { total: failedToScore },
+		lineups: [],
+	};
 };
 
-const buildTeamStatsCache = async (params: {
-	teamIds: number[];
-	leagueId: number;
-	season: number;
-	apiUrl?: string;
-	apiKey?: string;
-}) => {
-	const cache = new Map<number, unknown | null>();
-	let nextIndex = 0;
+const initStandings = (teams: Array<{ id: number; name: string }>) => {
+	const map = new Map<number, StandingsRow>();
+	for (const team of teams) {
+		map.set(team.id, {
+			teamId: team.id,
+			teamName: team.name,
+			played: 0,
+			win: 0,
+			draw: 0,
+			loss: 0,
+			goalsFor: 0,
+			goalsAgainst: 0,
+			points: 0,
+			formResults: [],
+		});
+	}
+	return map;
+};
 
-	const workers = Array.from(
-		{ length: Math.min(STATS_CONCURRENCY, params.teamIds.length) },
-		async () => {
-			while (nextIndex < params.teamIds.length) {
-				const idx = nextIndex;
-				nextIndex += 1;
-				const teamId = params.teamIds[idx];
-				const stats = await fetchTeamStats(
-					teamId,
-					params.leagueId,
-					params.season,
-					params.apiUrl,
-					params.apiKey,
-				);
-				cache.set(teamId, stats);
-				await sleep(REQUEST_DELAY_MS);
-			}
-		},
-	);
+const updateStandings = (
+	standings: Map<number, StandingsRow>,
+	teamId: number,
+	teamName: string,
+	goalsFor: number,
+	goalsAgainst: number,
+) => {
+	const entry =
+		standings.get(teamId) ??
+		({
+			teamId,
+			teamName,
+			played: 0,
+			win: 0,
+			draw: 0,
+			loss: 0,
+			goalsFor: 0,
+			goalsAgainst: 0,
+			points: 0,
+			formResults: [],
+		} as StandingsRow);
 
-	await Promise.all(workers);
-	return cache;
+	entry.teamName = teamName;
+	entry.played += 1;
+	entry.goalsFor += goalsFor;
+	entry.goalsAgainst += goalsAgainst;
+
+	if (goalsFor > goalsAgainst) {
+		entry.win += 1;
+		entry.points += 3;
+		entry.formResults.unshift("W");
+	} else if (goalsFor < goalsAgainst) {
+		entry.loss += 1;
+		entry.formResults.unshift("L");
+	} else {
+		entry.draw += 1;
+		entry.points += 1;
+		entry.formResults.unshift("D");
+	}
+
+	if (entry.formResults.length > 5) {
+		entry.formResults = entry.formResults.slice(0, 5);
+	}
+
+	standings.set(teamId, entry);
+};
+
+const buildStandingsSnapshot = (
+	standings: Map<number, StandingsRow>,
+	leagueSize: number,
+) => {
+	const rows = Array.from(standings.values()).map((row) => ({
+		...row,
+		goalDiff: row.goalsFor - row.goalsAgainst,
+	}));
+
+	rows.sort((a, b) => {
+		if (b.points !== a.points) return b.points - a.points;
+		if (b.goalDiff !== a.goalDiff) return b.goalDiff - a.goalDiff;
+		if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
+		return a.teamId - b.teamId;
+	});
+
+	const firstPlacePoints = rows[0]?.points ?? 0;
+	const clPosition = Math.min(4, leagueSize);
+	const relegationPosition = Math.max(leagueSize - 2, 1);
+	const clPoints = rows[clPosition - 1]?.points ?? firstPlacePoints;
+	const relegationPoints = rows[relegationPosition - 1]?.points ?? 0;
+
+	const rankById = new Map<number, number>();
+	for (const [idx, row] of rows.entries()) {
+		rankById.set(row.teamId, idx + 1);
+	}
+
+	return { rows, rankById, firstPlacePoints, clPoints, relegationPoints };
+};
+
+const getTeamStandingsData = (
+	snapshot: ReturnType<typeof buildStandingsSnapshot>,
+	teamId: number,
+): TeamStandingsData | null => {
+	const row = snapshot.rows.find((entry) => entry.teamId === teamId);
+	if (!row) return null;
+	return {
+		rank: snapshot.rankById.get(teamId) ?? row.rank ?? 1,
+		points: row.points,
+		played: row.played,
+		win: row.win,
+		draw: row.draw,
+		loss: row.loss,
+		goalsFor: row.goalsFor,
+		goalsAgainst: row.goalsAgainst,
+		goalDiff: row.goalDiff,
+		form: row.formResults.length > 0 ? row.formResults.join("") : null,
+		pointsFromFirst: snapshot.firstPlacePoints - row.points,
+		pointsFromCL: snapshot.clPoints - row.points,
+		pointsFromRelegation: row.points - snapshot.relegationPoints,
+	};
 };
 
 const computeLeagueStats = (fixtures: Fixture[]) => {
@@ -435,23 +566,17 @@ const main = async () => {
 				continue;
 			}
 
-			const leagueStats = computeLeagueStats(fixtures);
-			const teamIds = Array.from(
-				new Set(
-					fixtures.flatMap((fixture) => [
-						fixture.teams.home.id,
-						fixture.teams.away.id,
-					]),
-				),
+			const teamMap = new Map<number, string>();
+			for (const fixture of fixtures) {
+				teamMap.set(fixture.teams.home.id, fixture.teams.home.name);
+				teamMap.set(fixture.teams.away.id, fixture.teams.away.name);
+			}
+			const leagueSize = teamMap.size;
+			const standings = initStandings(
+				Array.from(teamMap.entries()).map(([id, name]) => ({ id, name })),
 			);
-			const teamStatsCache = await buildTeamStatsCache({
-				teamIds,
-				leagueId,
-				season,
-				apiUrl,
-				apiKey,
-			});
 
+			const leagueStats = computeLeagueStats(fixtures);
 			const teamHistory = new Map<number, ProcessedMatch[]>();
 			const h2hCache = new Map<string, Fixture[]>();
 			const eloState = new Map<number, EloState>();
@@ -489,6 +614,19 @@ const main = async () => {
 				};
 
 				{
+					const standingsSnapshot = buildStandingsSnapshot(
+						standings,
+						leagueSize,
+					);
+					const homeStandings = getTeamStandingsData(
+						standingsSnapshot,
+						homeId,
+					);
+					const awayStandings = getTeamStandingsData(
+						standingsSnapshot,
+						awayId,
+					);
+
 					let h2hRaw = h2hCache.get(key);
 					if (!h2hRaw) {
 						h2hRaw = await fetchH2HMatchesWithRetry(
@@ -535,19 +673,19 @@ const main = async () => {
 					const homeTeam = insightsService.processTeamData(
 						homeId,
 						fixture.teams.home.name,
-						(teamStatsCache.get(homeId) ?? null) as unknown,
+						(buildStatsFromMatches(homeMatches) ?? null) as unknown,
 						homeMatches,
 						leagueId,
-						null,
+						homeStandings,
 						homeElo,
 					);
 					const awayTeam = insightsService.processTeamData(
 						awayId,
 						fixture.teams.away.name,
-						(teamStatsCache.get(awayId) ?? null) as unknown,
+						(buildStatsFromMatches(awayMatches) ?? null) as unknown,
 						awayMatches,
 						leagueId,
-						null,
+						awayStandings,
 						awayElo,
 					);
 
@@ -634,6 +772,23 @@ const main = async () => {
 				);
 				teamHistory.set(homeId, nextHomeHistory);
 				teamHistory.set(awayId, nextAwayHistory);
+
+				const homeGoals = fixture.goals.home ?? 0;
+				const awayGoals = fixture.goals.away ?? 0;
+				updateStandings(
+					standings,
+					homeId,
+					fixture.teams.home.name,
+					homeGoals,
+					awayGoals,
+				);
+				updateStandings(
+					standings,
+					awayId,
+					fixture.teams.away.name,
+					awayGoals,
+					homeGoals,
+				);
 			}
 		}
 	}
