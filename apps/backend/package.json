@@ -8,7 +8,15 @@
     "deploy": "wrangler deploy",
     "tail": "wrangler tail",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "ingest:uefa-priors": "bun scripts/ingest-uefa-priors.ts",
+    "elo:backfill": "bun scripts/elo-backfill.ts",
+    "elo:update": "bun scripts/elo-update.ts",
+    "elo:evaluate": "bun scripts/elo-evaluate.ts",
+    "standings:refresh": "bun scripts/refresh-standings.ts",
+    "league:stats": "bun scripts/league-stats.ts",
+    "elo:global": "bun scripts/elo-backfill.ts --from-season 2021 --to-season 2025 --db ENTITIES_DB --config ./wrangler.toml --remote --apply",
+    "elo:global:resume": "bun scripts/elo-backfill.ts --from-season 2021 --to-season 2025 --db ENTITIES_DB --config ./wrangler.toml --remote --resume --apply"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.4.3",

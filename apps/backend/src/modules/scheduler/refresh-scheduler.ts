@@ -1,20 +1,31 @@
 import type { Fixture, FixturesResponse } from "@outscore/shared-types";
 import {
-  getFootballApiFixtures,
-  getFootballApiFixturesByIds,
+	getFootballApiFixtures,
+	getFootballApiFixturesByIds,
+	getFootballApiTeamById,
 } from "../../pkg/util/football-api";
 import { type InsightsEnv, insightsService } from "../betting-insights";
 import {
-  type CacheEnv,
-  cacheSet,
-  cacheSetEdgeOnly,
-  checkFixturesDateTransition,
-  cleanupOldCacheData,
-  getCurrentUtcDate,
-  getTomorrowUtcDate,
-  getYesterdayUtcDate,
+	type CacheEnv,
+	cacheSet,
+	cacheSetEdgeOnly,
+	checkFixturesDateTransition,
+	cleanupOldCacheData,
+	createKVCacheProvider,
+	createR2CacheProvider,
+	generateKVCacheKey,
+	getCurrentUtcDate,
+	getFixturesCacheLocation,
+	getFixturesR2Key,
+	getTomorrowUtcDate,
+	getYesterdayUtcDate,
 } from "../cache";
+import { calculateDivisionOffset, inferDivisionLevel, updateElo } from "../elo";
 import { filterFixturesByTimezone, formatFixtures } from "../fixtures";
+import {
+	type LeaguesRegistryEnv,
+	refreshLeaguesRegistry,
+} from "../leagues-registry";
 import { commonTimezones } from "../timezones";
 import { fetchStandingsForLeague } from "./standings-refresh";
 
@@ -28,6 +39,11 @@ const FIXTURES_BY_IDS_MAX = 20;
 export interface SchedulerEnv extends CacheEnv, InsightsEnv {
 	REFRESH_SCHEDULER_DO?: DurableObjectNamespace;
 }
+
+const TEAM_COUNTRY_BACKFILL_KEY = "jobs/team-country-backfill:last-run";
+const TEAM_COUNTRY_BACKFILL_LIMIT = 50;
+const ELO_CACHE_UPDATE_KEY = "jobs/elo-cache-update:last-run";
+const ELO_FINISHED_STATUSES = new Set(["FT", "AET", "PEN"]);
 
 /**
  * Refresh today's fixtures data in all cache layers
@@ -209,6 +225,27 @@ export const handleScheduledEvent = async (
 	// Run cleanup once per day at 2 AM UTC
 	const hour = scheduledTime.getUTCHours();
 	const minute = scheduledTime.getUTCMinutes();
+
+	// Weekly leagues registry refresh (Sunday 03:00 UTC window)
+	if (hour === 3 && minute < 10 && scheduledTime.getUTCDay() === 0) {
+		console.log(`📚 [Scheduler] Refreshing leagues registry`);
+		try {
+			await refreshLeaguesRegistry(env as LeaguesRegistryEnv);
+			console.log(`✅ [Scheduler] Leagues registry refreshed`);
+		} catch (error) {
+			console.error(`❌ [Scheduler] Leagues registry refresh failed:`, error);
+		}
+	}
+
+	// Daily team country backfill (03:10 UTC window)
+	if (hour === 3 && minute >= 10 && minute < 15) {
+		await backfillTeamCountries(env);
+	}
+
+	// Daily Elo update from cached fixtures (03:20 UTC window)
+	if (hour === 3 && minute >= 20 && minute < 25) {
+		await updateEloFromCachedFixtures(env);
+	}
 	if (hour === 2 && minute < 5) {
 		console.log(`🧹 [Scheduler] Running daily cleanup`);
 
@@ -261,6 +298,399 @@ export const handleScheduledEvent = async (
 		await refreshTodayFixtures(env);
 	}
 };
+
+async function backfillTeamCountries(env: SchedulerEnv): Promise<void> {
+	const today = getCurrentUtcDate();
+	const lastRun = await env.FOOTBALL_KV.get(TEAM_COUNTRY_BACKFILL_KEY);
+	if (lastRun === today) {
+		return;
+	}
+
+	console.log(`🌍 [Scheduler] Backfilling team countries`);
+
+	const rows = await env.ENTITIES_DB.prepare(
+		`SELECT t.id AS team_id, t.name AS team_name, e.provider_id AS provider_id
+		 FROM teams t
+		 JOIN external_ids e
+		   ON e.internal_id = t.id
+		  AND e.entity_type = 'team'
+		  AND e.provider = 'api_football'
+		 WHERE t.country IS NULL OR t.country = ''
+		 LIMIT ?`,
+	)
+		.bind(TEAM_COUNTRY_BACKFILL_LIMIT)
+		.all<{ team_id: number; team_name: string; provider_id: string }>();
+
+	const targets = rows.results ?? [];
+	if (!targets.length) {
+		await env.FOOTBALL_KV.put(TEAM_COUNTRY_BACKFILL_KEY, today);
+		console.log(`✅ [Scheduler] No missing team countries found`);
+		return;
+	}
+
+	const CONCURRENCY = 4;
+	let updated = 0;
+	let nextIndex = 0;
+
+	const processTarget = async (target: (typeof targets)[number]) => {
+		try {
+			const apiTeam = await getFootballApiTeamById(
+				Number(target.provider_id),
+				env.FOOTBALL_API_URL,
+				env.RAPIDAPI_KEY,
+			);
+			const first = apiTeam.response?.[0]?.team;
+			const country =
+				typeof first?.country === "string" && first.country.trim()
+					? first.country.trim()
+					: null;
+			if (!country) return false;
+
+			await env.ENTITIES_DB.prepare(
+				`UPDATE teams SET country = ?, updated_at = datetime('now') WHERE id = ?`,
+			)
+				.bind(country, target.team_id)
+				.run();
+			return true;
+		} catch (error) {
+			console.warn(
+				`⚠️ [Scheduler] Failed to fetch country for team ${target.team_id} (${target.team_name})`,
+				error,
+			);
+			return false;
+		}
+	};
+
+	const workers = Array.from(
+		{ length: Math.min(CONCURRENCY, targets.length) },
+		async () => {
+			while (nextIndex < targets.length) {
+				const current = targets[nextIndex];
+				nextIndex += 1;
+				const ok = await processTarget(current);
+				if (ok) {
+					updated += 1;
+				}
+			}
+		},
+	);
+
+	await Promise.all(workers);
+
+	await env.FOOTBALL_KV.put(TEAM_COUNTRY_BACKFILL_KEY, today);
+	console.log(
+		`✅ [Scheduler] Team country backfill done: updated ${updated} / ${targets.length}`,
+	);
+}
+
+async function loadCachedFixturesForDate(
+	env: SchedulerEnv,
+	date: string,
+): Promise<Fixture[]> {
+	const kvProvider = createKVCacheProvider<Fixture[]>(env.FOOTBALL_KV);
+	const kvKey = generateKVCacheKey({ date, live: false });
+	const kvResult = await kvProvider.get(kvKey);
+	if (kvResult.data) {
+		return kvResult.data;
+	}
+
+	const r2Provider = createR2CacheProvider<Fixture[]>(env.FOOTBALL_CACHE);
+	const location = getFixturesCacheLocation(date);
+	const r2Key = getFixturesR2Key(location, date, false);
+	const r2Result = await r2Provider.get(r2Key);
+	return r2Result.data ?? [];
+}
+
+async function loadProcessedFixtureIds(
+	db: D1Database,
+	fixtureIds: string[],
+): Promise<Set<string>> {
+	const processed = new Set<string>();
+	for (const chunk of chunkArray(fixtureIds, 100)) {
+		const placeholders = chunk.map(() => "?").join(",");
+		const rows = await db
+			.prepare(
+				`SELECT last_fixture_id
+				 FROM team_elo_ratings
+				 WHERE last_fixture_id IN (${placeholders})
+				 GROUP BY last_fixture_id
+				 HAVING COUNT(DISTINCT team_id) >= 2`,
+			)
+			.bind(...chunk)
+			.all<{ last_fixture_id: string }>();
+		for (const row of rows.results ?? []) {
+			processed.add(row.last_fixture_id);
+		}
+	}
+	return processed;
+}
+
+async function loadExternalTeamMap(
+	db: D1Database,
+	providerIds: number[],
+): Promise<Map<number, number>> {
+	const map = new Map<number, number>();
+	for (const chunk of chunkArray(providerIds, 100)) {
+		const placeholders = chunk.map(() => "?").join(",");
+		const rows = await db
+			.prepare(
+				`SELECT provider_id, internal_id FROM external_ids
+				 WHERE provider = 'api_football'
+				   AND entity_type = 'team'
+				   AND provider_id IN (${placeholders})`,
+			)
+			.bind(...chunk.map((id) => String(id)))
+			.all<{ provider_id: string; internal_id: number }>();
+		for (const row of rows.results ?? []) {
+			map.set(Number(row.provider_id), Number(row.internal_id));
+		}
+	}
+	return map;
+}
+
+async function loadCurrentEloMap(
+	db: D1Database,
+	teamIds: number[],
+): Promise<Map<number, { elo: number; games: number; asOf: string }>> {
+	const map = new Map<number, { elo: number; games: number; asOf: string }>();
+	for (const chunk of chunkArray(teamIds, 100)) {
+		const placeholders = chunk.map(() => "?").join(",");
+		const rows = await db
+			.prepare(
+				`SELECT team_id, elo, games, as_of_date
+				 FROM team_elo_current
+				 WHERE team_id IN (${placeholders})`,
+			)
+			.bind(...chunk)
+			.all<{ team_id: number; elo: number; games: number; as_of_date: string }>();
+		for (const row of rows.results ?? []) {
+			map.set(row.team_id, {
+				elo: row.elo,
+				games: row.games,
+				asOf: row.as_of_date,
+			});
+		}
+	}
+	return map;
+}
+
+function detectMatchType(leagueName: string) {
+	const name = (leagueName ?? "").toLowerCase();
+	if (
+		name.includes("champions league") ||
+		name.includes("europa league") ||
+		name.includes("conference league") ||
+		name.includes("libertadores") ||
+		name.includes("sudamericana") ||
+		name.includes("club world cup")
+	) {
+		return "INTERNATIONAL" as const;
+	}
+	if (
+		name.includes(" cup") ||
+		name.includes("copa") ||
+		name.includes("taça") ||
+		name.includes("taca") ||
+		name.includes("coupe") ||
+		name.includes("coppa") ||
+		name.includes("pokal") ||
+		name.includes("beker") ||
+		name.includes("super cup") ||
+		name.includes("supercup") ||
+		name.includes("super-cup") ||
+		name.includes("supercopa") ||
+		name.includes("supercoppa") ||
+		name.includes("shield")
+	) {
+		return "CUP" as const;
+	}
+	return "LEAGUE" as const;
+}
+
+async function updateEloFromCachedFixtures(env: SchedulerEnv): Promise<void> {
+	const today = getCurrentUtcDate();
+	const lastRun = await env.FOOTBALL_KV.get(ELO_CACHE_UPDATE_KEY);
+	if (lastRun === today) {
+		return;
+	}
+
+	const dates = [getYesterdayUtcDate(), today];
+	const fixtureLists = await Promise.all(
+		dates.map((date) => loadCachedFixturesForDate(env, date)),
+	);
+	const fixtures = fixtureLists.flat();
+	if (!fixtures.length) {
+		await env.FOOTBALL_KV.put(ELO_CACHE_UPDATE_KEY, today);
+		console.log(`✅ [Scheduler] No cached fixtures available for Elo update`);
+		return;
+	}
+
+	const finished = fixtures
+		.filter((fixture) => ELO_FINISHED_STATUSES.has(fixture.fixture.status.short))
+		.filter(
+			(fixture) => fixture.goals.home !== null && fixture.goals.away !== null,
+		);
+
+	if (!finished.length) {
+		await env.FOOTBALL_KV.put(ELO_CACHE_UPDATE_KEY, today);
+		console.log(`✅ [Scheduler] No finished fixtures to process for Elo`);
+		return;
+	}
+
+	const fixtureIds = finished.map((fixture) => String(fixture.fixture.id));
+	const processed = await loadProcessedFixtureIds(env.ENTITIES_DB, fixtureIds);
+	const pending = finished
+		.filter((fixture) => !processed.has(String(fixture.fixture.id)))
+		.sort(
+			(a, b) =>
+				new Date(a.fixture.date).getTime() - new Date(b.fixture.date).getTime(),
+		);
+
+	if (!pending.length) {
+		await env.FOOTBALL_KV.put(ELO_CACHE_UPDATE_KEY, today);
+		console.log(`✅ [Scheduler] All fixtures already processed for Elo`);
+		return;
+	}
+
+	const providerIds = Array.from(
+		new Set(
+			pending.flatMap((fixture) => [
+				fixture.teams.home.id,
+				fixture.teams.away.id,
+			]),
+		),
+	);
+	const externalTeamMap = await loadExternalTeamMap(env.ENTITIES_DB, providerIds);
+	const internalIds = Array.from(new Set(externalTeamMap.values()));
+	const currentEloMap = await loadCurrentEloMap(env.ENTITIES_DB, internalIds);
+	const eloState = new Map(
+		Array.from(currentEloMap.entries()).map(([teamId, state]) => [
+			teamId,
+			{ elo: state.elo, games: state.games, asOf: state.asOf },
+		]),
+	);
+
+	const inserts: Array<{
+		teamId: number;
+		asOf: string;
+		elo: number;
+		games: number;
+		fixtureId: number;
+	}> = [];
+	const touchedTeams = new Set<number>();
+
+	for (const fixture of pending) {
+		const homeId = externalTeamMap.get(fixture.teams.home.id);
+		const awayId = externalTeamMap.get(fixture.teams.away.id);
+		if (!homeId || !awayId) {
+			const missing = [
+				!homeId ? `home=${fixture.teams.home.id}` : null,
+				!awayId ? `away=${fixture.teams.away.id}` : null,
+			]
+				.filter(Boolean)
+				.join(", ");
+			console.warn(
+				`⚠️ [Scheduler] Skipping fixture ${fixture.fixture.id}: missing team mapping (${missing}).`,
+			);
+			continue;
+		}
+
+		const matchType = detectMatchType(fixture.league.name);
+		const baseDivisionOffset =
+			matchType === "LEAGUE"
+				? calculateDivisionOffset(inferDivisionLevel(fixture.league.name))
+				: 0;
+		const homeState =
+			eloState.get(homeId) ?? {
+				elo: 1500 + baseDivisionOffset,
+				games: 0,
+				asOf: fixture.fixture.date,
+			};
+		const awayState =
+			eloState.get(awayId) ?? {
+				elo: 1500 + baseDivisionOffset,
+				games: 0,
+				asOf: fixture.fixture.date,
+			};
+
+		const goalDiff = (fixture.goals.home ?? 0) - (fixture.goals.away ?? 0);
+		const update = updateElo({
+			homeElo: homeState.elo,
+			awayElo: awayState.elo,
+			matchType,
+			goalDiff,
+		});
+
+		const nextHome = {
+			elo: update.homeElo,
+			games: homeState.games + 1,
+			asOf: fixture.fixture.date,
+		};
+		const nextAway = {
+			elo: update.awayElo,
+			games: awayState.games + 1,
+			asOf: fixture.fixture.date,
+		};
+
+		eloState.set(homeId, nextHome);
+		eloState.set(awayId, nextAway);
+		touchedTeams.add(homeId);
+		touchedTeams.add(awayId);
+
+		inserts.push({
+			teamId: homeId,
+			asOf: fixture.fixture.date,
+			elo: nextHome.elo,
+			games: nextHome.games,
+			fixtureId: fixture.fixture.id,
+		});
+		inserts.push({
+			teamId: awayId,
+			asOf: fixture.fixture.date,
+			elo: nextAway.elo,
+			games: nextAway.games,
+			fixtureId: fixture.fixture.id,
+		});
+	}
+
+	const insertStatements = inserts.map((row) =>
+		env.ENTITIES_DB.prepare(
+			`INSERT INTO team_elo_ratings
+			 (team_id, as_of_date, elo, games, last_fixture_provider, last_fixture_id, updated_at)
+			 VALUES (?, ?, ?, ?, 'api_football', ?, datetime('now'))
+			 ON CONFLICT(team_id, last_fixture_provider, last_fixture_id) DO NOTHING`,
+		).bind(row.teamId, row.asOf, row.elo, row.games, String(row.fixtureId)),
+	);
+
+	for (const chunk of chunkArray(insertStatements, 100)) {
+		await env.ENTITIES_DB.batch(chunk);
+	}
+
+	const currentStatements = Array.from(touchedTeams).map((teamId) => {
+		const state = eloState.get(teamId);
+		if (!state) return null;
+		return env.ENTITIES_DB.prepare(
+			`INSERT INTO team_elo_current
+			 (team_id, elo, games, as_of_date, updated_at)
+			 VALUES (?, ?, ?, ?, datetime('now'))
+			 ON CONFLICT(team_id) DO UPDATE SET
+			   elo = excluded.elo,
+			   games = excluded.games,
+			   as_of_date = excluded.as_of_date,
+			   updated_at = datetime('now')`,
+		).bind(teamId, state.elo, state.games, state.asOf);
+	});
+
+	const currentBatches = currentStatements.filter(Boolean) as D1PreparedStatement[];
+	for (const chunk of chunkArray(currentBatches, 100)) {
+		await env.ENTITIES_DB.batch(chunk);
+	}
+
+	await env.FOOTBALL_KV.put(ELO_CACHE_UPDATE_KEY, today);
+	console.log(
+		`✅ [Scheduler] Elo update complete from cached fixtures: ${inserts.length} snapshots`,
+	);
+}
 
 // ============================================================================
 // DAILY ENTITY-DEDUPED PREFETCH (3 AM UTC)

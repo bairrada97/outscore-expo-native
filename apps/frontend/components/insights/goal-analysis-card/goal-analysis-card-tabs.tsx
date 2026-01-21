@@ -1,5 +1,6 @@
 import { Text } from "@/components/ui/text";
-import { Pressable, ScrollView, View } from "react-native";
+import { TouchableOpacity } from "@gorhom/bottom-sheet";
+import { ScrollView, View } from "react-native";
 
 export function GoalAnalysisCardTabs({
 	activeKey,
@@ -15,7 +16,7 @@ export function GoalAnalysisCardTabs({
 			contentContainerStyle={{ paddingTop: 8, paddingBottom: 8 }}
 		>
 			<View className="flex-row gap-8">
-				<Pressable
+				<TouchableOpacity
 					onPress={() => onSelectKey("over_under")}
 					className={`px-16 py-8 rounded-full border ${
 						activeKey === "over_under"
@@ -29,8 +30,8 @@ export function GoalAnalysisCardTabs({
 					>
 						Over/Under
 					</Text>
-				</Pressable>
-				<Pressable
+				</TouchableOpacity>
+				<TouchableOpacity
 					onPress={() => onSelectKey("btts")}
 					className={`px-16 py-8 rounded-full border ${
 						activeKey === "btts"
@@ -44,7 +45,7 @@ export function GoalAnalysisCardTabs({
 					>
 						BTTS
 					</Text>
-				</Pressable>
+				</TouchableOpacity>
 			</View>
 		</ScrollView>
 	);

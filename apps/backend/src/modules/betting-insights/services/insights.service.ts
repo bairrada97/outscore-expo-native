@@ -25,9 +25,14 @@ import {
 	hasInsightsSnapshot,
 	type InputsSnapshotData,
 	insertInsightsSnapshot,
+	getLeagueStatsByProviderId,
+	getCurrentTeamElo,
 	makeH2HPairKey,
 	type StandingsCurrentRowInsert,
 	type TeamSeasonContextInsert,
+	getLeagueById,
+	getTeamByProviderId,
+	resolveExternalId,
 	upsertH2HCache,
 	upsertInjuriesCache,
 	upsertLeague,
@@ -63,6 +68,7 @@ import { simulateBTTS } from "../simulations/simulate-btts";
 import { simulateFirstHalfActivity } from "../simulations/simulate-first-half-activity";
 import { simulateMatchOutcome } from "../simulations/simulate-match-outcome";
 import { simulateTotalGoalsOverUnder } from "../simulations/simulate-total-goals-over-under";
+import { calculateEloConfidence } from "../../elo";
 import type {
 	MatchContext as ApiMatchContext,
 	BettingInsightsResponse,
@@ -121,6 +127,102 @@ const INSIGHTS_FINISHED_STATUSES = [
 	"AWD", // Awarded
 	"WO", // Walkover
 ];
+
+const HIGH_ELO_MIDWEEK_GAP = 150;
+const HIGH_ELO_MIDWEEK_MAX_DAYS = 5;
+
+function getMostRecentTeamMatch(team: TeamData): ProcessedMatch | null {
+	const all = [...(team.lastHomeMatches ?? []), ...(team.lastAwayMatches ?? [])];
+	if (!all.length) return null;
+	const sorted = all
+		.slice()
+		.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+	return sorted[0] ?? null;
+}
+
+function isMidweekUTC(dateIso: string): boolean {
+	const d = new Date(dateIso);
+	const day = d.getUTCDay(); // 0 Sun ... 6 Sat
+	return day === 2 || day === 3 || day === 4;
+}
+
+function classifyCompetition(
+	leagueName: string,
+): "international" | "domestic_cup" | "other" {
+	const t = (leagueName ?? "").toLowerCase();
+	if (
+		t.includes("champions league") ||
+		t.includes("europa league") ||
+		t.includes("conference league") ||
+		t.includes("nations league") ||
+		t.includes("world cup") ||
+		t.includes("copa america") ||
+		t.includes("afc champions") ||
+		t.includes("caf champions") ||
+		t.includes("concacaf") ||
+		t.includes("libertadores") ||
+		t.includes("sudamericana")
+	) {
+		return "international";
+	}
+	if (
+		t.includes(" cup") ||
+		t.startsWith("cup ") ||
+		t.includes("copa") ||
+		t.includes("taça") ||
+		t.includes("taca") ||
+		t.includes("coupe") ||
+		t.includes("coppa") ||
+		t.includes("pokal") ||
+		t.includes("beker")
+	) {
+		return "domestic_cup";
+	}
+	return "other";
+}
+
+async function buildHighEloOpponentContext(
+	db: D1Database,
+	team: TeamData,
+): Promise<TeamData["recentHighEloOpponent"] | undefined> {
+	if (!team.elo) return undefined;
+	const last = getMostRecentTeamMatch(team);
+	if (!last) return undefined;
+	if (!isMidweekUTC(last.date)) return undefined;
+
+	const days = team.daysSinceLastMatch ?? 7;
+	if (days > HIGH_ELO_MIDWEEK_MAX_DAYS) return undefined;
+
+	const leagueName = last.league?.name ?? "";
+	const kind = classifyCompetition(leagueName);
+	if (kind === "other") return undefined;
+
+	const opponentProviderId =
+		last.homeTeam.id === team.id ? last.awayTeam.id : last.homeTeam.id;
+	const opponentName =
+		last.homeTeam.id === team.id ? last.awayTeam.name : last.homeTeam.name;
+	const opponentInternalId = await resolveExternalId(
+		db,
+		"api_football",
+		"team",
+		opponentProviderId,
+	);
+	if (!opponentInternalId) return undefined;
+
+	const opponentElo = await getCurrentTeamElo(db, opponentInternalId);
+	if (!opponentElo) return undefined;
+
+	const gap = opponentElo.elo - team.elo.rating;
+	if (gap < HIGH_ELO_MIDWEEK_GAP) return undefined;
+
+	return {
+		opponentName,
+		opponentElo: opponentElo.elo,
+		gap,
+		leagueName,
+		daysSince: days,
+	};
+}
 
 const FINISHED_STATUSES = new Set(["FT", "AET", "PEN"]);
 
@@ -492,6 +594,8 @@ export const insightsService = {
 				h2hMatches,
 				standings,
 				injuries,
+				homeEloRow,
+				awayEloRow,
 			] = await Promise.all([
 				this.fetchTeamStatistics(homeTeamId, leagueId, season, env),
 				this.fetchTeamStatistics(awayTeamId, leagueId, season, env),
@@ -500,6 +604,8 @@ export const insightsService = {
 				this.fetchH2HMatches(homeTeamId, awayTeamId, 5, env),
 				this.fetchStandings(leagueId, season, env),
 				this.fetchInjuries(fixtureId, homeTeamId, awayTeamId, env),
+				getCurrentTeamElo(env.ENTITIES_DB, homeTeamId),
+				getCurrentTeamElo(env.ENTITIES_DB, awayTeamId),
 			]);
 
 			// Step 2b: Extract team standings data
@@ -520,6 +626,14 @@ export const insightsService = {
 				homeMatches,
 				leagueId,
 				homeStandingsData,
+				homeEloRow
+					? {
+							rating: homeEloRow.elo,
+							games: homeEloRow.games,
+							asOf: homeEloRow.as_of_date,
+							confidence: calculateEloConfidence(homeEloRow.games),
+						}
+					: undefined,
 			);
 
 			const awayTeamData = this.processTeamData(
@@ -529,7 +643,22 @@ export const insightsService = {
 				awayMatches,
 				leagueId,
 				awayStandingsData,
+				awayEloRow
+					? {
+							rating: awayEloRow.elo,
+							games: awayEloRow.games,
+							asOf: awayEloRow.as_of_date,
+							confidence: calculateEloConfidence(awayEloRow.games),
+						}
+					: undefined,
 			);
+
+			const [homeHighElo, awayHighElo] = await Promise.all([
+				buildHighEloOpponentContext(env.ENTITIES_DB, homeTeamData),
+				buildHighEloOpponentContext(env.ENTITIES_DB, awayTeamData),
+			]);
+			if (homeHighElo) homeTeamData.recentHighEloOpponent = homeHighElo;
+			if (awayHighElo) awayTeamData.recentHighEloOpponent = awayHighElo;
 
 			// Step 4: Process H2H data
 			const h2hData = processH2HData(h2hMatches, homeTeamId, awayTeamId);
@@ -600,6 +729,12 @@ export const insightsService = {
 				),
 			};
 
+			const leagueStats = await this.getWeightedLeagueStats({
+				db: env.ENTITIES_DB,
+				leagueId,
+				season,
+			});
+
 			// Step 6: Generate simulations (with injury adjustments)
 			const simulations = this.generateSimulations(
 				homeTeamData,
@@ -607,6 +742,7 @@ export const insightsService = {
 				h2hData,
 				predictionContext,
 				injuries,
+				leagueStats,
 			);
 
 			// Step 7: Generate insights
@@ -1363,6 +1499,7 @@ export const insightsService = {
 		matches: ProcessedMatch[],
 		leagueId: number,
 		standingsData: TeamStandingsData | null = null,
+		elo?: TeamData["elo"],
 	): TeamData {
 		// Filter out friendly matches for analysis
 		const competitiveMatches = filterNonFriendlyMatches(matches);
@@ -1410,6 +1547,7 @@ export const insightsService = {
 			mood,
 			dna,
 			safetyFlags,
+			elo,
 			daysSinceLastMatch,
 			lastHomeMatches: homeMatches.slice(0, 10),
 			lastAwayMatches: awayMatches.slice(0, 10),
@@ -1663,6 +1801,7 @@ export const insightsService = {
 		h2h: H2HData,
 		context: PredictionMatchContext,
 		injuries: FixtureInjuries | null,
+		leagueStats?: { avgGoals: number; matches: number },
 	): Simulation[] {
 		const simulations: Simulation[] = [];
 
@@ -1683,6 +1822,7 @@ export const insightsService = {
 			h2h,
 			homeInjuryImpact: homeImpact,
 			awayInjuryImpact: awayImpact,
+			leagueStats,
 		});
 
 		// Both Teams To Score (injuries affect scoring likelihood)
@@ -1760,6 +1900,47 @@ export const insightsService = {
 
 		// Related scenarios (non-blocking, derived only from already computed simulations)
 		return attachRelatedScenarios(simulations);
+	},
+
+	/**
+	 * Build weighted league scoring profile (current + last season).
+	 */
+	async getWeightedLeagueStats(params: {
+		db: D1Database;
+		leagueId: number;
+		season: number;
+	}): Promise<{ avgGoals: number; matches: number } | undefined> {
+		const current = await getLeagueStatsByProviderId(
+			params.db,
+			"api_football",
+			params.leagueId,
+			params.season,
+		);
+		const previous = await getLeagueStatsByProviderId(
+			params.db,
+			"api_football",
+			params.leagueId,
+			params.season - 1,
+		);
+
+		if (!current && !previous) return undefined;
+		if (!current && previous) {
+			return { avgGoals: previous.avg_goals, matches: previous.matches };
+		}
+		if (current && !previous) {
+			return { avgGoals: current.avg_goals, matches: current.matches };
+		}
+
+		if (current && previous && current.matches < 10) {
+			return {
+				avgGoals: current.avg_goals * 0.3 + previous.avg_goals * 0.7,
+				matches: current.matches,
+			};
+		}
+
+		return current
+			? { avgGoals: current.avg_goals, matches: current.matches }
+			: undefined;
 	},
 
 	// ============================================================================
@@ -1972,6 +2153,15 @@ export const insightsService = {
 				cleanSheetPercentage: team.dna.cleanSheetPercentage,
 				isLateStarter: team.dna.isLateStarter,
 			},
+			...(team.elo
+				? {
+						elo: {
+							rating: team.elo.rating,
+							games: team.elo.games,
+							confidence: team.elo.confidence,
+						},
+					}
+				: {}),
 		};
 	},
 
@@ -2064,12 +2254,20 @@ export const insightsService = {
 
 		// 2. If standings exist, upsert all teams in standings + standings rows
 		if (standings) {
+			const usableLeagueCountry =
+				typeof league.country === "string" &&
+				league.country !== "World" &&
+				league.country !== "Europe" &&
+				league.country !== "International"
+					? league.country
+					: undefined;
+
 			// First, ensure all teams in standings exist in D1 and build provider→internal ID map
 			const teamIdMap = new Map<number, number>();
 			for (const row of standings.rows) {
 				const internalId = await upsertTeam(
 					db,
-					{ name: row.teamName },
+					{ name: row.teamName, country: usableLeagueCountry },
 					"api_football",
 					row.teamId,
 				);
@@ -2129,16 +2327,40 @@ export const insightsService = {
 	 */
 	async persistTeamWithContext(
 		db: D1Database,
+		_env: InsightsEnv,
 		team: { id: number; name: string; logo: string },
 		leagueId: number,
 		season: number,
 		teamData: TeamData,
 		now: string,
 	): Promise<number> {
+		const league = await getLeagueById(db, leagueId);
+		const leagueCountry =
+			typeof league?.country === "string" &&
+			league.country !== "World" &&
+			league.country !== "Europe" &&
+			league.country !== "International"
+				? league.country
+				: undefined;
+
+		// If the team already has a country in D1, do not fetch.
+		const existing = await getTeamByProviderId(db, "api_football", team.id).catch(
+			() => null,
+		);
+		const existingCountry = existing?.country ?? null;
+
+		let country: string | undefined = leagueCountry;
+		if (!country && !existingCountry) {
+			// Team country enrichment should happen asynchronously via background jobs
+			// to avoid blocking the insights request and consuming API quota.
+			// For now, keep country undefined and rely on league country or existing data.
+			country = undefined;
+		}
+
 		// 1. Upsert team entity
 		const teamInternalId = await upsertTeam(
 			db,
-			{ name: team.name, logo: team.logo },
+			{ name: team.name, logo: team.logo, country: country ?? existingCountry ?? undefined },
 			"api_football",
 			team.id,
 		);
@@ -2202,6 +2424,7 @@ export const insightsService = {
 			// 2. Home Team + Context (grouped)
 			await this.persistTeamWithContext(
 				db,
+				env,
 				fixture.teams.home,
 				leagueInternalId,
 				fixture.league.season,
@@ -2212,6 +2435,7 @@ export const insightsService = {
 			// 3. Away Team + Context (grouped)
 			await this.persistTeamWithContext(
 				db,
+				env,
 				fixture.teams.away,
 				leagueInternalId,
 				fixture.league.season,

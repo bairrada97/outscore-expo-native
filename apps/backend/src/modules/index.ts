@@ -9,6 +9,8 @@ export * from "./cache";
 export * from "./entities";
 // Fixtures module
 export * from "./fixtures";
+// Leagues registry module
+export * from "./leagues-registry";
 // Scheduler module
 export * from "./scheduler";
 // Security module

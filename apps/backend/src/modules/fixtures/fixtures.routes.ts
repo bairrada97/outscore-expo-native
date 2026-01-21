@@ -34,6 +34,14 @@ export const createFixturesRoutes = () => {
 			.string()
 			.regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
 			.optional(),
+		from: z
+			.string()
+			.regex(/^\d{4}-\d{2}-\d{2}$/, "From must be in YYYY-MM-DD format")
+			.optional(),
+		to: z
+			.string()
+			.regex(/^\d{4}-\d{2}-\d{2}$/, "To must be in YYYY-MM-DD format")
+			.optional(),
 		timezone: z
 			.string()
 			.refine((tz) => isValidTimezone(tz), {
@@ -84,6 +92,8 @@ export const createFixturesRoutes = () => {
 				team: teamId,
 				last,
 				date,
+				from,
+				to,
 				timezone,
 				live,
 			} = context.req.valid("query");
@@ -103,6 +113,8 @@ export const createFixturesRoutes = () => {
 			return handleFixturesList(
 				context,
 				date,
+				from,
+				to,
 				timezone,
 				live,
 				requestStartTime,
@@ -265,18 +277,39 @@ async function handleFixtureDetail(
 async function handleFixturesList(
 	context: Parameters<Parameters<ReturnType<typeof Hono.prototype.get>>[1]>[0],
 	date: string | undefined,
+	from: string | undefined,
+	to: string | undefined,
 	timezone: string,
 	live: "all" | undefined,
 	requestStartTime: number,
 ) {
 	try {
-		const result = await fixturesService.getFixtures({
-			date,
-			timezone,
-			live,
-			env: context.env,
-			ctx: context.executionCtx,
-		});
+		if ((from && !to) || (!from && to)) {
+			throw new Error("Invalid range query: both from and to are required.");
+		}
+
+		const isRangeRequest = Boolean(from && to && from !== to);
+		if (from && to && from > to) {
+			throw new Error("Invalid range query: from must be <= to.");
+		}
+
+		const dateToUse = !isRangeRequest ? (date ?? from) : undefined;
+
+		const result = isRangeRequest && from && to
+			? await fixturesService.getFixturesRange({
+					fromDate: from,
+					toDate: to,
+					timezone,
+					env: context.env,
+					ctx: context.executionCtx,
+				})
+			: await fixturesService.getFixtures({
+					date: dateToUse,
+					timezone,
+					live,
+					env: context.env,
+					ctx: context.executionCtx,
+				});
 
 		// Count filtered matches
 		let filteredMatchCount = 0;
@@ -287,22 +320,27 @@ async function handleFixturesList(
 		});
 
 		const responseTime = (performance.now() - requestStartTime).toFixed(2);
+		const dateLabel =
+			isRangeRequest && from && to ? `${from}..${to}` : dateToUse || "today";
 
 		console.log(
-			`📊 [Response] date=${date || "today"}, timezone=${timezone}, ` +
+			`📊 [Response] date=${dateLabel}, timezone=${timezone}, ` +
 				`source=${result.source}, originalCount=${result.originalMatchCount}, ` +
 				`filteredCount=${filteredMatchCount}, time=${responseTime}ms`,
 		);
 
 		// Set cache headers based on data freshness
-		const isToday = !date || date === new Date().toISOString().split("T")[0];
-		if (isToday || live === "all") {
+		const today = new Date().toISOString().split("T")[0];
+		const isToday = !dateToUse || dateToUse === today;
+		if (isRangeRequest) {
+			context.header("Cache-Control", "no-store");
+		} else if (isToday || live === "all") {
 			// Today's data or live: short cache with stale-while-revalidate
 			context.header(
 				"Cache-Control",
 				"public, max-age=15, stale-while-revalidate=30",
 			);
-		} else if (date && date > new Date().toISOString().split("T")[0]) {
+		} else if (dateToUse && dateToUse > today) {
 			// Future data: moderate cache
 			context.header(
 				"Cache-Control",
@@ -322,7 +360,8 @@ async function handleFixturesList(
 
 		return context.json({
 			status: "success",
-			date: date || new Date().toISOString().split("T")[0],
+			date: dateToUse || today,
+			...(isRangeRequest ? { from, to } : {}),
 			timezone,
 			source: result.source,
 			matchCount: {
@@ -344,6 +383,9 @@ async function handleFixturesList(
 			} else if (error.message.includes("API request failed")) {
 				errorMessage = "External API request failed. Please try again later.";
 				statusCode = 502;
+			} else if (error.message.includes("Invalid range query")) {
+				errorMessage = error.message;
+				statusCode = 400;
 			} else if (error.message.includes("Invalid timezone")) {
 				errorMessage = error.message;
 				statusCode = 400;

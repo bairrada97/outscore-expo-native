@@ -44,7 +44,13 @@ const FIXTURE_TABS = [
 	{ key: "standings", title: "STANDINGS" },
 ] as const;
 
-type FixtureTabKey = (typeof FIXTURE_TABS)[number]["key"];
+type FixtureTabKey =
+	| "overview"
+	| "insights"
+	| "lineups"
+	| "statistics"
+	| "h2h"
+	| "standings";
 
 function normalizeFixtureTab(tabParam: unknown): FixtureTabKey {
 	const raw = typeof tabParam === "string" ? tabParam : undefined;
@@ -296,6 +302,8 @@ export default function FixtureDetailScreen() {
 		);
 	}
 
+	const fixture = data.response?.[0];
+
 	return (
 		<>
 			<Stack.Screen
@@ -309,7 +317,7 @@ export default function FixtureDetailScreen() {
 					isWeb ? "bg-neu-02 dark:bg-neu-13" : "flex-1 bg-neu-02 dark:bg-neu-13"
 				}
 			>
-				<FixtureInfoHeader fixture={data.response?.[0]} />
+				<FixtureInfoHeader fixture={fixture} />
 
 				<Tabs
 					activeKey={isWeb ? normalizeFixtureTab(tab) : undefined}
@@ -324,7 +332,7 @@ export default function FixtureDetailScreen() {
 							title: "OVERVIEW",
 							render: () => (
 								<View className="p-16">
-									<FixtureEventsBlock fixture={data.response?.[0]} />
+									<FixtureEventsBlock fixture={fixture} />
 								</View>
 							),
 						},
@@ -391,7 +399,7 @@ export default function FixtureDetailScreen() {
 													insights={matchOutcomeSimulation.insights ?? []}
 												/>
 											) : (
-												<View className="bg-neu-01 dark:bg-neu-11 shadow-sha-01 dark:shadow-sha-06 rounded-lg px-16 py-12">
+												<View className="bg-neu-01 dark:bg-neu-11 shadow-sha-01 dark:shadow-sha-06 rounded-lg px-16 py-16">
 													<Text
 														variant="body-02"
 														className="text-neu-07 dark:text-neu-06"
@@ -404,6 +412,18 @@ export default function FixtureDetailScreen() {
 											<GoalAnalysisCard
 												overUnderSimulations={overUnderSimulations}
 												bttsSimulation={bttsSimulation}
+												homeGoalLineOverPct={
+													insightsData.homeTeamContext?.dna?.goalLineOverPct
+												}
+												awayGoalLineOverPct={
+													insightsData.awayTeamContext?.dna?.goalLineOverPct
+												}
+												homeBttsYesPct={
+													insightsData.homeTeamContext?.dna?.bttsYesPct
+												}
+												awayBttsYesPct={
+													insightsData.awayTeamContext?.dna?.bttsYesPct
+												}
 											/>
 										</View>
 									) : null}

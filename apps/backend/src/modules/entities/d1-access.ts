@@ -20,10 +20,19 @@ import type {
   Provider,
   StandingsCurrentRow,
   StandingsCurrentRowInsert,
+  LeagueStats,
+  LeagueStatsUpsert,
+  TeamEloRating,
+  TeamEloRatingInsert,
+  TeamEloCurrent,
+  TeamEloCurrentUpsert,
   Team,
   TeamInsert,
   TeamSeasonContext,
   TeamSeasonContextInsert,
+  UefaAssociationCoefficientInsert,
+  UefaClubCoefficientInsert,
+  UefaClubTeamMapInsert,
 } from './types';
 import { INJURIES_CACHE_TTL_MS } from './types';
 
@@ -71,6 +80,279 @@ export async function getProviderIdFromInternal(
   return result?.provider_id ?? null;
 }
 
+// ============================================================================
+// ELO RATINGS
+// ============================================================================
+
+/**
+ * Get the latest Elo rating for a team.
+ */
+export async function getLatestTeamElo(
+  db: D1Database,
+  teamId: number
+): Promise<TeamEloRating | null> {
+  const row = await db
+    .prepare(
+      `SELECT * FROM team_elo_ratings
+       WHERE team_id = ?
+       ORDER BY datetime(as_of_date) DESC
+       LIMIT 1`
+    )
+    .bind(teamId)
+    .first<TeamEloRating>();
+
+  return row ?? null;
+}
+
+// ============================================================================
+// LEAGUE STATS
+// ============================================================================
+
+export async function getLeagueStatsByProviderId(
+  db: D1Database,
+  provider: Provider,
+  leagueId: number,
+  season: number
+): Promise<LeagueStats | null> {
+  const row = await db
+    .prepare(
+      `SELECT * FROM league_stats
+       WHERE provider = ? AND league_id = ? AND season = ?`
+    )
+    .bind(provider, leagueId, season)
+    .first<LeagueStats>();
+
+  return row ?? null;
+}
+
+export async function upsertLeagueStats(
+  db: D1Database,
+  data: LeagueStatsUpsert
+): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO league_stats
+       (provider, league_id, season, matches, avg_goals, over_2_5_rate, btts_rate, home_goals_avg, away_goals_avg, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+       ON CONFLICT(provider, league_id, season) DO UPDATE SET
+         matches = excluded.matches,
+         avg_goals = excluded.avg_goals,
+         over_2_5_rate = excluded.over_2_5_rate,
+         btts_rate = excluded.btts_rate,
+         home_goals_avg = excluded.home_goals_avg,
+         away_goals_avg = excluded.away_goals_avg,
+         updated_at = datetime('now')`
+    )
+    .bind(
+      data.provider ?? 'api_football',
+      data.league_id,
+      data.season,
+      data.matches,
+      data.avg_goals,
+      data.over_2_5_rate,
+      data.btts_rate,
+      data.home_goals_avg,
+      data.away_goals_avg
+    )
+    .run();
+}
+
+/**
+ * Get the current Elo rating for a team.
+ */
+export async function getCurrentTeamElo(
+  db: D1Database,
+  teamId: number
+): Promise<TeamEloCurrent | null> {
+  const row = await db
+    .prepare(`SELECT * FROM team_elo_current WHERE team_id = ?`)
+    .bind(teamId)
+    .first<TeamEloCurrent>();
+
+  return row ?? null;
+}
+
+/**
+ * Upsert current Elo rating for a team.
+ */
+export async function upsertCurrentTeamElo(
+  db: D1Database,
+  data: TeamEloCurrentUpsert
+): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO team_elo_current
+       (team_id, elo, games, as_of_date, updated_at)
+       VALUES (?, ?, ?, ?, datetime('now'))
+       ON CONFLICT(team_id) DO UPDATE SET
+         elo = excluded.elo,
+         games = excluded.games,
+         as_of_date = excluded.as_of_date,
+         updated_at = datetime('now')`
+    )
+    .bind(data.team_id, data.elo, data.games, data.as_of_date)
+    .run();
+}
+
+/**
+ * Insert an Elo snapshot (idempotent by fixture + team).
+ * Returns true if inserted, false if already exists.
+ */
+export async function insertTeamEloSnapshot(
+  db: D1Database,
+  data: TeamEloRatingInsert
+): Promise<boolean> {
+  const result = await db
+    .prepare(
+      `INSERT INTO team_elo_ratings
+       (team_id, as_of_date, elo, games, last_fixture_provider, last_fixture_id, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+       ON CONFLICT(team_id, last_fixture_provider, last_fixture_id) DO NOTHING`
+    )
+    .bind(
+      data.team_id,
+      data.as_of_date,
+      data.elo,
+      data.games,
+      data.last_fixture_provider ?? 'api_football',
+      data.last_fixture_id
+    )
+    .run();
+
+  const metaChanges = (result as { meta?: { changes?: number } }).meta?.changes;
+  return typeof metaChanges === 'number' ? metaChanges > 0 : false;
+}
+
+// ============================================================================
+// UEFA COEFFICIENTS
+// ============================================================================
+
+export async function upsertUefaAssociationCoefficient(
+  db: D1Database,
+  data: UefaAssociationCoefficientInsert
+): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO uefa_association_coefficients
+       (country_code, as_of_season, rank, coefficient5y, updated_at)
+       VALUES (?, ?, ?, ?, datetime('now'))
+       ON CONFLICT(country_code, as_of_season) DO UPDATE SET
+         rank = excluded.rank,
+         coefficient5y = excluded.coefficient5y,
+         updated_at = datetime('now')`
+    )
+    .bind(
+      data.country_code,
+      data.as_of_season,
+      data.rank ?? null,
+      data.coefficient5y ?? null
+    )
+    .run();
+}
+
+export async function upsertUefaClubCoefficient(
+  db: D1Database,
+  data: UefaClubCoefficientInsert
+): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO uefa_club_coefficients
+       (uefa_club_key, as_of_season, name, country_code, coefficient, updated_at)
+       VALUES (?, ?, ?, ?, ?, datetime('now'))
+       ON CONFLICT(uefa_club_key, as_of_season) DO UPDATE SET
+         name = excluded.name,
+         country_code = excluded.country_code,
+         coefficient = excluded.coefficient,
+         updated_at = datetime('now')`
+    )
+    .bind(
+      data.uefa_club_key,
+      data.as_of_season,
+      data.name,
+      data.country_code ?? null,
+      data.coefficient ?? null
+    )
+    .run();
+}
+
+export async function upsertUefaClubTeamMap(
+  db: D1Database,
+  data: UefaClubTeamMapInsert
+): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO uefa_club_team_map
+       (uefa_club_key, as_of_season, api_football_team_id, team_id, confidence, method, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+       ON CONFLICT(uefa_club_key, as_of_season) DO UPDATE SET
+         api_football_team_id = excluded.api_football_team_id,
+         team_id = excluded.team_id,
+         confidence = excluded.confidence,
+         method = excluded.method,
+         updated_at = datetime('now')`
+    )
+    .bind(
+      data.uefa_club_key,
+      data.as_of_season,
+      data.api_football_team_id,
+      data.team_id ?? null,
+      data.confidence ?? null,
+      data.method ?? null
+    )
+    .run();
+}
+
+export async function getUefaAssociationCoefficient(
+  db: D1Database,
+  countryCode: string,
+  asOfSeason: number
+): Promise<{ coefficient5y: number | null; rank: number | null } | null> {
+  const row = await db
+    .prepare(
+      `SELECT coefficient5y, rank
+       FROM uefa_association_coefficients
+       WHERE country_code = ? AND as_of_season = ?`
+    )
+    .bind(countryCode, asOfSeason)
+    .first<{ coefficient5y: number | null; rank: number | null }>();
+
+  return row ?? null;
+}
+
+export async function getUefaClubCoefficient(
+  db: D1Database,
+  uefaClubKey: string,
+  asOfSeason: number
+): Promise<{ coefficient: number | null; country_code: string | null } | null> {
+  const row = await db
+    .prepare(
+      `SELECT coefficient, country_code
+       FROM uefa_club_coefficients
+       WHERE uefa_club_key = ? AND as_of_season = ?`
+    )
+    .bind(uefaClubKey, asOfSeason)
+    .first<{ coefficient: number | null; country_code: string | null }>();
+
+  return row ?? null;
+}
+
+export async function getUefaClubKeyForTeam(
+  db: D1Database,
+  teamId: number,
+  asOfSeason: number
+): Promise<string | null> {
+  const row = await db
+    .prepare(
+      `SELECT uefa_club_key
+       FROM uefa_club_team_map
+       WHERE team_id = ? AND as_of_season = ?`
+    )
+    .bind(teamId, asOfSeason)
+    .first<{ uefa_club_key: string }>();
+
+  return row?.uefa_club_key ?? null;
+}
+
 /**
  * Upsert external ID mapping
  */
@@ -96,6 +378,42 @@ export async function upsertExternalId(
       data.match_method ?? null
     )
     .run();
+}
+
+/**
+ * Insert external ID mapping only if missing (race-safe).
+ * Returns true if inserted, false if mapping already existed.
+ *
+ * Rationale:
+ * - Under concurrency, two requests can insert the same team/league row, then both try
+ *   to upsert external_ids. If the second overwrites internal_id, the first row becomes
+ *   an orphan and you see duplicates in `teams` / `leagues`.
+ */
+async function insertExternalIdIfMissing(
+  db: D1Database,
+  data: ExternalIdInsert,
+): Promise<boolean> {
+  const result = await db
+    .prepare(
+      `INSERT INTO external_ids (provider, entity_type, provider_id, internal_id, match_confidence, match_method)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(provider, entity_type, provider_id) DO NOTHING`
+    )
+    .bind(
+      data.provider,
+      data.entity_type,
+      data.provider_id,
+      data.internal_id,
+      data.match_confidence ?? null,
+      data.match_method ?? null,
+    )
+    .run();
+
+  // D1 returns a meta object; when the insert is ignored, changes should be 0.
+  // We treat any positive change count as "inserted".
+  const metaChanges = (result as { meta?: { changes?: number } }).meta?.changes;
+  const changes = typeof metaChanges === 'number' ? metaChanges : 0;
+  return changes > 0;
 }
 
 // ============================================================================
@@ -166,8 +484,8 @@ export async function upsertLeague(
   }
   const newId = result.id;
 
-  // Create external ID mapping
-  await upsertExternalId(db, {
+  // Create external ID mapping (race-safe).
+  const inserted = await insertExternalIdIfMissing(db, {
     provider,
     entity_type: 'league',
     provider_id: String(providerId),
@@ -175,6 +493,15 @@ export async function upsertLeague(
     match_confidence: 1.0,
     match_method: 'api_fetch',
   });
+
+  if (inserted) return newId;
+
+  // Mapping already existed (likely concurrent insert). Reuse mapped internal id and delete the orphan row.
+  const existingInternalId = await resolveExternalId(db, provider, 'league', providerId);
+  if (existingInternalId && existingInternalId !== newId) {
+    await db.prepare('DELETE FROM leagues WHERE id = ?').bind(newId).run();
+    return existingInternalId;
+  }
 
   return newId;
 }
@@ -250,7 +577,7 @@ export async function upsertTeam(
   }
   const newId = result.id;
 
-  await upsertExternalId(db, {
+  const inserted = await insertExternalIdIfMissing(db, {
     provider,
     entity_type: 'team',
     provider_id: String(providerId),
@@ -258,6 +585,15 @@ export async function upsertTeam(
     match_confidence: 1.0,
     match_method: 'api_fetch',
   });
+
+  if (inserted) return newId;
+
+  // Mapping already existed (likely concurrent insert). Reuse mapped internal id and delete the orphan row.
+  const existingInternalId = await resolveExternalId(db, provider, 'team', providerId);
+  if (existingInternalId && existingInternalId !== newId) {
+    await db.prepare('DELETE FROM teams WHERE id = ?').bind(newId).run();
+    return existingInternalId;
+  }
 
   return newId;
 }

@@ -1,0 +1,2139 @@
+{
+  "asOfSeason": 2026,
+  "associations": [
+    {
+      "countryCode": "ENG",
+      "rank": 1,
+      "coefficient5y": 103.658,
+      "name": "England"
+    },
+    {
+      "countryCode": "ITA",
+      "rank": 2,
+      "coefficient5y": 92.124,
+      "name": "Italy"
+    },
+    {
+      "countryCode": "ESP",
+      "rank": 3,
+      "coefficient5y": 86.015,
+      "name": "Spain"
+    },
+    {
+      "countryCode": "GER",
+      "rank": 4,
+      "coefficient5y": 82.974,
+      "name": "Germany"
+    },
+    {
+      "countryCode": "FRA",
+      "rank": 5,
+      "coefficient5y": 75.605,
+      "name": "France"
+    },
+    {
+      "countryCode": "NED",
+      "rank": 6,
+      "coefficient5y": 65.762,
+      "name": "Netherlands"
+    },
+    {
+      "countryCode": "POR",
+      "rank": 7,
+      "coefficient5y": 63.266,
+      "name": "Portugal"
+    },
+    {
+      "countryCode": "BEL",
+      "rank": 8,
+      "coefficient5y": 57.75,
+      "name": "Belgium"
+    },
+    {
+      "countryCode": "TUR",
+      "rank": 9,
+      "coefficient5y": 48.125,
+      "name": "Türkiye"
+    },
+    {
+      "countryCode": "CZE",
+      "rank": 10,
+      "coefficient5y": 46.075,
+      "name": "Czechia"
+    },
+    {
+      "countryCode": "POL",
+      "rank": 11,
+      "coefficient5y": 44.625,
+      "name": "Poland"
+    },
+    {
+      "countryCode": "GRE",
+      "rank": 12,
+      "coefficient5y": 43.712,
+      "name": "Greece"
+    },
+    {
+      "countryCode": "DEN",
+      "rank": 13,
+      "coefficient5y": 38.981,
+      "name": "Denmark"
+    },
+    {
+      "countryCode": "NOR",
+      "rank": 14,
+      "coefficient5y": 38.587,
+      "name": "Norway"
+    },
+    {
+      "countryCode": "CYP",
+      "rank": 15,
+      "coefficient5y": 34.943,
+      "name": "Cyprus"
+    },
+    {
+      "countryCode": "SUI",
+      "rank": 16,
+      "coefficient5y": 34.5,
+      "name": "Switzerland"
+    },
+    {
+      "countryCode": "AUT",
+      "rank": 17,
+      "coefficient5y": 33.05,
+      "name": "Austria"
+    },
+    {
+      "countryCode": "SCO",
+      "rank": 18,
+      "coefficient5y": 30.45,
+      "name": "Scotland"
+    },
+    {
+      "countryCode": "SWE",
+      "rank": 19,
+      "coefficient5y": 29.625,
+      "name": "Sweden"
+    },
+    {
+      "countryCode": "ISR",
+      "rank": 20,
+      "coefficient5y": 27.5,
+      "name": "Israel"
+    },
+    {
+      "countryCode": "CRO",
+      "rank": 21,
+      "coefficient5y": 25.906,
+      "name": "Croatia"
+    },
+    {
+      "countryCode": "ROU",
+      "rank": 22,
+      "coefficient5y": 25.0,
+      "name": "Romania"
+    },
+    {
+      "countryCode": "HUN",
+      "rank": 23,
+      "coefficient5y": 24.875,
+      "name": "Hungary"
+    },
+    {
+      "countryCode": "UKR",
+      "rank": 24,
+      "coefficient5y": 24.412,
+      "name": "Ukraine"
+    },
+    {
+      "countryCode": "SRB",
+      "rank": 25,
+      "coefficient5y": 23.875,
+      "name": "Serbia"
+    },
+    {
+      "countryCode": "SVN",
+      "rank": 26,
+      "coefficient5y": 22.843,
+      "name": "Slovenia"
+    },
+    {
+      "countryCode": "SVK",
+      "rank": 27,
+      "coefficient5y": 22.375,
+      "name": "Slovakia"
+    },
+    {
+      "countryCode": "AZE",
+      "rank": 28,
+      "coefficient5y": 22.25,
+      "name": "Azerbaijan"
+    },
+    {
+      "countryCode": "BUL",
+      "rank": 29,
+      "coefficient5y": 19.875,
+      "name": "Bulgaria"
+    },
+    {
+      "countryCode": "RUS",
+      "rank": 30,
+      "coefficient5y": 18.299,
+      "name": "Russia"
+    },
+    {
+      "countryCode": "IRL",
+      "rank": 31,
+      "coefficient5y": 17.343,
+      "name": "Republic of Ireland"
+    },
+    {
+      "countryCode": "ISL",
+      "rank": 32,
+      "coefficient5y": 16.52,
+      "name": "Iceland"
+    },
+    {
+      "countryCode": "MDA",
+      "rank": 33,
+      "coefficient5y": 14.625,
+      "name": "Moldova"
+    },
+    {
+      "countryCode": "ARM",
+      "rank": 34,
+      "coefficient5y": 14.562,
+      "name": "Armenia"
+    },
+    {
+      "countryCode": "FIN",
+      "rank": 35,
+      "coefficient5y": 14.0,
+      "name": "Finland"
+    },
+    {
+      "countryCode": "KOS",
+      "rank": 36,
+      "coefficient5y": 13.989,
+      "name": "Kosovo"
+    },
+    {
+      "countryCode": "KAZ",
+      "rank": 37,
+      "coefficient5y": 13.75,
+      "name": "Kazakhstan"
+    },
+    {
+      "countryCode": "BIH",
+      "rank": 38,
+      "coefficient5y": 13.468,
+      "name": "Bosnia and Herzegovina"
+    },
+    {
+      "countryCode": "LVA",
+      "rank": 39,
+      "coefficient5y": 12.875,
+      "name": "Latvia"
+    },
+    {
+      "countryCode": "FRO",
+      "rank": 40,
+      "coefficient5y": 9.75,
+      "name": "Faroe Islands"
+    },
+    {
+      "countryCode": "MLT",
+      "rank": 41,
+      "coefficient5y": 9.0,
+      "name": "Malta"
+    },
+    {
+      "countryCode": "LIE",
+      "rank": 42,
+      "coefficient5y": 8.5,
+      "name": "Liechtenstein"
+    },
+    {
+      "countryCode": "EST",
+      "rank": 43,
+      "coefficient5y": 8.207,
+      "name": "Estonia"
+    },
+    {
+      "countryCode": "ALB",
+      "rank": 44,
+      "coefficient5y": 8.125,
+      "name": "Albania"
+    },
+    {
+      "countryCode": "MKD",
+      "rank": 45,
+      "coefficient5y": 7.759,
+      "name": "North Macedonia"
+    },
+    {
+      "countryCode": "LTU",
+      "rank": 46,
+      "coefficient5y": 7.75,
+      "name": "Lithuania"
+    },
+    {
+      "countryCode": "NIR",
+      "rank": 47,
+      "coefficient5y": 7.25,
+      "name": "Northern Ireland"
+    },
+    {
+      "countryCode": "GIB",
+      "rank": 48,
+      "coefficient5y": 7.124,
+      "name": "Gibraltar"
+    },
+    {
+      "countryCode": "AND",
+      "rank": 49,
+      "coefficient5y": 6.832,
+      "name": "Andorra"
+    },
+    {
+      "countryCode": "BLR",
+      "rank": 50,
+      "coefficient5y": 6.625,
+      "name": "Belarus"
+    },
+    {
+      "countryCode": "LUX",
+      "rank": 51,
+      "coefficient5y": 6.625,
+      "name": "Luxembourg"
+    },
+    {
+      "countryCode": "MNE",
+      "rank": 52,
+      "coefficient5y": 6.583,
+      "name": "Montenegro"
+    },
+    {
+      "countryCode": "GEO",
+      "rank": 53,
+      "coefficient5y": 6.0,
+      "name": "Georgia"
+    },
+    {
+      "countryCode": "WAL",
+      "rank": 54,
+      "coefficient5y": 5.624,
+      "name": "Wales"
+    },
+    {
+      "countryCode": "SMR",
+      "rank": 55,
+      "coefficient5y": 2.831,
+      "name": "San Marino"
+    }
+  ],
+  "clubs": [
+    {
+      "uefaClubKey": "real-madrid",
+      "name": "Real Madrid",
+      "countryCode": "ESP",
+      "coefficient": 131.5
+    },
+    {
+      "uefaClubKey": "bayern-munchen",
+      "name": "Bayern München",
+      "countryCode": "GER",
+      "coefficient": 124.25
+    },
+    {
+      "uefaClubKey": "inter",
+      "name": "Inter",
+      "countryCode": "ITA",
+      "coefficient": 121.25
+    },
+    {
+      "uefaClubKey": "man-city",
+      "name": "Man City",
+      "countryCode": "ENG",
+      "coefficient": 117.75
+    },
+    {
+      "uefaClubKey": "liverpool",
+      "name": "Liverpool",
+      "countryCode": "ENG",
+      "coefficient": 115.5
+    },
+    {
+      "uefaClubKey": "paris",
+      "name": "Paris",
+      "countryCode": "FRA",
+      "coefficient": 109.5
+    },
+    {
+      "uefaClubKey": "b-dortmund",
+      "name": "B. Dortmund",
+      "countryCode": "GER",
+      "coefficient": 98.75
+    },
+    {
+      "uefaClubKey": "leverkusen",
+      "name": "Leverkusen",
+      "countryCode": "GER",
+      "coefficient": 98.25
+    },
+    {
+      "uefaClubKey": "barcelona",
+      "name": "Barcelona",
+      "countryCode": "ESP",
+      "coefficient": 96.25
+    },
+    {
+      "uefaClubKey": "arsenal",
+      "name": "Arsenal",
+      "countryCode": "ENG",
+      "coefficient": 93.0
+    },
+    {
+      "uefaClubKey": "atleti",
+      "name": "Atleti",
+      "countryCode": "ESP",
+      "coefficient": 91.5
+    },
+    {
+      "uefaClubKey": "chelsea",
+      "name": "Chelsea",
+      "countryCode": "ENG",
+      "coefficient": 89.0
+    },
+    {
+      "uefaClubKey": "roma",
+      "name": "Roma",
+      "countryCode": "ITA",
+      "coefficient": 88.5
+    },
+    {
+      "uefaClubKey": "benfica",
+      "name": "Benfica",
+      "countryCode": "POR",
+      "coefficient": 87.75
+    },
+    {
+      "uefaClubKey": "frankfurt",
+      "name": "Frankfurt",
+      "countryCode": "GER",
+      "coefficient": 83.0
+    },
+    {
+      "uefaClubKey": "atalanta",
+      "name": "Atalanta",
+      "countryCode": "ITA",
+      "coefficient": 80.0
+    },
+    {
+      "uefaClubKey": "man-utd",
+      "name": "Man Utd",
+      "countryCode": "ENG",
+      "coefficient": 76.5
+    },
+    {
+      "uefaClubKey": "psv",
+      "name": "PSV",
+      "countryCode": "NED",
+      "coefficient": 71.25
+    },
+    {
+      "uefaClubKey": "club-brugge",
+      "name": "Club Brugge",
+      "countryCode": "BEL",
+      "coefficient": 69.75
+    },
+    {
+      "uefaClubKey": "sporting-cp",
+      "name": "Sporting CP",
+      "countryCode": "POR",
+      "coefficient": 69.5
+    },
+    {
+      "uefaClubKey": "tottenham",
+      "name": "Tottenham",
+      "countryCode": "ENG",
+      "coefficient": 69.25
+    },
+    {
+      "uefaClubKey": "fiorentina",
+      "name": "Fiorentina",
+      "countryCode": "ITA",
+      "coefficient": 69.25
+    },
+    {
+      "uefaClubKey": "feyenoord",
+      "name": "Feyenoord",
+      "countryCode": "NED",
+      "coefficient": 69.0
+    },
+    {
+      "uefaClubKey": "west-ham",
+      "name": "West Ham",
+      "countryCode": "ENG",
+      "coefficient": 69.0
+    },
+    {
+      "uefaClubKey": "juventus",
+      "name": "Juventus",
+      "countryCode": "ITA",
+      "coefficient": 66.25
+    },
+    {
+      "uefaClubKey": "milan",
+      "name": "Milan",
+      "countryCode": "ITA",
+      "coefficient": 66.0
+    },
+    {
+      "uefaClubKey": "porto",
+      "name": "Porto",
+      "countryCode": "POR",
+      "coefficient": 65.75
+    },
+    {
+      "uefaClubKey": "lille",
+      "name": "Lille",
+      "countryCode": "FRA",
+      "coefficient": 64.0
+    },
+    {
+      "uefaClubKey": "real-betis",
+      "name": "Real Betis",
+      "countryCode": "ESP",
+      "coefficient": 62.25
+    },
+    {
+      "uefaClubKey": "napoli",
+      "name": "Napoli",
+      "countryCode": "ITA",
+      "coefficient": 62.0
+    },
+    {
+      "uefaClubKey": "leipzig",
+      "name": "Leipzig",
+      "countryCode": "GER",
+      "coefficient": 61.0
+    },
+    {
+      "uefaClubKey": "villarreal",
+      "name": "Villarreal",
+      "countryCode": "ESP",
+      "coefficient": 59.0
+    },
+    {
+      "uefaClubKey": "lazio",
+      "name": "Lazio",
+      "countryCode": "ITA",
+      "coefficient": 59.0
+    },
+    {
+      "uefaClubKey": "aston-villa",
+      "name": "Aston Villa",
+      "countryCode": "ENG",
+      "coefficient": 57.25
+    },
+    {
+      "uefaClubKey": "rangers",
+      "name": "Rangers",
+      "countryCode": "SCO",
+      "coefficient": 57.25
+    },
+    {
+      "uefaClubKey": "real-sociedad",
+      "name": "Real Sociedad",
+      "countryCode": "ESP",
+      "coefficient": 57.0
+    },
+    {
+      "uefaClubKey": "az-alkmaar",
+      "name": "AZ Alkmaar",
+      "countryCode": "NED",
+      "coefficient": 56.875
+    },
+    {
+      "uefaClubKey": "olympiacos",
+      "name": "Olympiacos",
+      "countryCode": "GRE",
+      "coefficient": 56.5
+    },
+    {
+      "uefaClubKey": "ajax",
+      "name": "Ajax",
+      "countryCode": "NED",
+      "coefficient": 56.25
+    },
+    {
+      "uefaClubKey": "bod-glimt",
+      "name": "Bodø/Glimt",
+      "countryCode": "NOR",
+      "coefficient": 56.0
+    },
+    {
+      "uefaClubKey": "fenerbahce",
+      "name": "Fenerbahçe",
+      "countryCode": "TUR",
+      "coefficient": 55.25
+    },
+    {
+      "uefaClubKey": "monaco",
+      "name": "Monaco",
+      "countryCode": "FRA",
+      "coefficient": 54.0
+    },
+    {
+      "uefaClubKey": "marseille",
+      "name": "Marseille",
+      "countryCode": "FRA",
+      "coefficient": 54.0
+    },
+    {
+      "uefaClubKey": "lyon",
+      "name": "Lyon",
+      "countryCode": "FRA",
+      "coefficient": 53.75
+    },
+    {
+      "uefaClubKey": "copenhagen",
+      "name": "Copenhagen",
+      "countryCode": "DEN",
+      "coefficient": 53.375
+    },
+    {
+      "uefaClubKey": "shakhtar",
+      "name": "Shakhtar",
+      "countryCode": "UKR",
+      "coefficient": 50.25
+    },
+    {
+      "uefaClubKey": "galatasaray",
+      "name": "Galatasaray",
+      "countryCode": "TUR",
+      "coefficient": 47.75
+    },
+    {
+      "uefaClubKey": "union-sg",
+      "name": "Union SG",
+      "countryCode": "BEL",
+      "coefficient": 46.0
+    },
+    {
+      "uefaClubKey": "braga",
+      "name": "Braga",
+      "countryCode": "POR",
+      "coefficient": 46.0
+    },
+    {
+      "uefaClubKey": "viktoria-plzen",
+      "name": "Viktoria Plzeň",
+      "countryCode": "CZE",
+      "coefficient": 44.75
+    },
+    {
+      "uefaClubKey": "paok",
+      "name": "PAOK",
+      "countryCode": "GRE",
+      "coefficient": 44.25
+    },
+    {
+      "uefaClubKey": "ferencvaros",
+      "name": "Ferencváros",
+      "countryCode": "HUN",
+      "coefficient": 44.0
+    },
+    {
+      "uefaClubKey": "slavia-praha",
+      "name": "Slavia Praha",
+      "countryCode": "CZE",
+      "coefficient": 44.0
+    },
+    {
+      "uefaClubKey": "gnk-dinamo",
+      "name": "GNK Dinamo",
+      "countryCode": "CRO",
+      "coefficient": 44.0
+    },
+    {
+      "uefaClubKey": "salzburg",
+      "name": "Salzburg",
+      "countryCode": "AUT",
+      "coefficient": 43.0
+    },
+    {
+      "uefaClubKey": "crvena-zvezda",
+      "name": "Crvena Zvezda",
+      "countryCode": "SRB",
+      "coefficient": 41.0
+    },
+    {
+      "uefaClubKey": "qarabag",
+      "name": "Qarabağ",
+      "countryCode": "AZE",
+      "coefficient": 40.0
+    },
+    {
+      "uefaClubKey": "celtic",
+      "name": "Celtic",
+      "countryCode": "SCO",
+      "coefficient": 40.0
+    },
+    {
+      "uefaClubKey": "gent",
+      "name": "Gent",
+      "countryCode": "BEL",
+      "coefficient": 39.0
+    },
+    {
+      "uefaClubKey": "sevilla",
+      "name": "Sevilla",
+      "countryCode": "ESP",
+      "coefficient": 39.0
+    },
+    {
+      "uefaClubKey": "sparta-praha",
+      "name": "Sparta Praha",
+      "countryCode": "CZE",
+      "coefficient": 38.25
+    },
+    {
+      "uefaClubKey": "freiburg",
+      "name": "Freiburg",
+      "countryCode": "GER",
+      "coefficient": 38.0
+    },
+    {
+      "uefaClubKey": "athletic-club",
+      "name": "Athletic Club",
+      "countryCode": "ESP",
+      "coefficient": 36.75
+    },
+    {
+      "uefaClubKey": "midtjylland",
+      "name": "Midtjylland",
+      "countryCode": "DEN",
+      "coefficient": 36.75
+    },
+    {
+      "uefaClubKey": "s-bratislava",
+      "name": "S. Bratislava",
+      "countryCode": "SVK",
+      "coefficient": 36.0
+    },
+    {
+      "uefaClubKey": "rennes",
+      "name": "Rennes",
+      "countryCode": "FRA",
+      "coefficient": 35.0
+    },
+    {
+      "uefaClubKey": "basel",
+      "name": "Basel",
+      "countryCode": "SUI",
+      "coefficient": 34.5
+    },
+    {
+      "uefaClubKey": "legia-warszawa",
+      "name": "Legia Warszawa",
+      "countryCode": "POL",
+      "coefficient": 32.5
+    },
+    {
+      "uefaClubKey": "djurgarden",
+      "name": "Djurgården",
+      "countryCode": "SWE",
+      "coefficient": 32.0
+    },
+    {
+      "uefaClubKey": "anderlecht",
+      "name": "Anderlecht",
+      "countryCode": "BEL",
+      "coefficient": 30.75
+    },
+    {
+      "uefaClubKey": "m-tel-aviv",
+      "name": "M. Tel-Aviv",
+      "countryCode": "ISR",
+      "coefficient": 30.5
+    },
+    {
+      "uefaClubKey": "sk-rapid",
+      "name": "SK Rapid",
+      "countryCode": "AUT",
+      "coefficient": 29.75
+    },
+    {
+      "uefaClubKey": "young-boys",
+      "name": "Young Boys",
+      "countryCode": "SUI",
+      "coefficient": 29.5
+    },
+    {
+      "uefaClubKey": "ludogorets",
+      "name": "Ludogorets",
+      "countryCode": "BUL",
+      "coefficient": 26.0
+    },
+    {
+      "uefaClubKey": "sturm-graz",
+      "name": "Sturm Graz",
+      "countryCode": "AUT",
+      "coefficient": 26.0
+    },
+    {
+      "uefaClubKey": "lech-poznan",
+      "name": "Lech Poznań",
+      "countryCode": "POL",
+      "coefficient": 24.75
+    },
+    {
+      "uefaClubKey": "fcsb",
+      "name": "FCSB",
+      "countryCode": "ROU",
+      "coefficient": 24.5
+    },
+    {
+      "uefaClubKey": "panathinaikos",
+      "name": "Panathinaikos",
+      "countryCode": "GRE",
+      "coefficient": 23.0
+    },
+    {
+      "uefaClubKey": "union-berlin",
+      "name": "Union Berlin",
+      "countryCode": "GER",
+      "coefficient": 23.0
+    },
+    {
+      "uefaClubKey": "rakow",
+      "name": "Raków",
+      "countryCode": "POL",
+      "coefficient": 22.25
+    },
+    {
+      "uefaClubKey": "pafos",
+      "name": "Pafos",
+      "countryCode": "CYP",
+      "coefficient": 22.125
+    },
+    {
+      "uefaClubKey": "jagiellonia",
+      "name": "Jagiellonia",
+      "countryCode": "POL",
+      "coefficient": 22.0
+    },
+    {
+      "uefaClubKey": "partizan",
+      "name": "Partizan",
+      "countryCode": "SRB",
+      "coefficient": 22.0
+    },
+    {
+      "uefaClubKey": "molde",
+      "name": "Molde",
+      "countryCode": "NOR",
+      "coefficient": 21.75
+    },
+    {
+      "uefaClubKey": "omonoia",
+      "name": "Omonoia",
+      "countryCode": "CYP",
+      "coefficient": 21.25
+    },
+    {
+      "uefaClubKey": "lugano",
+      "name": "Lugano",
+      "countryCode": "SUI",
+      "coefficient": 21.25
+    },
+    {
+      "uefaClubKey": "newcastle",
+      "name": "Newcastle",
+      "countryCode": "ENG",
+      "coefficient": 21.0
+    },
+    {
+      "uefaClubKey": "stuttgart",
+      "name": "Stuttgart",
+      "countryCode": "GER",
+      "coefficient": 21.0
+    },
+    {
+      "uefaClubKey": "lask",
+      "name": "LASK",
+      "countryCode": "AUT",
+      "coefficient": 21.0
+    },
+    {
+      "uefaClubKey": "crystal-palace",
+      "name": "Crystal Palace",
+      "countryCode": "ENG",
+      "coefficient": 8.875
+    },
+    {
+      "uefaClubKey": "nott-m-forest",
+      "name": "Nott'm Forest",
+      "countryCode": "ENG",
+      "coefficient": 8.0
+    },
+    {
+      "uefaClubKey": "celje",
+      "name": "Celje",
+      "countryCode": "SVN",
+      "coefficient": 20.5
+    },
+    {
+      "uefaClubKey": "sheriff",
+      "name": "Sheriff",
+      "countryCode": "MDA",
+      "coefficient": 20.0
+    },
+    {
+      "uefaClubKey": "aek-athens",
+      "name": "AEK Athens",
+      "countryCode": "GRE",
+      "coefficient": 19.5
+    },
+    {
+      "uefaClubKey": "basaksehir",
+      "name": "Başakşehir",
+      "countryCode": "TUR",
+      "coefficient": 19.5
+    },
+    {
+      "uefaClubKey": "shamrock-rovers",
+      "name": "Shamrock Rovers",
+      "countryCode": "IRL",
+      "coefficient": 19.375
+    },
+    {
+      "uefaClubKey": "aek-larnaca",
+      "name": "AEK Larnaca",
+      "countryCode": "CYP",
+      "coefficient": 19.25
+    },
+    {
+      "uefaClubKey": "bologna",
+      "name": "Bologna",
+      "countryCode": "ITA",
+      "coefficient": 19.0
+    },
+    {
+      "uefaClubKey": "vitoria-sc",
+      "name": "Vitória SC",
+      "countryCode": "POR",
+      "coefficient": 18.75
+    },
+    {
+      "uefaClubKey": "olimpija",
+      "name": "Olimpija",
+      "countryCode": "SVN",
+      "coefficient": 18.375
+    },
+    {
+      "uefaClubKey": "genk",
+      "name": "Genk",
+      "countryCode": "BEL",
+      "coefficient": 18.0
+    },
+    {
+      "uefaClubKey": "dynamo-kyiv",
+      "name": "Dynamo Kyiv",
+      "countryCode": "UKR",
+      "coefficient": 17.5
+    },
+    {
+      "uefaClubKey": "cfr-cluj",
+      "name": "CFR Cluj",
+      "countryCode": "ROU",
+      "coefficient": 17.5
+    },
+    {
+      "uefaClubKey": "maccabi-haifa",
+      "name": "Maccabi Haifa",
+      "countryCode": "ISR",
+      "coefficient": 17.5
+    },
+    {
+      "uefaClubKey": "rayo-vallecano",
+      "name": "Rayo Vallecano",
+      "countryCode": "ESP",
+      "coefficient": 12.5
+    },
+    {
+      "uefaClubKey": "celta",
+      "name": "Celta",
+      "countryCode": "ESP",
+      "coefficient": 6.0
+    },
+    {
+      "uefaClubKey": "rijeka",
+      "name": "Rijeka",
+      "countryCode": "CRO",
+      "coefficient": 17.125
+    },
+    {
+      "uefaClubKey": "nice",
+      "name": "Nice",
+      "countryCode": "FRA",
+      "coefficient": 17.0
+    },
+    {
+      "uefaClubKey": "brest",
+      "name": "Brest",
+      "countryCode": "FRA",
+      "coefficient": 16.75
+    },
+    {
+      "uefaClubKey": "mainz",
+      "name": "Mainz",
+      "countryCode": "GER",
+      "coefficient": 12.0
+    },
+    {
+      "uefaClubKey": "brighton",
+      "name": "Brighton",
+      "countryCode": "ENG",
+      "coefficient": 16.0
+    },
+    {
+      "uefaClubKey": "strasbourg",
+      "name": "Strasbourg",
+      "countryCode": "FRA",
+      "coefficient": 15.5
+    },
+    {
+      "uefaClubKey": "besiktas",
+      "name": "Beşiktaş",
+      "countryCode": "TUR",
+      "coefficient": 15.5
+    },
+    {
+      "uefaClubKey": "girona",
+      "name": "Girona",
+      "countryCode": "ESP",
+      "coefficient": 8.0
+    },
+    {
+      "uefaClubKey": "apoel",
+      "name": "APOEL",
+      "countryCode": "CYP",
+      "coefficient": 14.75
+    },
+    {
+      "uefaClubKey": "heidenheim",
+      "name": "Heidenheim",
+      "countryCode": "GER",
+      "coefficient": 8.125
+    },
+    {
+      "uefaClubKey": "hoffenheim",
+      "name": "Hoffenheim",
+      "countryCode": "GER",
+      "coefficient": 7.0
+    },
+    {
+      "uefaClubKey": "kups-kuopio",
+      "name": "KuPS Kuopio",
+      "countryCode": "FIN",
+      "coefficient": 14.0
+    },
+    {
+      "uefaClubKey": "hjk",
+      "name": "HJK",
+      "countryCode": "FIN",
+      "coefficient": 14.0
+    },
+    {
+      "uefaClubKey": "h-beer-sheva",
+      "name": "H. Beer-Sheva",
+      "countryCode": "ISR",
+      "coefficient": 14.0
+    },
+    {
+      "uefaClubKey": "drita",
+      "name": "Drita",
+      "countryCode": "KOS",
+      "coefficient": 13.625
+    },
+    {
+      "uefaClubKey": "l-red-imps",
+      "name": "L. Red Imps",
+      "countryCode": "GIB",
+      "coefficient": 13.5
+    },
+    {
+      "uefaClubKey": "twente",
+      "name": "Twente",
+      "countryCode": "NED",
+      "coefficient": 13.5
+    },
+    {
+      "uefaClubKey": "zrinjski",
+      "name": "Zrinjski",
+      "countryCode": "BIH",
+      "coefficient": 13.25
+    },
+    {
+      "uefaClubKey": "go-ahead-eagles",
+      "name": "Go Ahead Eagles",
+      "countryCode": "NED",
+      "coefficient": 5.5
+    },
+    {
+      "uefaClubKey": "utrecht",
+      "name": "Utrecht",
+      "countryCode": "NED",
+      "coefficient": 1.0
+    },
+    {
+      "uefaClubKey": "borac",
+      "name": "Borac",
+      "countryCode": "BIH",
+      "coefficient": 13.125
+    },
+    {
+      "uefaClubKey": "lens",
+      "name": "Lens",
+      "countryCode": "FRA",
+      "coefficient": 12.5
+    },
+    {
+      "uefaClubKey": "malmo",
+      "name": "Malmö",
+      "countryCode": "SWE",
+      "coefficient": 13.0
+    },
+    {
+      "uefaClubKey": "leicester",
+      "name": "Leicester",
+      "countryCode": "ENG",
+      "coefficient": 13.0
+    },
+    {
+      "uefaClubKey": "cercle-brugge",
+      "name": "Cercle Brugge",
+      "countryCode": "BEL",
+      "coefficient": 12.75
+    },
+    {
+      "uefaClubKey": "santa-clara",
+      "name": "Santa Clara",
+      "countryCode": "POR",
+      "coefficient": 5.0
+    },
+    {
+      "uefaClubKey": "rfs",
+      "name": "RFS",
+      "countryCode": "LVA",
+      "coefficient": 12.5
+    },
+    {
+      "uefaClubKey": "servette",
+      "name": "Servette",
+      "countryCode": "SUI",
+      "coefficient": 12.5
+    },
+    {
+      "uefaClubKey": "astana",
+      "name": "Astana",
+      "countryCode": "KAZ",
+      "coefficient": 12.5
+    },
+    {
+      "uefaClubKey": "antwerp",
+      "name": "Antwerp",
+      "countryCode": "BEL",
+      "coefficient": 12.5
+    },
+    {
+      "uefaClubKey": "sivasspor",
+      "name": "Sivasspor",
+      "countryCode": "TUR",
+      "coefficient": 12.5
+    },
+    {
+      "uefaClubKey": "brei-ablik",
+      "name": "Breiðablik",
+      "countryCode": "ISL",
+      "coefficient": 12.0
+    },
+    {
+      "uefaClubKey": "zalgiris",
+      "name": "Žalgiris",
+      "countryCode": "LTU",
+      "coefficient": 12.0
+    },
+    {
+      "uefaClubKey": "zorya-luhansk",
+      "name": "Zorya Luhansk",
+      "countryCode": "UKR",
+      "coefficient": 12.0
+    },
+    {
+      "uefaClubKey": "spartak-moskva",
+      "name": "Spartak Moskva",
+      "countryCode": "RUS",
+      "coefficient": 12.0
+    },
+    {
+      "uefaClubKey": "vikingur-r",
+      "name": "Víkingur R.",
+      "countryCode": "ISL",
+      "coefficient": 11.75
+    },
+    {
+      "uefaClubKey": "charleroi",
+      "name": "Charleroi",
+      "countryCode": "BEL",
+      "coefficient": 1.5
+    },
+    {
+      "uefaClubKey": "hearts",
+      "name": "Hearts",
+      "countryCode": "SCO",
+      "coefficient": 11.5
+    },
+    {
+      "uefaClubKey": "kairat-almaty",
+      "name": "Kairat Almaty",
+      "countryCode": "KAZ",
+      "coefficient": 11.0
+    },
+    {
+      "uefaClubKey": "brann",
+      "name": "Brann",
+      "countryCode": "NOR",
+      "coefficient": 11.0
+    },
+    {
+      "uefaClubKey": "elfsborg",
+      "name": "Elfsborg",
+      "countryCode": "SWE",
+      "coefficient": 11.0
+    },
+    {
+      "uefaClubKey": "trabzonspor",
+      "name": "Trabzonspor",
+      "countryCode": "TUR",
+      "coefficient": 11.0
+    },
+    {
+      "uefaClubKey": "shkendija",
+      "name": "Shkëndija",
+      "countryCode": "MKD",
+      "coefficient": 10.875
+    },
+    {
+      "uefaClubKey": "noah",
+      "name": "Noah",
+      "countryCode": "ARM",
+      "coefficient": 10.75
+    }
+  ],
+  "clubTeamMap": [
+    {
+      "uefaClubKey": "real-madrid",
+      "apiFootballTeamId": 541,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "bayern-munchen",
+      "apiFootballTeamId": 157,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "inter",
+      "apiFootballTeamId": 505,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "man-city",
+      "apiFootballTeamId": 50,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "liverpool",
+      "apiFootballTeamId": 40,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "paris",
+      "apiFootballTeamId": 85,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "b-dortmund",
+      "apiFootballTeamId": 165,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "leverkusen",
+      "apiFootballTeamId": 168,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "barcelona",
+      "apiFootballTeamId": 529,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "arsenal",
+      "apiFootballTeamId": 42,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "atleti",
+      "apiFootballTeamId": 530,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "chelsea",
+      "apiFootballTeamId": 49,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "roma",
+      "apiFootballTeamId": 22590,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "benfica",
+      "apiFootballTeamId": 211,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "frankfurt",
+      "apiFootballTeamId": 169,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "atalanta",
+      "apiFootballTeamId": 499,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "man-utd",
+      "apiFootballTeamId": 33,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "psv",
+      "apiFootballTeamId": 197,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "club-brugge",
+      "apiFootballTeamId": 569,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "sporting-cp",
+      "apiFootballTeamId": 228,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "tottenham",
+      "apiFootballTeamId": 47,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "fiorentina",
+      "apiFootballTeamId": 502,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "feyenoord",
+      "apiFootballTeamId": 209,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "west-ham",
+      "apiFootballTeamId": 48,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "juventus",
+      "apiFootballTeamId": 496,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "milan",
+      "apiFootballTeamId": 489,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "porto",
+      "apiFootballTeamId": 20782,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "lille",
+      "apiFootballTeamId": 79,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "real-betis",
+      "apiFootballTeamId": 543,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "napoli",
+      "apiFootballTeamId": 492,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "leipzig",
+      "apiFootballTeamId": 173,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "villarreal",
+      "apiFootballTeamId": 533,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "lazio",
+      "apiFootballTeamId": 487,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "aston-villa",
+      "apiFootballTeamId": 66,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "rangers",
+      "apiFootballTeamId": 257,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "real-sociedad",
+      "apiFootballTeamId": 548,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "az-alkmaar",
+      "apiFootballTeamId": 201,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "olympiacos",
+      "apiFootballTeamId": 553,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "ajax",
+      "apiFootballTeamId": 194,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "bod-glimt",
+      "apiFootballTeamId": 327,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "fenerbahce",
+      "apiFootballTeamId": 611,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "monaco",
+      "apiFootballTeamId": 91,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "marseille",
+      "apiFootballTeamId": 81,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "lyon",
+      "apiFootballTeamId": 80,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "copenhagen",
+      "apiFootballTeamId": 400,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "shakhtar",
+      "apiFootballTeamId": 550,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "galatasaray",
+      "apiFootballTeamId": 645,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "union-sg",
+      "apiFootballTeamId": 1393,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "braga",
+      "apiFootballTeamId": 217,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "viktoria-plzen",
+      "apiFootballTeamId": 567,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "paok",
+      "apiFootballTeamId": 619,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "ferencvaros",
+      "apiFootballTeamId": 10888,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "slavia-praha",
+      "apiFootballTeamId": 560,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "gnk-dinamo",
+      "apiFootballTeamId": 620,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "salzburg",
+      "apiFootballTeamId": 571,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "crvena-zvezda",
+      "apiFootballTeamId": 598,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "qarabag",
+      "apiFootballTeamId": 556,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "celtic",
+      "apiFootballTeamId": 247,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "gent",
+      "apiFootballTeamId": 631,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "sevilla",
+      "apiFootballTeamId": 536,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "sparta-praha",
+      "apiFootballTeamId": 628,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "freiburg",
+      "apiFootballTeamId": 160,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "athletic-club",
+      "apiFootballTeamId": 531,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "midtjylland",
+      "apiFootballTeamId": 397,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "s-bratislava",
+      "apiFootballTeamId": 656,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "rennes",
+      "apiFootballTeamId": 94,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "basel",
+      "apiFootballTeamId": 551,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "legia-warszawa",
+      "apiFootballTeamId": 339,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "djurgarden",
+      "apiFootballTeamId": 11076,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "anderlecht",
+      "apiFootballTeamId": 554,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "m-tel-aviv",
+      "apiFootballTeamId": 604,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "sk-rapid",
+      "apiFootballTeamId": 781,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "young-boys",
+      "apiFootballTeamId": 15917,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "ludogorets",
+      "apiFootballTeamId": 566,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "sturm-graz",
+      "apiFootballTeamId": 637,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "lech-poznan",
+      "apiFootballTeamId": 347,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "fcsb",
+      "apiFootballTeamId": 559,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "panathinaikos",
+      "apiFootballTeamId": 617,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "union-berlin",
+      "apiFootballTeamId": 182,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "rakow",
+      "apiFootballTeamId": 3491,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "pafos",
+      "apiFootballTeamId": 3403,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "jagiellonia",
+      "apiFootballTeamId": 336,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "partizan",
+      "apiFootballTeamId": 6395,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "molde",
+      "apiFootballTeamId": 329,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "omonoia",
+      "apiFootballTeamId": 3402,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "lugano",
+      "apiFootballTeamId": 8396,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "newcastle",
+      "apiFootballTeamId": 34,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "stuttgart",
+      "apiFootballTeamId": 24130,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "lask",
+      "apiFootballTeamId": 24440,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "crystal-palace",
+      "apiFootballTeamId": 52,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "nott-m-forest",
+      "apiFootballTeamId": 65,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "celje",
+      "apiFootballTeamId": 4360,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "sheriff",
+      "apiFootballTeamId": 568,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "aek-athens",
+      "apiFootballTeamId": 575,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "basaksehir",
+      "apiFootballTeamId": 564,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "shamrock-rovers",
+      "apiFootballTeamId": 652,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "aek-larnaca",
+      "apiFootballTeamId": 614,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "bologna",
+      "apiFootballTeamId": 500,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "vitoria-sc",
+      "apiFootballTeamId": 224,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "olimpija",
+      "apiFootballTeamId": 677,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "genk",
+      "apiFootballTeamId": 742,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "dynamo-kyiv",
+      "apiFootballTeamId": 572,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "cfr-cluj",
+      "apiFootballTeamId": 2246,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "maccabi-haifa",
+      "apiFootballTeamId": 4195,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "rayo-vallecano",
+      "apiFootballTeamId": 728,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "celta",
+      "apiFootballTeamId": 538,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "rijeka",
+      "apiFootballTeamId": 561,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "nice",
+      "apiFootballTeamId": 84,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "brest",
+      "apiFootballTeamId": 106,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "mainz",
+      "apiFootballTeamId": 164,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "brighton",
+      "apiFootballTeamId": 51,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "strasbourg",
+      "apiFootballTeamId": 95,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "besiktas",
+      "apiFootballTeamId": 549,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "girona",
+      "apiFootballTeamId": 547,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "apoel",
+      "apiFootballTeamId": 557,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "heidenheim",
+      "apiFootballTeamId": 180,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "hoffenheim",
+      "apiFootballTeamId": 167,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "kups-kuopio",
+      "apiFootballTeamId": 1165,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "hjk",
+      "apiFootballTeamId": 649,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "h-beer-sheva",
+      "apiFootballTeamId": 563,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "drita",
+      "apiFootballTeamId": 14281,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "l-red-imps",
+      "apiFootballTeamId": 667,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "twente",
+      "apiFootballTeamId": 415,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "zrinjski",
+      "apiFootballTeamId": 588,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "go-ahead-eagles",
+      "apiFootballTeamId": 410,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "utrecht",
+      "apiFootballTeamId": 207,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "borac",
+      "apiFootballTeamId": 3364,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "lens",
+      "apiFootballTeamId": 116,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "malmo",
+      "apiFootballTeamId": 375,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "leicester",
+      "apiFootballTeamId": 46,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "cercle-brugge",
+      "apiFootballTeamId": 741,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "santa-clara",
+      "apiFootballTeamId": 227,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "rfs",
+      "apiFootballTeamId": 21382,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "servette",
+      "apiFootballTeamId": 2184,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "astana",
+      "apiFootballTeamId": 562,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "antwerp",
+      "apiFootballTeamId": 740,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "sivasspor",
+      "apiFootballTeamId": 1002,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "brei-ablik",
+      "apiFootballTeamId": 276,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "zalgiris",
+      "apiFootballTeamId": 586,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "zorya-luhansk",
+      "apiFootballTeamId": 599,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "spartak-moskva",
+      "apiFootballTeamId": 558,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "vikingur-r",
+      "apiFootballTeamId": 278,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "charleroi",
+      "apiFootballTeamId": 736,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "hearts",
+      "apiFootballTeamId": 254,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "kairat-almaty",
+      "apiFootballTeamId": 664,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "brann",
+      "apiFootballTeamId": 319,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "elfsborg",
+      "apiFootballTeamId": 21693,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "trabzonspor",
+      "apiFootballTeamId": 998,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "shkendija",
+      "apiFootballTeamId": 609,
+      "confidence": 1.0,
+      "method": "manual"
+    },
+    {
+      "uefaClubKey": "noah",
+      "apiFootballTeamId": 3684,
+      "confidence": 1.0,
+      "method": "manual"
+    }
+  ]
+}

@@ -270,7 +270,7 @@ import { Text } from "@/components/ui/text";
 - `px-8` - 8px horizontal padding
 - `px-16` - 16px horizontal padding
 - `py-4` - 4px vertical padding
-- `py-12` - 12px vertical padding
+- `py-16` - 16px vertical padding
 - `gap-x-8` - 8px horizontal gap
 - `gap-y-1` - 4px vertical gap
 - `gap-y-4` - 16px vertical gap
@@ -391,7 +391,7 @@ import { Text } from "@/components/ui/text";
 
 **Vertical Padding:**
 - `py-4` (4px) - Compact vertical spacing
-- `py-12` (12px) - Standard vertical spacing
+- `py-16` (16px) - Standard vertical spacing
 
 ---
 

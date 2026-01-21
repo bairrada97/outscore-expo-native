@@ -77,6 +77,132 @@ export interface ExternalIdInsert {
 }
 
 // ============================================================================
+// ELO RATINGS
+// ============================================================================
+
+export interface TeamEloRating {
+  id: number;
+  team_id: number;
+  as_of_date: string;
+  elo: number;
+  games: number;
+  last_fixture_provider: Provider;
+  last_fixture_id: string;
+  updated_at: string;
+}
+
+export interface TeamEloRatingInsert {
+  team_id: number;
+  as_of_date: string;
+  elo: number;
+  games: number;
+  last_fixture_provider: Provider;
+  last_fixture_id: string;
+}
+
+export interface TeamEloCurrent {
+  team_id: number;
+  elo: number;
+  games: number;
+  as_of_date: string;
+  updated_at: string;
+}
+
+export interface TeamEloCurrentUpsert {
+  team_id: number;
+  elo: number;
+  games: number;
+  as_of_date: string;
+}
+
+// ============================================================================
+// LEAGUE STATS (SCORING PROFILE)
+// ============================================================================
+
+export interface LeagueStats {
+  provider: Provider;
+  league_id: number;
+  season: number;
+  matches: number;
+  avg_goals: number;
+  over_2_5_rate: number;
+  btts_rate: number;
+  home_goals_avg: number;
+  away_goals_avg: number;
+  updated_at: string;
+}
+
+export interface LeagueStatsUpsert {
+  provider?: Provider;
+  league_id: number;
+  season: number;
+  matches: number;
+  avg_goals: number;
+  over_2_5_rate: number;
+  btts_rate: number;
+  home_goals_avg: number;
+  away_goals_avg: number;
+}
+
+// ============================================================================
+// UEFA COEFFICIENTS
+// ============================================================================
+
+export interface UefaAssociationCoefficient {
+  country_code: string;
+  as_of_season: number;
+  rank: number | null;
+  coefficient5y: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UefaAssociationCoefficientInsert {
+  country_code: string;
+  as_of_season: number;
+  rank?: number | null;
+  coefficient5y?: number | null;
+}
+
+export interface UefaClubCoefficient {
+  uefa_club_key: string;
+  as_of_season: number;
+  name: string;
+  country_code: string | null;
+  coefficient: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UefaClubCoefficientInsert {
+  uefa_club_key: string;
+  as_of_season: number;
+  name: string;
+  country_code?: string | null;
+  coefficient?: number | null;
+}
+
+export interface UefaClubTeamMap {
+  uefa_club_key: string;
+  as_of_season: number;
+  api_football_team_id: number;
+  team_id: number | null;
+  confidence: number | null;
+  method: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UefaClubTeamMapInsert {
+  uefa_club_key: string;
+  as_of_season: number;
+  api_football_team_id: number;
+  team_id?: number | null;
+  confidence?: number | null;
+  method?: string | null;
+}
+
+// ============================================================================
 // TEAM SEASON CONTEXT
 // ============================================================================
 

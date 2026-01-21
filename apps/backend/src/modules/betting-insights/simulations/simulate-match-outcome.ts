@@ -49,6 +49,7 @@ import { calculatePositionScore } from "../utils/position-score";
 import { calculateRestScore } from "../utils/rest-score";
 import { buildGoalDistribution } from "./goal-distribution";
 import type { GoalDistributionModifiers } from "./goal-distribution-modifiers";
+import { calculateEloGapAdjustment } from "../../elo";
 
 // ============================================================================
 // MIDWEEK LOAD (competition context)
@@ -271,6 +272,7 @@ export function simulateMatchOutcome(
 	const awayAdjustments: Adjustment[] = [];
 
 	addMindMoodAdjustments(homeTeam, awayTeam, homeAdjustments, awayAdjustments);
+	addEloAdjustments(homeTeam, awayTeam, homeAdjustments, awayAdjustments);
 	addFormationAdjustments(
 		homeTeam,
 		awayTeam,
@@ -354,6 +356,37 @@ export function simulateMatchOutcome(
 // ============================================================================
 // ADJUSTMENT FUNCTIONS
 // ============================================================================
+
+function addEloAdjustments(
+	homeTeam: TeamData,
+	awayTeam: TeamData,
+	homeAdj: Adjustment[],
+	awayAdj: Adjustment[],
+): void {
+	if (!homeTeam.elo || !awayTeam.elo) return;
+
+	const eloGap = homeTeam.elo.rating - awayTeam.elo.rating;
+	const confidence = Math.min(homeTeam.elo.confidence, awayTeam.elo.confidence);
+	if (confidence <= 0) return;
+
+	const adjustment = calculateEloGapAdjustment(eloGap, confidence, 8);
+	if (adjustment === 0) return;
+
+	homeAdj.push(
+		createAdjustment(
+			"elo_gap_home",
+			adjustment,
+			`Elo gap favors ${adjustment > 0 ? "home" : "away"} side`,
+		),
+	);
+	awayAdj.push(
+		createAdjustment(
+			"elo_gap_away",
+			-adjustment,
+			`Elo gap favors ${adjustment > 0 ? "home" : "away"} side`,
+		),
+	);
+}
 
 /**
  * Add Mind/Mood gap adjustments (Sleeping Giant, Over-Performer)
@@ -1026,6 +1059,27 @@ function buildMatchOutcomeInsights(params: {
 		}
 	}
 
+	let hasHighEloMidweek = false;
+	const highEloPick =
+		pick === "home"
+			? homeTeam.recentHighEloOpponent
+			: pick === "away"
+				? awayTeam.recentHighEloOpponent
+				: null;
+	if (pick !== "draw" && highEloPick) {
+		watchOuts.push({
+			abs: Math.min(30, 12 + Math.round(highEloPick.gap / 20)),
+			insight: {
+				text: `${pickTeam} faced a much stronger ${highEloPick.leagueName} opponent (${highEloPick.opponentName}) midweek, which can reduce freshness going into this match.`,
+				emoji: "⚡",
+				priority: 67,
+				category: "WARNING",
+				severity: "MEDIUM",
+			},
+		});
+		hasHighEloMidweek = true;
+	}
+
 	// Injuries uncertainty: only when the situation is materially unbalanced or severe.
 	if (
 		(homeInjuryImpact || awayInjuryImpact) &&
@@ -1056,7 +1110,7 @@ function buildMatchOutcomeInsights(params: {
 	}
 
 	// Midweek competition load: highlight potential rotation/freshness effects without rest-day talk.
-	if (!watchOuts.some((w) => w.insight.emoji === "🗓️")) {
+	if (!hasHighEloMidweek && !watchOuts.some((w) => w.insight.emoji === "🗓️")) {
 		const homeLoad = buildMidweekLoadAdjustment(homeTeam);
 		const awayLoad = buildMidweekLoadAdjustment(awayTeam);
 		const pickLoad =
