@@ -9,7 +9,7 @@
  */
 
 import { Hono } from "hono";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	createMockFinishedMatchResponse,
 	createMockInsightsResponse,
@@ -47,36 +47,14 @@ interface ValidationErrorResponse {
 	success: boolean;
 }
 
-// Mock the insights service module
-vi.mock("../services/insights.service", () => {
-	class InsightsNotAvailableErrorMock extends Error {
-		code = "INSIGHTS_NOT_AVAILABLE";
-		fixtureId: number;
-		fixtureStatus: string;
-		constructor(message: string, fixtureId: number, fixtureStatus: string) {
-			super(message);
-			this.name = "InsightsNotAvailableError";
-			this.fixtureId = fixtureId;
-			this.fixtureStatus = fixtureStatus;
-		}
-	}
-
-	return {
-		insightsService: {
-			generateInsights: vi.fn(),
-		},
-		InsightsNotAvailableError: InsightsNotAvailableErrorMock,
-	};
-});
-
-// Import after mock is set up
 import {
 	InsightsNotAvailableError,
 	insightsService,
 } from "../services/insights.service";
 import { createInsightsRoutes } from "./insights.routes";
 
-const mockGenerateInsights = vi.mocked(insightsService.generateInsights);
+const mockGenerateInsights = vi.fn();
+const originalGenerateInsights = insightsService.generateInsights;
 
 /**
  * Create a test app with proper execution context mocking
@@ -104,8 +82,14 @@ function createTestApp() {
 describe("GET /fixtures/:fixtureId/insights", () => {
 	let app: Hono;
 
+	afterAll(() => {
+		insightsService.generateInsights = originalGenerateInsights;
+	});
+
 	beforeEach(() => {
 		vi.clearAllMocks();
+		insightsService.generateInsights =
+			mockGenerateInsights as typeof insightsService.generateInsights;
 		mockGenerateInsights.mockReset();
 		app = createTestApp();
 	});

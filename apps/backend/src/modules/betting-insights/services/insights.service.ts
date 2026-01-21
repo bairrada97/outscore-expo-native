@@ -2515,7 +2515,13 @@ export const insightsService = {
 			db,
 			"api_football",
 			team.id,
-		).catch(() => null);
+		).catch((error) => {
+			console.error(
+				`❌ [D1] getTeamByProviderId failed for provider=api_football teamId=${team.id}`,
+				error,
+			);
+			return null;
+		});
 		const existingCountry = existing?.country ?? null;
 
 		let country: string | undefined = leagueCountry;
