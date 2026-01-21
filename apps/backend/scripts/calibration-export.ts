@@ -2,11 +2,11 @@ import type { Fixture, FixturesResponse } from "@outscore/shared-types";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
-	buildGoalDistributionModifiers,
 	insightsService,
 	simulateMatchOutcome,
 	type ProcessedMatch,
 } from "../src/modules/betting-insights";
+import { buildGoalDistributionModifiers } from "../src/modules/betting-insights/simulations/goal-distribution-modifiers";
 import { buildMatchContext } from "../src/modules/betting-insights/match-context/context-adjustments";
 import { extractRoundNumber } from "../src/modules/betting-insights/utils/helpers";
 import { processH2HData } from "../src/modules/betting-insights/utils/h2h-helpers";

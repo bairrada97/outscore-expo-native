@@ -1,5 +1,11 @@
 import { readFileSync } from "node:fs";
 import { MATCH_OUTCOME_CALIBRATION } from "../src/modules/betting-insights/config/match-outcome-calibration";
+import {
+	applyTemperatureScaling,
+	assertActual,
+	assertProb,
+	clamp,
+} from "../src/modules/betting-insights/utils/calibration-utils";
 
 type EvalRow = {
 	fixtureId?: number;
@@ -13,48 +19,6 @@ type EvalRow = {
 	actual: "HOME" | "DRAW" | "AWAY";
 };
 
-const clamp = (value: number, min: number, max: number) =>
-	Math.max(min, Math.min(max, value));
-
-const assertProb = (value: number, key: string, index: number) => {
-	if (!Number.isFinite(value) || value < 0 || value > 1) {
-		throw new Error(
-			`Invalid probability for ${key} at row ${index}: ${JSON.stringify(
-				value,
-			)}`,
-		);
-	}
-};
-
-const assertActual = (value: EvalRow["actual"], index: number) => {
-	if (value !== "HOME" && value !== "DRAW" && value !== "AWAY") {
-		throw new Error(
-			`Invalid actual value at row ${index}: ${JSON.stringify(value)}`,
-		);
-	}
-};
-
-const applyTemperatureScaling = (
-	probs: { home: number; draw: number; away: number },
-	temperature: number,
-): { home: number; draw: number; away: number } => {
-	if (!Number.isFinite(temperature) || temperature <= 0 || temperature === 1) {
-		return probs;
-	}
-	const logits = [probs.home, probs.draw, probs.away].map((p) =>
-		Math.log(clamp(p, 1e-12, 1)) / temperature,
-	);
-	const exp = logits.map((value) => Math.exp(value));
-	const sum = exp.reduce((acc, value) => acc + value, 0);
-	if (!Number.isFinite(sum) || sum <= 0) {
-		return probs;
-	}
-	return {
-		home: exp[0] / sum,
-		draw: exp[1] / sum,
-		away: exp[2] / sum,
-	};
-};
 
 const brierScore = (rows: EvalRow[], temperature = 1) => {
 	let sum = 0;

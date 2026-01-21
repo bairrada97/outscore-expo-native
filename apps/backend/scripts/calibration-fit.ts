@@ -1,5 +1,11 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import {
+	applyTemperatureScaling,
+	assertActual,
+	assertProb,
+	clamp,
+} from "../src/modules/betting-insights/utils/calibration-utils";
 
 type EvalRow = {
 	probHomeWin: number;
@@ -8,48 +14,6 @@ type EvalRow = {
 	actual: "HOME" | "DRAW" | "AWAY";
 };
 
-const clamp = (value: number, min: number, max: number) =>
-	Math.max(min, Math.min(max, value));
-
-const assertProb = (value: number, key: string, index: number) => {
-	if (!Number.isFinite(value) || value < 0 || value > 1) {
-		throw new Error(
-			`Invalid probability for ${key} at row ${index}: ${JSON.stringify(
-				value,
-			)}`,
-		);
-	}
-};
-
-const assertActual = (value: EvalRow["actual"], index: number) => {
-	if (value !== "HOME" && value !== "DRAW" && value !== "AWAY") {
-		throw new Error(
-			`Invalid actual value at row ${index}: ${JSON.stringify(value)}`,
-		);
-	}
-};
-
-const applyTemperatureScaling = (
-	probs: { home: number; draw: number; away: number },
-	temperature: number,
-): { home: number; draw: number; away: number } => {
-	if (!Number.isFinite(temperature) || temperature <= 0 || temperature === 1) {
-		return probs;
-	}
-	const logits = [probs.home, probs.draw, probs.away].map((p) =>
-		Math.log(clamp(p, 1e-12, 1)) / temperature,
-	);
-	const exp = logits.map((value) => Math.exp(value));
-	const sum = exp.reduce((acc, value) => acc + value, 0);
-	if (!Number.isFinite(sum) || sum <= 0) {
-		return probs;
-	}
-	return {
-		home: exp[0] / sum,
-		draw: exp[1] / sum,
-		away: exp[2] / sum,
-	};
-};
 
 const logLoss = (rows: EvalRow[], temperature = 1) => {
 	let sum = 0;
@@ -84,7 +48,7 @@ const logLoss = (rows: EvalRow[], temperature = 1) => {
 	return sum / rows.length;
 };
 
-const main = () => {
+const main = async () => {
 	const file = process.argv[2];
 	if (!file) {
 		throw new Error("Usage: bun scripts/calibration-fit.ts <eval.json>");
@@ -131,7 +95,7 @@ const main = () => {
 export const MATCH_OUTCOME_CALIBRATION: MatchOutcomeCalibrationConfig = {
 	temperature: ${bestT.toFixed(4)},
 	updatedAt: "${new Date().toISOString()}",
-	source: "${file.replaceAll("\\\\", "/")}",
+	source: "${file.replace(/\\/g, "/")}",
 };
 `;
 
@@ -144,4 +108,7 @@ export const MATCH_OUTCOME_CALIBRATION: MatchOutcomeCalibrationConfig = {
 	console.log(`✅ [Calibration] Wrote ${outputPath}`);
 };
 
-main();
+main().catch((err) => {
+	console.error("Error in main:", err);
+	process.exit(1);
+});
