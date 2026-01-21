@@ -187,7 +187,6 @@ const fetchFixturesWithRetry = async (
 			await sleep(delay);
 		}
 	}
-	throw new Error("Failed to fetch fixtures after retries.");
 };
 
 const fetchH2HMatchesWithRetry = async (

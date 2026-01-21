@@ -59,3 +59,44 @@ export const applyTemperatureScaling = (
 
 	return scaled;
 };
+
+export const logLoss = (
+	rows: Array<{
+		probHomeWin: number;
+		probDraw: number;
+		probAwayWin: number;
+		actual: string;
+	}>,
+	temperature = 1,
+) => {
+	let sum = 0;
+	for (const [index, row] of rows.entries()) {
+		assertActual(row.actual, index);
+		assertProb(row.probHomeWin, "probHomeWin", index);
+		assertProb(row.probDraw, "probDraw", index);
+		assertProb(row.probAwayWin, "probAwayWin", index);
+		const scaled = applyTemperatureScaling(
+			{
+				home: row.probHomeWin,
+				draw: row.probDraw,
+				away: row.probAwayWin,
+			},
+			temperature,
+		);
+		const p =
+			row.actual === "HOME"
+				? scaled.home
+				: row.actual === "DRAW"
+					? scaled.draw
+					: scaled.away;
+		if (!Number.isFinite(p) || p <= 0 || p > 1) {
+			throw new Error(
+				`Invalid probability for actual=${row.actual} at row ${index}: ${JSON.stringify(
+					p,
+				)}`,
+			);
+		}
+		sum += -Math.log(clamp(p, 1e-6, 1));
+	}
+	return sum / rows.length;
+};

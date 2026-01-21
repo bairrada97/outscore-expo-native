@@ -2,9 +2,7 @@ import { readFileSync } from "node:fs";
 import { MATCH_OUTCOME_CALIBRATION } from "../src/modules/betting-insights/config/match-outcome-calibration";
 import {
 	applyTemperatureScaling,
-	assertActual,
-	assertProb,
-	clamp,
+	logLoss,
 } from "../src/modules/betting-insights/utils/calibration-utils";
 
 type EvalRow = {
@@ -47,41 +45,22 @@ const brierScore = (rows: EvalRow[], temperature = 1) => {
 	return sum / rows.length;
 };
 
-const logLoss = (rows: EvalRow[], temperature = 1) => {
-	let sum = 0;
-	for (const [index, row] of rows.entries()) {
-		assertActual(row.actual, index);
-		const scaled = applyTemperatureScaling(
-			{
-				home: row.probHomeWin,
-				draw: row.probDraw,
-				away: row.probAwayWin,
-			},
-			temperature,
-		);
-		const p =
-			row.actual === "HOME"
-				? scaled.home
-				: row.actual === "DRAW"
-					? scaled.draw
-					: scaled.away;
-		if (!Number.isFinite(p) || p <= 0 || p > 1) {
-			throw new Error(
-				`Invalid probability for actual=${row.actual} at row ${index}: ${JSON.stringify(
-					p,
-				)}`,
-			);
-		}
-		sum += -Math.log(clamp(p, 1e-6, 1));
-	}
-	return sum / rows.length;
-};
-
 const summarize = (label: string, rows: EvalRow[], temperature = 1) => {
 	console.log(
 		`${label}: n=${rows.length}, brier=${brierScore(rows, temperature).toFixed(
 			6,
 		)}, logloss=${logLoss(rows, temperature).toFixed(6)}`,
+	);
+};
+
+const isEvalRow = (value: unknown): value is EvalRow => {
+	if (!value || typeof value !== "object") return false;
+	const row = value as Record<string, unknown>;
+	return (
+		"probHomeWin" in row &&
+		"probDraw" in row &&
+		"probAwayWin" in row &&
+		"actual" in row
 	);
 };
 
@@ -99,7 +78,12 @@ const main = () => {
 	if (!Array.isArray(parsed)) {
 		throw new Error("Expected JSON array for eval rows.");
 	}
-	const rows = parsed as EvalRow[];
+	const rows = parsed.filter(isEvalRow);
+	if (rows.length !== parsed.length) {
+		console.warn(
+			`⚠️ [Calibration] Dropped ${parsed.length - rows.length} malformed eval rows.`,
+		);
+	}
 	if (!rows.length) {
 		console.log("No rows to evaluate.");
 		return;
@@ -158,7 +142,9 @@ const main = () => {
 	}
 };
 
-main().catch((err) => {
+try {
+	main();
+} catch (err) {
 	console.error("Error in main:", err);
 	process.exit(1);
-});
+}
