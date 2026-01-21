@@ -345,7 +345,9 @@ const buildProcessedMatch = (
 		teamId,
 	);
 
-const buildStatsFromMatches = (matches: ProcessedMatch[]): RawTeamStats | null => {
+const buildStatsFromMatches = (
+	matches: ProcessedMatch[],
+): RawTeamStats | null => {
 	if (!matches.length) return null;
 
 	const formatAvg = (value: number) => value.toFixed(2);
@@ -637,14 +639,8 @@ const main = async () => {
 						standings,
 						leagueSize,
 					);
-					const homeStandings = getTeamStandingsData(
-						standingsSnapshot,
-						homeId,
-					);
-					const awayStandings = getTeamStandingsData(
-						standingsSnapshot,
-						awayId,
-					);
+					const homeStandings = getTeamStandingsData(standingsSnapshot, homeId);
+					const awayStandings = getTeamStandingsData(standingsSnapshot, awayId);
 
 					let h2hRaw = h2hCache.get(key);
 					if (!h2hRaw) {
