@@ -353,6 +353,23 @@ export async function getUefaClubKeyForTeam(
   return row?.uefa_club_key ?? null;
 }
 
+export async function getUefaClubKeyForApiTeam(
+  db: D1Database,
+  apiFootballTeamId: number,
+  asOfSeason: number
+): Promise<string | null> {
+  const row = await db
+    .prepare(
+      `SELECT uefa_club_key
+       FROM uefa_club_team_map
+       WHERE api_football_team_id = ? AND as_of_season = ?`
+    )
+    .bind(apiFootballTeamId, asOfSeason)
+    .first<{ uefa_club_key: string }>();
+
+  return row?.uefa_club_key ?? null;
+}
+
 /**
  * Upsert external ID mapping
  */

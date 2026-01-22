@@ -47,11 +47,46 @@ const brierScore = (rows: EvalRow[], temperature = 1) => {
 	return sum / rows.length;
 };
 
+const rpsScore = (rows: EvalRow[], temperature = 1) => {
+	let sum = 0;
+	for (const [index, row] of rows.entries()) {
+		assertActual(row.actual, index);
+		assertProb(row.probHomeWin, "probHomeWin", index);
+		assertProb(row.probDraw, "probDraw", index);
+		assertProb(row.probAwayWin, "probAwayWin", index);
+		const scaled = applyTemperatureScaling(
+			{
+				home: row.probHomeWin,
+				draw: row.probDraw,
+				away: row.probAwayWin,
+			},
+			temperature,
+		);
+		const cumPred = [
+			scaled.home,
+			scaled.home + scaled.draw,
+			scaled.home + scaled.draw + scaled.away,
+		];
+		const cumObs =
+			row.actual === "HOME"
+				? [1, 1, 1]
+				: row.actual === "DRAW"
+					? [0, 1, 1]
+					: [0, 0, 1];
+		const diff = cumPred.map((value, idx) => (value - cumObs[idx]) ** 2);
+		sum += diff.reduce((acc, value) => acc + value, 0);
+	}
+	return sum / rows.length;
+};
+
 const summarize = (label: string, rows: EvalRow[], temperature = 1) => {
 	console.log(
-		`${label}: n=${rows.length}, brier=${brierScore(rows, temperature).toFixed(
+		`${label}: n=${rows.length}, brier=${brierScore(
+			rows,
+			temperature,
+		).toFixed(6)}, logloss=${logLoss(rows, temperature).toFixed(
 			6,
-		)}, logloss=${logLoss(rows, temperature).toFixed(6)}`,
+		)}, rps=${rpsScore(rows, temperature).toFixed(6)}`,
 	);
 };
 

@@ -17,7 +17,7 @@ import {
     isStale,
     withDeduplication,
 } from "../../cache";
-import { calculateEloConfidence } from "../../elo";
+import { calculateEloConfidence, calculateStartingElo } from "../../elo";
 import {
     createInputsSnapshotJson,
     getCurrentTeamElo,
@@ -26,6 +26,10 @@ import {
     getLeagueById,
     getLeagueStatsByProviderId,
     getTeamByProviderId,
+	getUefaAssociationCoefficient,
+	getUefaClubCoefficient,
+	getUefaClubKeyForApiTeam,
+	getUefaClubKeyForTeam,
     H2H_CACHE_TTL_MS,
     hasInsightsSnapshot,
     type InputsSnapshotData,
@@ -37,6 +41,7 @@ import {
     upsertH2HCache,
     upsertInjuriesCache,
     upsertLeague,
+	upsertCurrentTeamElo,
     upsertStandings,
     upsertTeam,
     upsertTeamSeasonContext,
@@ -229,6 +234,39 @@ async function buildHighEloOpponentContext(
 }
 
 const FINISHED_STATUSES = new Set(["FT", "AET", "PEN"]);
+
+const UEFA_FALLBACK_ELO_CONFIDENCE = 0.25;
+const UEFA_FALLBACK_ELO_GAMES = 10;
+
+async function buildUefaFallbackElo(
+	db: D1Database,
+	teamId: number,
+	asOfSeason: number,
+): Promise<TeamData["elo"] | undefined> {
+	const uefaClubKey =
+		(await getUefaClubKeyForTeam(db, teamId, asOfSeason)) ??
+		(await getUefaClubKeyForApiTeam(db, teamId, asOfSeason));
+	if (!uefaClubKey) return undefined;
+
+	const club = await getUefaClubCoefficient(db, uefaClubKey, asOfSeason);
+	if (!club) return undefined;
+
+	const association = club.country_code
+		? await getUefaAssociationCoefficient(db, club.country_code, asOfSeason)
+		: null;
+
+	const rating = calculateStartingElo({
+		associationCoefficient5y: association?.coefficient5y ?? null,
+		clubCoefficient: club.coefficient ?? null,
+	});
+
+	return {
+		rating,
+		games: UEFA_FALLBACK_ELO_GAMES,
+		asOf: `${asOfSeason}-07-01`,
+		confidence: UEFA_FALLBACK_ELO_CONFIDENCE,
+	};
+}
 
 // ============================================================================
 // ERRORS
@@ -657,6 +695,48 @@ export const insightsService = {
 				awayTeamId,
 			);
 
+			const homeElo = homeEloRow
+				? {
+						rating: homeEloRow.elo,
+						games: homeEloRow.games,
+						asOf: homeEloRow.as_of_date,
+						confidence: calculateEloConfidence(homeEloRow.games),
+					}
+				: await buildUefaFallbackElo(env.ENTITIES_DB, homeTeamId, season);
+
+			if (!homeEloRow && homeElo) {
+				dataQualityWarnings.push(
+					"Home team Elo missing; using UEFA priors (low confidence)",
+				);
+				await upsertCurrentTeamElo(env.ENTITIES_DB, {
+					team_id: homeTeamId,
+					elo: homeElo.rating,
+					games: homeElo.games,
+					as_of_date: homeElo.asOf ?? `${season}-07-01`,
+				});
+			}
+
+			const awayElo = awayEloRow
+				? {
+						rating: awayEloRow.elo,
+						games: awayEloRow.games,
+						asOf: awayEloRow.as_of_date,
+						confidence: calculateEloConfidence(awayEloRow.games),
+					}
+				: await buildUefaFallbackElo(env.ENTITIES_DB, awayTeamId, season);
+
+			if (!awayEloRow && awayElo) {
+				dataQualityWarnings.push(
+					"Away team Elo missing; using UEFA priors (low confidence)",
+				);
+				await upsertCurrentTeamElo(env.ENTITIES_DB, {
+					team_id: awayTeamId,
+					elo: awayElo.rating,
+					games: awayElo.games,
+					as_of_date: awayElo.asOf ?? `${season}-07-01`,
+				});
+			}
+
 			// Step 3: Process team data (with standings)
 			const homeTeamData = this.processTeamData(
 				homeTeamId,
@@ -665,14 +745,7 @@ export const insightsService = {
 				homeMatches,
 				leagueId,
 				homeStandingsData,
-				homeEloRow
-					? {
-							rating: homeEloRow.elo,
-							games: homeEloRow.games,
-							asOf: homeEloRow.as_of_date,
-							confidence: calculateEloConfidence(homeEloRow.games),
-						}
-					: undefined,
+				homeElo,
 			);
 
 			const awayTeamData = this.processTeamData(
@@ -682,14 +755,7 @@ export const insightsService = {
 				awayMatches,
 				leagueId,
 				awayStandingsData,
-				awayEloRow
-					? {
-							rating: awayEloRow.elo,
-							games: awayEloRow.games,
-							asOf: awayEloRow.as_of_date,
-							confidence: calculateEloConfidence(awayEloRow.games),
-						}
-					: undefined,
+				awayElo,
 			);
 
 			sanityWarnings.push(
