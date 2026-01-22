@@ -1,0 +1,21 @@
+{
+  "market": "fh_1x2",
+  "target": "fh_result",
+  "type": "multiclass",
+  "metric": "log_loss",
+  "value": 1.0438847546659724,
+  "best_params": {
+    "learning_rate": 0.035434788340123494,
+    "num_leaves": 28,
+    "min_child_samples": 18,
+    "subsample": 0.8816067257256079,
+    "colsample_bytree": 0.9210107625622681,
+    "reg_alpha": 0.5542596318612083,
+    "reg_lambda": 0.8788408183281144
+  },
+  "rows": {
+    "train": 51809,
+    "val": 2344,
+    "test": 2343
+  }
+}

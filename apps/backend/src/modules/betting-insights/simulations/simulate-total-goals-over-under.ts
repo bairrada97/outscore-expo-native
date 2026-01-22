@@ -24,7 +24,10 @@ import type {
 	Simulation,
 	TeamData,
 } from "../types";
-import { applyCappedAsymmetricAdjustments } from "../utils/capped-adjustments";
+import {
+	applyCappedAsymmetricAdjustments,
+	createAdjustment,
+} from "../utils/capped-adjustments";
 import { applyBinaryTemperatureScaling } from "../utils/calibration-utils";
 import { clamp } from "../utils/helpers";
 import { buildGoalDistribution } from "./goal-distribution";
@@ -33,6 +36,40 @@ import type { GoalDistributionModifiers } from "./goal-distribution-modifiers";
 // ============================================================================
 // CONSTANTS
 // ============================================================================
+
+const normalizeWeights = (
+	weights: AlgorithmConfig["marketWeights"]["overUnderGoals"],
+) => {
+	const sum = Object.values(weights).reduce((acc, value) => acc + value, 0);
+	if (!Number.isFinite(sum) || sum <= 0) {
+		const fallback = DEFAULT_ALGORITHM_CONFIG.marketWeights.overUnderGoals;
+		const fallbackSum = Object.values(fallback).reduce(
+			(acc, value) => acc + value,
+			0,
+		);
+		return fallbackSum > 0
+			? {
+					avgGoalsPerGame: fallback.avgGoalsPerGame / fallbackSum,
+					defensiveWeakness: fallback.defensiveWeakness / fallbackSum,
+					recentForm: fallback.recentForm / fallbackSum,
+					h2h: fallback.h2h / fallbackSum,
+				}
+			: {
+					avgGoalsPerGame: 0.25,
+					defensiveWeakness: 0.25,
+					recentForm: 0.25,
+					h2h: 0.25,
+				};
+	}
+	return {
+		avgGoalsPerGame: weights.avgGoalsPerGame / sum,
+		defensiveWeakness: weights.defensiveWeakness / sum,
+		recentForm: weights.recentForm / sum,
+		h2h: weights.h2h / sum,
+	};
+};
+
+const clampSignal = (value: number) => clamp(value, -1, 1);
 
 // ============================================================================
 // MAIN PREDICTION FUNCTION
@@ -64,6 +101,74 @@ export function simulateTotalGoalsOverUnder(
 
 	// Phase 3.5 + 4.5: context-aware adjustments + caps/asymmetry.
 	const adjustments: Adjustment[] = [];
+	const normalizedWeights = normalizeWeights(config.marketWeights.overUnderGoals);
+	const multipliers = {
+		avgGoalsPerGame: normalizedWeights.avgGoalsPerGame,
+		defensiveWeakness: normalizedWeights.defensiveWeakness,
+		recentForm: normalizedWeights.recentForm,
+		h2h: normalizedWeights.h2h,
+	};
+
+	const combinedScored =
+		(homeTeam.stats.avgGoalsScored ?? 0) + (awayTeam.stats.avgGoalsScored ?? 0);
+	const combinedConceded =
+		(homeTeam.stats.avgGoalsConceded ?? 0) +
+		(awayTeam.stats.avgGoalsConceded ?? 0);
+	const avgGoalsSignal = clampSignal((combinedScored - line) / 2);
+	const defensiveSignal = clampSignal((combinedConceded - line) / 2);
+
+	const homeFormTier = homeTeam.mood?.tier ?? 3;
+	const awayFormTier = awayTeam.mood?.tier ?? 3;
+	const avgFormTier = (homeFormTier + awayFormTier) / 2;
+	const recentFormSignal =
+		avgFormTier <= 2 ? 1 : avgFormTier >= 4 ? -1 : 0;
+
+	const key = String(line) as GoalLineKey;
+	const h2hOverPct =
+		h2h?.hasSufficientData && h2h.goalLineOverPct?.[key] !== undefined
+			? h2h.goalLineOverPct[key]
+			: null;
+	const h2hSignal =
+		typeof h2hOverPct === "number"
+			? clampSignal((h2hOverPct - 50) / 50)
+			: 0;
+
+	if (combinedScored > 0) {
+		adjustments.push(
+			createAdjustment(
+				"avg_goals_per_game",
+				avgGoalsSignal * 8 * multipliers.avgGoalsPerGame,
+				"Average goals profile vs line",
+			),
+		);
+	}
+	if (combinedConceded > 0) {
+		adjustments.push(
+			createAdjustment(
+				"defensive_weakness",
+				defensiveSignal * 7 * multipliers.defensiveWeakness,
+				"Defensive profile vs line",
+			),
+		);
+	}
+	if (recentFormSignal !== 0) {
+		adjustments.push(
+			createAdjustment(
+				"recent_form_totals",
+				recentFormSignal * 5 * multipliers.recentForm,
+				"Recent form scoring tendency",
+			),
+		);
+	}
+	if (h2hSignal !== 0) {
+		adjustments.push(
+			createAdjustment(
+				"h2h_totals",
+				h2hSignal * 6 * multipliers.h2h,
+				"H2H totals tendency",
+			),
+		);
+	}
 
 	let baseConfidence = calculateBaseConfidence(baseOverProbability);
 	if (context) {

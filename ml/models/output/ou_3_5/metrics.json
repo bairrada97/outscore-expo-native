@@ -1,0 +1,21 @@
+{
+  "market": "ou_3_5",
+  "target": "ou_over_3_5",
+  "type": "binary",
+  "metric": "log_loss",
+  "value": 0.6112932636128084,
+  "best_params": {
+    "learning_rate": 0.042048407291988915,
+    "num_leaves": 43,
+    "min_child_samples": 84,
+    "subsample": 0.975195634512884,
+    "colsample_bytree": 0.7624693448411624,
+    "reg_alpha": 0.937121287021963,
+    "reg_lambda": 0.5813322955570102
+  },
+  "rows": {
+    "train": 51812,
+    "val": 2344,
+    "test": 2343
+  }
+}

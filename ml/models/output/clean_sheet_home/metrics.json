@@ -1,0 +1,21 @@
+{
+  "market": "clean_sheet_home",
+  "target": "clean_sheet_home",
+  "type": "binary",
+  "metric": "log_loss",
+  "value": 8.737238710097932e-06,
+  "best_params": {
+    "learning_rate": 0.198938742548291,
+    "num_leaves": 104,
+    "min_child_samples": 99,
+    "subsample": 0.7721037500611977,
+    "colsample_bytree": 0.6659696890306201,
+    "reg_alpha": 0.2092142553128863,
+    "reg_lambda": 0.7972932108408607
+  },
+  "rows": {
+    "train": 51812,
+    "val": 2344,
+    "test": 2343
+  }
+}

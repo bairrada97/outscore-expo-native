@@ -23,13 +23,17 @@ import type {
   AlgorithmConfig,
   ConfidenceLevel,
   H2HData,
+  Insight,
   ProcessedMatch,
   Simulation,
   TeamData,
 } from "../types";
 import { buildGoalDistribution } from "./goal-distribution";
 import type { GoalDistributionModifiers } from "./goal-distribution-modifiers";
-import { applyCappedAsymmetricAdjustments } from "../utils/capped-adjustments";
+import {
+	applyCappedAsymmetricAdjustments,
+	createAdjustment,
+} from "../utils/capped-adjustments";
 import { clamp } from "../utils/helpers";
 import { applyBinaryTemperatureScaling } from "../utils/calibration-utils";
 
@@ -43,17 +47,6 @@ import { applyBinaryTemperatureScaling } from "../utils/calibration-utils";
 const BASE_BTTS_PROBABILITY = 50;
 
 /**
- * Weight configuration for BTTS factors
- * Total should conceptually represent contribution to final probability
- */
-const BTTS_WEIGHTS = {
-	scoringRate: 0.25,
-	defensiveForm: 0.2,
-	recentForm: 0.35,
-	h2h: 0.25,
-} as const;
-
-/**
  * Thresholds for BTTS adjustments
  */
 const THRESHOLDS = {
@@ -64,6 +57,40 @@ const THRESHOLDS = {
 	highH2HBtts: 70, // H2H BTTS rate >70%
 	lowH2HBtts: 30, // H2H BTTS rate <30%
 } as const;
+
+const normalizeWeights = (
+	weights: AlgorithmConfig["marketWeights"]["btts"],
+) => {
+	const sum = Object.values(weights).reduce((acc, value) => acc + value, 0);
+	if (!Number.isFinite(sum) || sum <= 0) {
+		const fallback = DEFAULT_ALGORITHM_CONFIG.marketWeights.btts;
+		const fallbackSum = Object.values(fallback).reduce(
+			(acc, value) => acc + value,
+			0,
+		);
+		return fallbackSum > 0
+			? {
+					scoringRate: fallback.scoringRate / fallbackSum,
+					defensiveForm: fallback.defensiveForm / fallbackSum,
+					recentForm: fallback.recentForm / fallbackSum,
+					h2h: fallback.h2h / fallbackSum,
+				}
+			: {
+					scoringRate: 0.25,
+					defensiveForm: 0.25,
+					recentForm: 0.25,
+					h2h: 0.25,
+				};
+	}
+	return {
+		scoringRate: weights.scoringRate / sum,
+		defensiveForm: weights.defensiveForm / sum,
+		recentForm: weights.recentForm / sum,
+		h2h: weights.h2h / sum,
+	};
+};
+
+const scaleAdjustment = (value: number, multiplier: number) => value * multiplier;
 
 // ============================================================================
 // DERIVED METRICS (avoid type/field drift)
@@ -157,6 +184,13 @@ export function simulateBTTS(
 
 	// Context-aware + capped adjustments (Phase 3.5 + 4.5)
 	const adjustments: Adjustment[] = [];
+	const normalizedWeights = normalizeWeights(config.marketWeights.btts);
+	const multipliers = {
+		scoringRate: normalizedWeights.scoringRate,
+		defensiveForm: normalizedWeights.defensiveForm,
+		recentForm: normalizedWeights.recentForm,
+		h2h: normalizedWeights.h2h,
+	};
 
 	// Base confidence from data coverage, then cap maximum confidence based on match context volatility.
 	let baseConfidence = calculateBaseConfidence(homeTeam, awayTeam, h2h);
@@ -164,6 +198,24 @@ export function simulateBTTS(
 		const maxConfidence = getMaxConfidenceForContext(context);
 		baseConfidence = minConfidence(baseConfidence, maxConfidence);
 	}
+
+	adjustments.push(
+		...getScoringRateAdjustments(homeTeam, awayTeam, multipliers.scoringRate),
+	);
+	adjustments.push(
+		...getDefensiveFormAdjustments(homeTeam, awayTeam, multipliers.defensiveForm),
+	);
+	adjustments.push(
+		...getRecentFormAdjustments(homeTeam, awayTeam, multipliers.recentForm),
+	);
+	if (h2h?.hasSufficientData) {
+		adjustments.push(...getH2HAdjustments(h2h, multipliers.h2h));
+	}
+	if (context) {
+		adjustments.push(...getContextAdjustments(context));
+	}
+	adjustments.push(...getFormationAdjustments(homeTeam, awayTeam, 0.8));
+	adjustments.push(...getSafetyFlagAdjustments(homeTeam, awayTeam));
 
 	const result = applyCappedAsymmetricAdjustments(
 		baseYesProbability,
@@ -227,8 +279,11 @@ function calculateBaseBTTSProbability(
 	const avgScoringRate = (homeScoringRate + awayScoringRate) / 2;
 
 	// Convert to probability adjustment (-15 to +15)
+	const normalizedWeights = normalizeWeights(
+		DEFAULT_ALGORITHM_CONFIG.marketWeights.btts,
+	);
 	const scoringAdjustment =
-		((avgScoringRate - 60) / 40) * 15 * BTTS_WEIGHTS.scoringRate;
+		((avgScoringRate - 60) / 40) * 15 * normalizedWeights.scoringRate;
 	probability += scoringAdjustment;
 
 	// Factor 2: Combined defensive weakness (inverse of clean sheet rate)
@@ -238,14 +293,15 @@ function calculateBaseBTTSProbability(
 
 	// Lower clean sheet rate = higher BTTS chance
 	const defensiveAdjustment =
-		((30 - avgCleanSheetRate) / 30) * 12 * BTTS_WEIGHTS.defensiveForm;
+		((30 - avgCleanSheetRate) / 30) * 12 * normalizedWeights.defensiveForm;
 	probability += defensiveAdjustment;
 
 	// Factor 3: H2H BTTS rate (if available)
 	if (h2h?.hasSufficientData) {
 		const h2hBttsRate = h2h.bttsPercentage;
 		// Convert to adjustment (-10 to +10)
-		const h2hAdjustment = ((h2hBttsRate - 50) / 50) * 10 * BTTS_WEIGHTS.h2h;
+		const h2hAdjustment =
+			((h2hBttsRate - 50) / 50) * 10 * normalizedWeights.h2h;
 		probability += h2hAdjustment;
 	}
 
@@ -262,6 +318,7 @@ function calculateBaseBTTSProbability(
 function getScoringRateAdjustments(
 	homeTeam: TeamData,
 	awayTeam: TeamData,
+	weightMultiplier: number = 1,
 ): Adjustment[] {
 	const adjustments: Adjustment[] = [];
 
@@ -273,7 +330,7 @@ function getScoringRateAdjustments(
 		adjustments.push(
 			createAdjustment(
 				"home_scoring_rate",
-				3,
+				scaleAdjustment(3, weightMultiplier),
 				`Home team scores frequently (${homeScoringRate.toFixed(0)}%)`,
 			),
 		);
@@ -283,7 +340,7 @@ function getScoringRateAdjustments(
 		adjustments.push(
 			createAdjustment(
 				"away_scoring_rate",
-				3,
+				scaleAdjustment(3, weightMultiplier),
 				`Away team scores frequently (${awayScoringRate.toFixed(0)}%)`,
 			),
 		);
@@ -294,7 +351,7 @@ function getScoringRateAdjustments(
 		adjustments.push(
 			createAdjustment(
 				"home_scoring_rate",
-				-4,
+				scaleAdjustment(-4, weightMultiplier),
 				`Home team struggles to score (${homeScoringRate.toFixed(0)}%)`,
 			),
 		);
@@ -304,7 +361,7 @@ function getScoringRateAdjustments(
 		adjustments.push(
 			createAdjustment(
 				"away_scoring_rate",
-				-4,
+				scaleAdjustment(-4, weightMultiplier),
 				`Away team struggles to score (${awayScoringRate.toFixed(0)}%)`,
 			),
 		);
@@ -319,6 +376,7 @@ function getScoringRateAdjustments(
 function getDefensiveFormAdjustments(
 	homeTeam: TeamData,
 	awayTeam: TeamData,
+	weightMultiplier: number = 1,
 ): Adjustment[] {
 	const adjustments: Adjustment[] = [];
 
@@ -330,7 +388,7 @@ function getDefensiveFormAdjustments(
 		adjustments.push(
 			createAdjustment(
 				"home_defensive_form",
-				-4,
+				scaleAdjustment(-4, weightMultiplier),
 				`Home team has strong defense (${homeCleanSheetRate.toFixed(0)}% clean sheets)`,
 			),
 		);
@@ -340,7 +398,7 @@ function getDefensiveFormAdjustments(
 		adjustments.push(
 			createAdjustment(
 				"away_defensive_form",
-				-4,
+				scaleAdjustment(-4, weightMultiplier),
 				`Away team has strong defense (${awayCleanSheetRate.toFixed(0)}% clean sheets)`,
 			),
 		);
@@ -351,7 +409,7 @@ function getDefensiveFormAdjustments(
 		adjustments.push(
 			createAdjustment(
 				"home_defensive_form",
-				3,
+				scaleAdjustment(3, weightMultiplier),
 				`Home team has weak defense (${homeCleanSheetRate.toFixed(0)}% clean sheets)`,
 			),
 		);
@@ -361,7 +419,7 @@ function getDefensiveFormAdjustments(
 		adjustments.push(
 			createAdjustment(
 				"away_defensive_form",
-				3,
+				scaleAdjustment(3, weightMultiplier),
 				`Away team has weak defense (${awayCleanSheetRate.toFixed(0)}% clean sheets)`,
 			),
 		);
@@ -376,6 +434,7 @@ function getDefensiveFormAdjustments(
 function getRecentFormAdjustments(
 	homeTeam: TeamData,
 	awayTeam: TeamData,
+	weightMultiplier: number = 1,
 ): Adjustment[] {
 	const adjustments: Adjustment[] = [];
 
@@ -388,7 +447,7 @@ function getRecentFormAdjustments(
 		adjustments.push(
 			createAdjustment(
 				"form_home_btts",
-				4,
+				scaleAdjustment(4, weightMultiplier),
 				`BTTS in ${homeRecentBtts.toFixed(0)}% of home team's recent matches`,
 			),
 		);
@@ -398,7 +457,7 @@ function getRecentFormAdjustments(
 		adjustments.push(
 			createAdjustment(
 				"form_away_btts",
-				4,
+				scaleAdjustment(4, weightMultiplier),
 				`BTTS in ${awayRecentBtts.toFixed(0)}% of away team's recent matches`,
 			),
 		);
@@ -409,7 +468,7 @@ function getRecentFormAdjustments(
 		adjustments.push(
 			createAdjustment(
 				"form_home_btts",
-				-3,
+				scaleAdjustment(-3, weightMultiplier),
 				`BTTS in only ${homeRecentBtts.toFixed(0)}% of home team's recent matches`,
 			),
 		);
@@ -419,7 +478,7 @@ function getRecentFormAdjustments(
 		adjustments.push(
 			createAdjustment(
 				"form_away_btts",
-				-3,
+				scaleAdjustment(-3, weightMultiplier),
 				`BTTS in only ${awayRecentBtts.toFixed(0)}% of away team's recent matches`,
 			),
 		);
@@ -431,7 +490,10 @@ function getRecentFormAdjustments(
 /**
  * Get H2H adjustments
  */
-function getH2HAdjustments(h2h: H2HData): Adjustment[] {
+function getH2HAdjustments(
+	h2h: H2HData,
+	weightMultiplier: number = 1,
+): Adjustment[] {
 	const adjustments: Adjustment[] = [];
 
 	// Strong H2H BTTS trend
@@ -439,7 +501,7 @@ function getH2HAdjustments(h2h: H2HData): Adjustment[] {
 		adjustments.push(
 			createAdjustment(
 				"h2h_btts",
-				5,
+				scaleAdjustment(5, weightMultiplier),
 				`BTTS in ${h2h.bttsPercentage.toFixed(0)}% of H2H matches`,
 			),
 		);
@@ -450,7 +512,7 @@ function getH2HAdjustments(h2h: H2HData): Adjustment[] {
 		adjustments.push(
 			createAdjustment(
 				"h2h_btts",
-				-5,
+				scaleAdjustment(-5, weightMultiplier),
 				`BTTS in only ${h2h.bttsPercentage.toFixed(0)}% of H2H matches`,
 			),
 		);

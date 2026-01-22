@@ -1,0 +1,21 @@
+{
+  "market": "total_cards",
+  "target": "total_cards",
+  "type": "regression",
+  "metric": "rmse",
+  "value": 2.285938846085414,
+  "best_params": {
+    "learning_rate": 0.01203596104508176,
+    "num_leaves": 60,
+    "min_child_samples": 89,
+    "subsample": 0.7895229951391068,
+    "colsample_bytree": 0.6390411143925392,
+    "reg_alpha": 0.692114096967068,
+    "reg_lambda": 0.8882018474273919
+  },
+  "rows": {
+    "train": 38369,
+    "val": 2344,
+    "test": 2343
+  }
+}

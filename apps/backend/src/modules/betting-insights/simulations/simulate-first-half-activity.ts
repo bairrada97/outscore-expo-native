@@ -40,6 +40,43 @@ import { clamp } from "../utils/helpers";
  */
 const BASE_FIRST_HALF_PROBABILITY = 50;
 
+const normalizeWeights = (
+	weights: AlgorithmConfig["marketWeights"]["firstHalf"],
+) => {
+	const sum = Object.values(weights).reduce((acc, value) => acc + value, 0);
+	if (!Number.isFinite(sum) || sum <= 0) {
+		const fallback = DEFAULT_ALGORITHM_CONFIG.marketWeights.firstHalf;
+		const fallbackSum = Object.values(fallback).reduce(
+			(acc, value) => acc + value,
+			0,
+		);
+		return fallbackSum > 0
+			? {
+					firstHalfScoring: fallback.firstHalfScoring / fallbackSum,
+					recentForm: fallback.recentForm / fallbackSum,
+					h2h: fallback.h2h / fallbackSum,
+					homeAdvantage: fallback.homeAdvantage / fallbackSum,
+					motivation: fallback.motivation / fallbackSum,
+				}
+			: {
+					firstHalfScoring: 0.2,
+					recentForm: 0.2,
+					h2h: 0.2,
+					homeAdvantage: 0.2,
+					motivation: 0.2,
+				};
+	}
+	return {
+		firstHalfScoring: weights.firstHalfScoring / sum,
+		recentForm: weights.recentForm / sum,
+		h2h: weights.h2h / sum,
+		homeAdvantage: weights.homeAdvantage / sum,
+		motivation: weights.motivation / sum,
+	};
+};
+
+const scaleAdjustment = (value: number, multiplier: number) => value * multiplier;
+
 /**
  * Weight configuration
  */
@@ -85,27 +122,53 @@ export function simulateFirstHalfActivity(
 
 	// Step 2: Collect adjustments
 	const adjustments: Adjustment[] = [];
+	const normalizedWeights = normalizeWeights(config.marketWeights.firstHalf);
 
 	// Add first half scoring adjustments
-	adjustments.push(...getFirstHalfScoringAdjustments(homeTeam, awayTeam));
+	adjustments.push(
+		...getFirstHalfScoringAdjustments(
+			homeTeam,
+			awayTeam,
+			normalizedWeights.firstHalfScoring,
+		),
+	);
 
 	// Add slow starter detection
-	adjustments.push(...getSlowStarterAdjustments(homeTeam, awayTeam));
+	adjustments.push(
+		...getSlowStarterAdjustments(
+			homeTeam,
+			awayTeam,
+			normalizedWeights.firstHalfScoring,
+		),
+	);
 
 	// Add recent form adjustments
-	adjustments.push(...getRecentFormAdjustments(homeTeam, awayTeam));
+	adjustments.push(
+		...getRecentFormAdjustments(
+			homeTeam,
+			awayTeam,
+			normalizedWeights.recentForm,
+		),
+	);
 
 	// Add H2H adjustments
 	if (h2h?.hasSufficientData) {
-		adjustments.push(...getH2HAdjustments(h2h));
+		adjustments.push(...getH2HAdjustments(h2h, normalizedWeights.h2h));
 	}
 
 	// Add home advantage adjustments
-	adjustments.push(...getHomeAdvantageAdjustments(homeTeam));
+	adjustments.push(
+		...getHomeAdvantageAdjustments(
+			homeTeam,
+			normalizedWeights.homeAdvantage,
+		),
+	);
 
 	// Add context adjustments
 	if (context) {
-		adjustments.push(...getContextAdjustments(context));
+		adjustments.push(
+			...getContextAdjustments(context, normalizedWeights.motivation),
+		);
 	}
 
 	// Add formation adjustments (20% less impact = 0.8 multiplier)
@@ -174,6 +237,7 @@ function calculateBaseFirstHalfProbability(
 function getFirstHalfScoringAdjustments(
 	homeTeam: TeamData,
 	awayTeam: TeamData,
+	weightMultiplier: number = 1,
 ): Adjustment[] {
 	const adjustments: Adjustment[] = [];
 
@@ -185,7 +249,7 @@ function getFirstHalfScoringAdjustments(
 		adjustments.push(
 			createAdjustment(
 				"home_first_half_rate",
-				5,
+				scaleAdjustment(5, weightMultiplier),
 				`Home team scores in 1st half in ${homeRate.toFixed(0)}% of matches`,
 			),
 		);
@@ -195,7 +259,7 @@ function getFirstHalfScoringAdjustments(
 		adjustments.push(
 			createAdjustment(
 				"away_first_half_rate",
-				5,
+				scaleAdjustment(5, weightMultiplier),
 				`Away team scores in 1st half in ${awayRate.toFixed(0)}% of matches`,
 			),
 		);
@@ -206,7 +270,7 @@ function getFirstHalfScoringAdjustments(
 		adjustments.push(
 			createAdjustment(
 				"home_first_half_rate",
-				-4,
+				scaleAdjustment(-4, weightMultiplier),
 				`Home team scores in 1st half in only ${homeRate.toFixed(0)}% of matches`,
 			),
 		);
@@ -216,7 +280,7 @@ function getFirstHalfScoringAdjustments(
 		adjustments.push(
 			createAdjustment(
 				"away_first_half_rate",
-				-4,
+				scaleAdjustment(-4, weightMultiplier),
 				`Away team scores in 1st half in only ${awayRate.toFixed(0)}% of matches`,
 			),
 		);
@@ -231,6 +295,7 @@ function getFirstHalfScoringAdjustments(
 function getSlowStarterAdjustments(
 	homeTeam: TeamData,
 	awayTeam: TeamData,
+	weightMultiplier: number = 1,
 ): Adjustment[] {
 	const adjustments: Adjustment[] = [];
 
@@ -245,7 +310,7 @@ function getSlowStarterAdjustments(
 		adjustments.push(
 			createAdjustment(
 				"both_slow_starters",
-				-8,
+				scaleAdjustment(-8, weightMultiplier),
 				"Both teams are slow starters - first half goals unlikely",
 			),
 		);
@@ -256,7 +321,7 @@ function getSlowStarterAdjustments(
 		adjustments.push(
 			createAdjustment(
 				"home_late_starter",
-				-3,
+				scaleAdjustment(-3, weightMultiplier),
 				"Home team typically scores late in games",
 			),
 		);
@@ -266,7 +331,7 @@ function getSlowStarterAdjustments(
 		adjustments.push(
 			createAdjustment(
 				"away_late_starter",
-				-3,
+				scaleAdjustment(-3, weightMultiplier),
 				"Away team typically scores late in games",
 			),
 		);
@@ -281,6 +346,7 @@ function getSlowStarterAdjustments(
 function getRecentFormAdjustments(
 	homeTeam: TeamData,
 	awayTeam: TeamData,
+	weightMultiplier: number = 1,
 ): Adjustment[] {
 	const adjustments: Adjustment[] = [];
 
@@ -293,7 +359,7 @@ function getRecentFormAdjustments(
 		adjustments.push(
 			createAdjustment(
 				"home_good_form",
-				2,
+				scaleAdjustment(2, weightMultiplier),
 				"Home team in good form - likely to start confidently",
 			),
 		);
@@ -303,7 +369,7 @@ function getRecentFormAdjustments(
 		adjustments.push(
 			createAdjustment(
 				"away_good_form",
-				2,
+				scaleAdjustment(2, weightMultiplier),
 				"Away team in good form - likely to start confidently",
 			),
 		);
@@ -314,7 +380,7 @@ function getRecentFormAdjustments(
 		adjustments.push(
 			createAdjustment(
 				"home_poor_form",
-				-2,
+				scaleAdjustment(-2, weightMultiplier),
 				"Home team in poor form - may start cautiously",
 			),
 		);
@@ -324,7 +390,7 @@ function getRecentFormAdjustments(
 		adjustments.push(
 			createAdjustment(
 				"away_poor_form",
-				-2,
+				scaleAdjustment(-2, weightMultiplier),
 				"Away team in poor form - may start cautiously",
 			),
 		);
@@ -336,7 +402,10 @@ function getRecentFormAdjustments(
 /**
  * Get H2H adjustments
  */
-function getH2HAdjustments(h2h: H2HData): Adjustment[] {
+function getH2HAdjustments(
+	h2h: H2HData,
+	weightMultiplier: number = 1,
+): Adjustment[] {
 	const adjustments: Adjustment[] = [];
 
 	// High-scoring H2H suggests more first half goals
@@ -344,7 +413,7 @@ function getH2HAdjustments(h2h: H2HData): Adjustment[] {
 		adjustments.push(
 			createAdjustment(
 				"h2h_high_scoring",
-				4,
+				scaleAdjustment(4, weightMultiplier),
 				`H2H matches average ${h2h.avgGoals.toFixed(1)} goals - early goals likely`,
 			),
 		);
@@ -355,7 +424,7 @@ function getH2HAdjustments(h2h: H2HData): Adjustment[] {
 		adjustments.push(
 			createAdjustment(
 				"h2h_low_scoring",
-				-4,
+				scaleAdjustment(-4, weightMultiplier),
 				`H2H matches average only ${h2h.avgGoals.toFixed(1)} goals`,
 			),
 		);
@@ -367,7 +436,10 @@ function getH2HAdjustments(h2h: H2HData): Adjustment[] {
 /**
  * Get home advantage adjustments
  */
-function getHomeAdvantageAdjustments(homeTeam: TeamData): Adjustment[] {
+function getHomeAdvantageAdjustments(
+	homeTeam: TeamData,
+	weightMultiplier: number = 1,
+): Adjustment[] {
 	const adjustments: Adjustment[] = [];
 
 	// We don't currently have `homeWinRate` stored in TeamData.
@@ -377,7 +449,7 @@ function getHomeAdvantageAdjustments(homeTeam: TeamData): Adjustment[] {
 		adjustments.push(
 			createAdjustment(
 				"home_advantage_proxy",
-				1,
+				scaleAdjustment(1, weightMultiplier),
 				"Home side in good form - may start on front foot",
 			),
 		);
@@ -389,7 +461,10 @@ function getHomeAdvantageAdjustments(homeTeam: TeamData): Adjustment[] {
 /**
  * Get context adjustments
  */
-function getContextAdjustments(context: MatchContext): Adjustment[] {
+function getContextAdjustments(
+	context: MatchContext,
+	weightMultiplier: number = 1,
+): Adjustment[] {
 	const adjustments: Adjustment[] = [];
 
 	// High-stakes matches often start cagey
@@ -397,7 +472,7 @@ function getContextAdjustments(context: MatchContext): Adjustment[] {
 		adjustments.push(
 			createAdjustment(
 				"critical_match",
-				-5,
+				scaleAdjustment(-5, weightMultiplier),
 				"Critical match - likely cautious start",
 			),
 		);
@@ -407,7 +482,7 @@ function getContextAdjustments(context: MatchContext): Adjustment[] {
 		adjustments.push(
 			createAdjustment(
 				"high_stakes",
-				-3,
+				scaleAdjustment(-3, weightMultiplier),
 				"High-stakes match - may start cautiously",
 			),
 		);
@@ -418,7 +493,7 @@ function getContextAdjustments(context: MatchContext): Adjustment[] {
 		adjustments.push(
 			createAdjustment(
 				"knockout_stage",
-				-4,
+				scaleAdjustment(-4, weightMultiplier),
 				"Knockout match - typically tactical opening",
 			),
 		);
@@ -430,7 +505,7 @@ function getContextAdjustments(context: MatchContext): Adjustment[] {
 		adjustments.push(
 			createAdjustment(
 				"derby_caution",
-				-2,
+				scaleAdjustment(-2, weightMultiplier),
 				"High-intensity derby - could be cagey opening",
 			),
 		);

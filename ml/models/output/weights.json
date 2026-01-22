@@ -1,0 +1,101 @@
+{
+  "1x2": {
+    "meta": 0.089333,
+    "form": 0.17,
+    "attackStrength": 0.141333,
+    "defenseStrength": 0.135778,
+    "rest": 0.062667,
+    "homeAwayStrength": 0.099111,
+    "h2h": 0.301778
+  },
+  "btts": {
+    "meta": 0.089048,
+    "form": 0.167778,
+    "attackStrength": 0.093651,
+    "defenseStrength": 0.088095,
+    "rest": 0.064921,
+    "homeAwayStrength": 0.141905,
+    "h2h": 0.354603
+  },
+  "ou_0_5": {
+    "meta": 0.100645,
+    "form": 0.157419,
+    "attackStrength": 0.104839,
+    "defenseStrength": 0.098065,
+    "rest": 0.069355,
+    "homeAwayStrength": 0.129032,
+    "h2h": 0.340645
+  },
+  "ou_1_5": {
+    "meta": 0.094444,
+    "form": 0.17,
+    "attackStrength": 0.090556,
+    "defenseStrength": 0.102222,
+    "rest": 0.0625,
+    "homeAwayStrength": 0.133333,
+    "h2h": 0.346944
+  },
+  "ou_2_5": {
+    "meta": 0.14375,
+    "form": 0.151562,
+    "attackStrength": 0.12625,
+    "defenseStrength": 0.092188,
+    "rest": 0.05875,
+    "homeAwayStrength": 0.11125,
+    "h2h": 0.31625
+  },
+  "ou_3_5": {
+    "meta": 0.132143,
+    "form": 0.131667,
+    "attackStrength": 0.118333,
+    "defenseStrength": 0.09119,
+    "rest": 0.059286,
+    "homeAwayStrength": 0.11119,
+    "h2h": 0.35619
+  },
+  "ou_4_5": {
+    "meta": 0.144068,
+    "form": 0.117458,
+    "attackStrength": 0.149153,
+    "defenseStrength": 0.102542,
+    "rest": 0.042542,
+    "homeAwayStrength": 0.108475,
+    "h2h": 0.335763
+  },
+  "ou_5_5": {
+    "meta": 0.110196,
+    "form": 0.148039,
+    "attackStrength": 0.11902,
+    "defenseStrength": 0.091961,
+    "rest": 0.05451,
+    "homeAwayStrength": 0.127843,
+    "h2h": 0.348431
+  },
+  "fh_1x2": {
+    "meta": 0.068519,
+    "form": 0.171481,
+    "attackStrength": 0.132593,
+    "defenseStrength": 0.118395,
+    "rest": 0.06037,
+    "homeAwayStrength": 0.117407,
+    "h2h": 0.331235
+  },
+  "fh_goals": {
+    "meta": 0.153704,
+    "form": 0.125185,
+    "attackStrength": 0.163704,
+    "defenseStrength": 0.107778,
+    "rest": 0.036667,
+    "homeAwayStrength": 0.086667,
+    "h2h": 0.326296
+  },
+  "sh_goals": {
+    "meta": 0.161875,
+    "form": 0.115625,
+    "attackStrength": 0.14875,
+    "defenseStrength": 0.106875,
+    "rest": 0.0725,
+    "homeAwayStrength": 0.085,
+    "h2h": 0.309375
+  }
+}

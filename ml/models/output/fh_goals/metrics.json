@@ -1,0 +1,21 @@
+{
+  "market": "fh_goals",
+  "target": "fh_goals_total",
+  "type": "regression",
+  "metric": "rmse",
+  "value": 1.1141162097098913,
+  "best_params": {
+    "learning_rate": 0.022772177199859075,
+    "num_leaves": 28,
+    "min_child_samples": 58,
+    "subsample": 0.9641727024312938,
+    "colsample_bytree": 0.9560444078144789,
+    "reg_alpha": 0.41932714993863995,
+    "reg_lambda": 0.7534131586722187
+  },
+  "rows": {
+    "train": 51809,
+    "val": 2344,
+    "test": 2343
+  }
+}

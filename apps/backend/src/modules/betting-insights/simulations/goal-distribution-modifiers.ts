@@ -1,3 +1,5 @@
+import { calculateEloBalanceShift } from "../../elo";
+import { DEFAULT_ALGORITHM_CONFIG } from "../config/algorithm-config";
 import type { MatchContext } from "../match-context/context-adjustments";
 import type { H2HData, TeamData } from "../types";
 import { calculateFormScore } from "../utils/form-score";
@@ -8,7 +10,6 @@ import type { InjuryImpactAssessment } from "../utils/injury-adjustments";
 import { calculateMotivationScore } from "../utils/motivation-score";
 import { calculatePositionScore } from "../utils/position-score";
 import { calculateRestScore } from "../utils/rest-score";
-import { calculateEloBalanceShift } from "../../elo";
 
 export interface GoalDistributionModifiers {
 	attackHomeMult: number;
@@ -32,14 +33,8 @@ const MAX_BALANCE_SHIFT = 0.08; // max +/-8% shift in scoring balance
 const BASE_LEAGUE_AVG_GOALS = 2.6;
 const LEAGUE_GOALS_MAX_SHIFT = 0.1;
 
-const MATCH_RESULT_WEIGHTS = {
-	recentForm: 0.3,
-	h2h: 0.25,
-	homeAdvantage: 0.2,
-	motivation: 0.18,
-	rest: 0.12,
-	leaguePosition: 0.1,
-} as const;
+const DEFAULT_MATCH_RESULT_WEIGHTS =
+	DEFAULT_ALGORITHM_CONFIG.marketWeights.matchResult;
 
 export function buildGoalDistributionModifiers(params: {
 	context?: MatchContext;
@@ -126,25 +121,27 @@ function applyBalanceShift(
 	const motivationScore = calculateMotivationScore(homeTeam, awayTeam);
 	const restScore = calculateRestScore(homeTeam, awayTeam);
 	const positionScore = calculatePositionScore(homeTeam, awayTeam);
-	const eloGap = homeTeam.elo && awayTeam.elo
-		? homeTeam.elo.rating - awayTeam.elo.rating
-		: 0;
-	const eloConfidence = homeTeam.elo && awayTeam.elo
-		? Math.min(homeTeam.elo.confidence, awayTeam.elo.confidence)
-		: 0;
+	const eloGap =
+		homeTeam.elo && awayTeam.elo
+			? homeTeam.elo.rating - awayTeam.elo.rating
+			: 0;
+	const eloConfidence =
+		homeTeam.elo && awayTeam.elo
+			? Math.min(homeTeam.elo.confidence, awayTeam.elo.confidence)
+			: 0;
 
 	// Weighted home advantage signal (-100..100-ish)
-	const weightSum = Object.values(MATCH_RESULT_WEIGHTS).reduce(
+	const weightSum = Object.values(DEFAULT_MATCH_RESULT_WEIGHTS).reduce(
 		(sum, w) => sum + w,
 		0,
 	);
 	const weightedScore =
-		formScore * MATCH_RESULT_WEIGHTS.recentForm +
-		h2hScore * MATCH_RESULT_WEIGHTS.h2h +
-		homeAdvantageScore * MATCH_RESULT_WEIGHTS.homeAdvantage +
-		motivationScore * MATCH_RESULT_WEIGHTS.motivation +
-		restScore * MATCH_RESULT_WEIGHTS.rest +
-		positionScore * MATCH_RESULT_WEIGHTS.leaguePosition;
+		formScore * DEFAULT_MATCH_RESULT_WEIGHTS.recentForm +
+		h2hScore * DEFAULT_MATCH_RESULT_WEIGHTS.h2h +
+		homeAdvantageScore * DEFAULT_MATCH_RESULT_WEIGHTS.homeAdvantage +
+		motivationScore * DEFAULT_MATCH_RESULT_WEIGHTS.motivation +
+		restScore * DEFAULT_MATCH_RESULT_WEIGHTS.rest +
+		positionScore * DEFAULT_MATCH_RESULT_WEIGHTS.leaguePosition;
 
 	// Convert to small balance shift without changing total goals
 	const normalized = clamp(weightedScore / (weightSum * 100), -1, 1);
@@ -169,12 +166,12 @@ function applyLeagueScoringProfile(
 ): void {
 	if (!leagueStats || leagueStats.matches <= 0) return;
 
-	const ratio = clamp(
-		leagueStats.avgGoals / BASE_LEAGUE_AVG_GOALS,
-		0.8,
-		1.2,
+	const ratio = clamp(leagueStats.avgGoals / BASE_LEAGUE_AVG_GOALS, 0.8, 1.2);
+	const shift = clamp(
+		(ratio - 1) * 0.5,
+		-LEAGUE_GOALS_MAX_SHIFT,
+		LEAGUE_GOALS_MAX_SHIFT,
 	);
-	const shift = clamp((ratio - 1) * 0.5, -LEAGUE_GOALS_MAX_SHIFT, LEAGUE_GOALS_MAX_SHIFT);
 	modifiers.globalGoalsMult *= 1 + shift;
 }
 

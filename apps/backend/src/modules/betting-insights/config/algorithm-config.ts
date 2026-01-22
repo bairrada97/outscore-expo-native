@@ -9,17 +9,17 @@
  */
 
 import type {
-  AlgorithmConfig,
-  AsymmetricWeightingConfig,
-  ConfidenceDowngradeConfig,
-  CumulativeCapsConfig,
-  FormWeightingConfig,
-  GoalDistributionConfig,
-  H2HRecencyConfig,
-  MarketWeightsConfig,
-  ProbabilityCapsConfig,
-  ScenarioType,
-  TierThresholds,
+	AlgorithmConfig,
+	AsymmetricWeightingConfig,
+	ConfidenceDowngradeConfig,
+	CumulativeCapsConfig,
+	FormWeightingConfig,
+	GoalDistributionConfig,
+	H2HRecencyConfig,
+	MarketWeightsConfig,
+	ProbabilityCapsConfig,
+	ScenarioType,
+	TierThresholds,
 } from "../types";
 
 // ============================================================================
@@ -85,12 +85,12 @@ export const DEFAULT_MARKET_WEIGHTS: MarketWeightsConfig = {
 	 * - League Position (10%): Quality difference
 	 */
 	matchResult: {
-		recentForm: 0.3,
-		h2h: 0.25,
-		homeAdvantage: 0.2,
+		recentForm: 0.153075,
+		h2h: 0.271733,
+		homeAdvantage: 0.089243,
 		motivation: 0.18,
-		rest: 0.12,
-		leaguePosition: 0.1,
+		rest: 0.056428,
+		leaguePosition: 0.249522,
 	},
 
 	/**
@@ -103,10 +103,10 @@ export const DEFAULT_MARKET_WEIGHTS: MarketWeightsConfig = {
 	 * - Defensive Form (20%): Clean sheet rates
 	 */
 	btts: {
-		scoringRate: 0.25,
-		defensiveForm: 0.2,
-		recentForm: 0.35,
-		h2h: 0.25,
+		scoringRate: 0.133003,
+		defensiveForm: 0.125112,
+		recentForm: 0.238278,
+		h2h: 0.503607,
 	},
 
 	/**
@@ -119,10 +119,10 @@ export const DEFAULT_MARKET_WEIGHTS: MarketWeightsConfig = {
 	 * - H2H (20%): Historical goal totals
 	 */
 	overUnderGoals: {
-		avgGoalsPerGame: 0.3,
-		defensiveWeakness: 0.25,
-		recentForm: 0.3,
-		h2h: 0.2,
+		avgGoalsPerGame: 0.183971,
+		defensiveWeakness: 0.134336,
+		recentForm: 0.220855,
+		h2h: 0.460838,
 	},
 
 	/**
@@ -136,10 +136,10 @@ export const DEFAULT_MARKET_WEIGHTS: MarketWeightsConfig = {
 	 * - Motivation (10%): High stakes = cautious starts
 	 */
 	firstHalf: {
-		firstHalfScoring: 0.4,
-		recentForm: 0.25,
-		h2h: 0.2,
-		homeAdvantage: 0.15,
+		firstHalfScoring: 0.158537,
+		recentForm: 0.205035,
+		h2h: 0.396048,
+		homeAdvantage: 0.14038,
 		motivation: 0.1,
 	},
 };

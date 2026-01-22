@@ -1,0 +1,21 @@
+{
+  "market": "away_cards",
+  "target": "away_cards",
+  "type": "regression",
+  "metric": "rmse",
+  "value": 1.5065019945471603,
+  "best_params": {
+    "learning_rate": 0.02316177977846493,
+    "num_leaves": 101,
+    "min_child_samples": 63,
+    "subsample": 0.6571483769396333,
+    "colsample_bytree": 0.611752170795242,
+    "reg_alpha": 0.25240425108458076,
+    "reg_lambda": 0.5980030177959583
+  },
+  "rows": {
+    "train": 38370,
+    "val": 2344,
+    "test": 2343
+  }
+}
