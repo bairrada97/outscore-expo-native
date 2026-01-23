@@ -103,6 +103,7 @@ import {
 import {
     calculateInjuryAdjustments,
     getInjurySituationSummary,
+    buildGoalMarketInjuryAdjustments,
 } from "../utils/injury-adjustments";
 import {
     calculateDNALayer,
@@ -2039,8 +2040,9 @@ export const insightsService = {
 		const simulations: Simulation[] = [];
 
 		// Calculate injury impacts for both teams
+		// Pass team data for tier-proportional adjustments in uncapped mode
 		const { homeAdjustments, awayAdjustments, homeImpact, awayImpact } =
-			calculateInjuryAdjustments(injuries);
+			calculateInjuryAdjustments(injuries, homeTeam, awayTeam);
 
 		// Log injury situation if significant
 		if (homeImpact || awayImpact) {
@@ -2112,22 +2114,50 @@ export const insightsService = {
 		// Note: We add injury adjustments as explanatory factors for transparency.
 		// MatchOutcome already consumes these adjustments inside `simulateMatchOutcome`,
 		// so we skip it here to avoid double-counting.
-		if (homeAdjustments.length > 0 || awayAdjustments.length > 0) {
+		// 
+		// For goal markets (BTTS, TotalGoals), we use goal-specific adjustments that
+		// account for tier gaps (stronger team exploits weaker injured opponent).
+		if (homeImpact || awayImpact) {
+			// Build goal-market-specific adjustments
+			const goalMarketAdjustments = buildGoalMarketInjuryAdjustments(
+				homeImpact,
+				awayImpact,
+				homeTeam,
+				awayTeam,
+			);
+
 			for (const sim of simulations) {
 				if (sim.scenarioType === "MatchOutcome") continue;
-				// Add injury adjustments to the simulation's adjustmentsApplied array for transparency
-				sim.adjustmentsApplied = [
-					...(sim.adjustmentsApplied || []),
-					...homeAdjustments,
-					...awayAdjustments,
-				];
-				// Update total adjustment
-				const injuryAdjustmentTotal = [
-					...homeAdjustments,
-					...awayAdjustments,
-				].reduce((sum, adj) => sum + adj.value, 0);
-				sim.totalAdjustment =
-					(sim.totalAdjustment || 0) + injuryAdjustmentTotal;
+
+				if (
+					sim.scenarioType === "BothTeamsToScore" ||
+					sim.scenarioType === "TotalGoalsOverUnder"
+				) {
+					// Use goal-market-specific adjustments (accounts for tier gap)
+					sim.adjustmentsApplied = [
+						...(sim.adjustmentsApplied || []),
+						...goalMarketAdjustments,
+					];
+					const injuryAdjustmentTotal = goalMarketAdjustments.reduce(
+						(sum, adj) => sum + adj.value,
+						0,
+					);
+					sim.totalAdjustment =
+						(sim.totalAdjustment || 0) + injuryAdjustmentTotal;
+				} else {
+					// For other markets (FirstHalfActivity), use raw adjustments
+					sim.adjustmentsApplied = [
+						...(sim.adjustmentsApplied || []),
+						...homeAdjustments,
+						...awayAdjustments,
+					];
+					const injuryAdjustmentTotal = [
+						...homeAdjustments,
+						...awayAdjustments,
+					].reduce((sum, adj) => sum + adj.value, 0);
+					sim.totalAdjustment =
+						(sim.totalAdjustment || 0) + injuryAdjustmentTotal;
+				}
 			}
 		}
 

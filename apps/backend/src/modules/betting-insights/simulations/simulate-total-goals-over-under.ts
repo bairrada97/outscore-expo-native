@@ -8,7 +8,7 @@
  * Reference: docs/implementation-plan/phase4.md - Section 4.2
  */
 
-import { DEFAULT_ALGORITHM_CONFIG } from "../config/algorithm-config";
+import { DEFAULT_ALGORITHM_CONFIG, ML_FACTOR_COEFFICIENTS, UNCAPPED_MODE } from "../config/algorithm-config";
 import { TOTAL_GOALS_CALIBRATION } from "../config/total-goals-calibration";
 import type { MatchContext } from "../match-context/context-adjustments";
 import { getMaxConfidenceForContext } from "../match-context/context-adjustments";
@@ -25,13 +25,87 @@ import type {
 	TeamData,
 } from "../types";
 import {
-	applyCappedAsymmetricAdjustments,
+	applyAdjustments,
 	createAdjustment,
 } from "../utils/capped-adjustments";
 import { applyBinaryTemperatureScaling } from "../utils/calibration-utils";
 import { clamp } from "../utils/helpers";
 import { buildGoalDistribution } from "./goal-distribution";
 import type { GoalDistributionModifiers } from "./goal-distribution-modifiers";
+
+// ============================================================================
+// TIER-GAP ADJUSTMENT CONSTANTS
+// ============================================================================
+
+/**
+ * Tier-gap adjustment for total goals
+ * 
+ * When an elite team (tier 1-2) plays a weak team (tier 3-4) with different
+ * competitive objectives, total goals tend to increase because:
+ * - Elite teams score freely against weaker defenses
+ * - Weak teams can't effectively park the bus
+ * - Games become more open
+ * 
+ * This adjustment is applied directly to the Over probability for lines 2.5-3.5
+ * where the gap between model and bookmaker is most pronounced.
+ * 
+ * Example: PSG (tier 1, TITLE_RACE) vs Auxerre (tier 4, RELEGATION) = +5 adjustment
+ */
+const TIER_GAP_ADJUSTMENT = {
+	minTierGap: 2,           // Minimum tier gap to trigger adjustment
+	baseAdjustment: 2.5,     // +2.5% per tier gap
+	maxAdjustment: 8,        // Max +8% total
+	applicableLines: [2.5, 3.5] as const,  // Only apply to middle lines where gap is worst
+} as const;
+
+/**
+ * Six-pointer suppression for total goals
+ * 
+ * In six-pointer matches (both teams fighting for same objective like relegation),
+ * total goals tend to be lower because:
+ * - Both teams play conservatively and defensively
+ * - Neither can afford to lose, so they prioritize not conceding
+ * - High stakes lead to cagier, more defensive approaches
+ * 
+ * This applies a negative adjustment (Under boost) to counteract the model's
+ * tendency to overestimate goals in these matches.
+ */
+const SIX_POINTER_SUPPRESSION = {
+	adjustment: -6,          // -6% adjustment (Under boost)
+	applicableLines: [2.5, 3.5] as const,  // Only apply to middle lines
+} as const;
+
+/**
+ * Competitive zones for same-zone detection
+ * (mirrors goal-distribution-modifiers.ts)
+ */
+type CompetitiveZone = 'RELEGATION' | 'TITLE' | 'EUROPEAN' | 'MID_TABLE' | 'OTHER';
+
+function getCompetitiveZone(stakes?: string): CompetitiveZone {
+	if (!stakes) return 'OTHER';
+	switch (stakes) {
+		case 'RELEGATION_BATTLE':
+		case 'ALREADY_RELEGATED':
+			return 'RELEGATION';
+		case 'TITLE_RACE':
+			return 'TITLE';
+		case 'CL_QUALIFICATION':
+		case 'EUROPA_RACE':
+		case 'CONFERENCE_RACE':
+			return 'EUROPEAN';
+		case 'NOTHING_TO_PLAY':
+			return 'MID_TABLE';
+		default:
+			return 'OTHER';
+	}
+}
+
+function areInSameZone(homeStakes?: string, awayStakes?: string): boolean {
+	const homeZone = getCompetitiveZone(homeStakes);
+	const awayZone = getCompetitiveZone(awayStakes);
+	if (homeZone === 'OTHER' || awayZone === 'OTHER') return false;
+	return homeZone === awayZone;
+}
 
 // ============================================================================
 // CONSTANTS
@@ -161,11 +235,35 @@ export function simulateTotalGoalsOverUnder(
 		);
 	}
 	if (h2hSignal !== 0) {
+		// Use ML-derived coefficient for H2H totals (0.26 = max ±26% adjustment)
+		// ML training found H2H to be the most predictive factor (~33% weight)
+		const h2hCoefficient = ML_FACTOR_COEFFICIENTS.totalGoals.h2h;
 		adjustments.push(
 			createAdjustment(
 				"h2h_totals",
-				h2hSignal * 6 * multipliers.h2h,
+				h2hSignal * (h2hCoefficient * 100),
 				"H2H totals tendency",
+			),
+		);
+	}
+
+	// Tier-gap adjustment for extreme mismatches (elite vs weak team)
+	const tierGapAdjustment = getTierGapAdjustment(homeTeam, awayTeam, line, context);
+	if (tierGapAdjustment) {
+		adjustments.push(tierGapAdjustment);
+	}
+
+	// Six-pointer suppression: reduce Over probability in high-stakes same-objective matches
+	// These matches tend to be cagier with both teams playing defensively
+	if (
+		context?.isSixPointer &&
+		SIX_POINTER_SUPPRESSION.applicableLines.includes(line as 2.5 | 3.5)
+	) {
+		adjustments.push(
+			createAdjustment(
+				"six_pointer_suppression",
+				SIX_POINTER_SUPPRESSION.adjustment,
+				"Six-pointer match: both teams play conservatively",
 			),
 		);
 	}
@@ -176,7 +274,8 @@ export function simulateTotalGoalsOverUnder(
 		baseConfidence = minConfidence(baseConfidence, maxConfidence);
 	}
 
-	const result = applyCappedAsymmetricAdjustments(
+	// Use smart adjustment function (selects uncapped mode if enabled)
+	const result = applyAdjustments(
 		baseOverProbability,
 		adjustments,
 		"TotalGoalsOverUnder",
@@ -453,4 +552,74 @@ function buildInsights(
 		...supporting.slice(0, remainingSupports),
 		...watchOuts.slice(0, 5 - remainingSupports),
 	];
+}
+
+// ============================================================================
+// TIER-GAP ADJUSTMENT
+// ============================================================================
+
+/**
+ * Get tier-gap adjustment for total goals
+ * 
+ * When an elite team plays a weak team with different competitive objectives,
+ * apply a direct Over adjustment for the middle lines (2.5, 3.5) where the
+ * gap between model and bookmaker is most pronounced.
+ * 
+ * This supplements the tier-gap boost in goal-distribution-modifiers.ts,
+ * which affects the base Poisson distribution but may be capped.
+ * 
+ * Example: PSG (tier 1, TITLE_RACE) vs Auxerre (tier 4, RELEGATION_BATTLE)
+ * - Tier gap: 3
+ * - Different zones: Yes
+ * - Applicable line (2.5): Yes
+ * - Adjustment: min(3 * 2.5, 8) = +7.5% for Over
+ * 
+ * @returns Adjustment or null if not applicable
+ */
+function getTierGapAdjustment(
+	homeTeam: TeamData,
+	awayTeam: TeamData,
+	line: GoalLine,
+	context?: MatchContext,
+): Adjustment | null {
+	// Only apply in uncapped mode
+	if (!UNCAPPED_MODE.enabled) return null;
+
+	// Only apply to applicable lines (2.5, 3.5 where gap is worst)
+	if (!TIER_GAP_ADJUSTMENT.applicableLines.includes(line as 2.5 | 3.5)) {
+		return null;
+	}
+
+	const homeTier = homeTeam.mind?.tier ?? 3;
+	const awayTier = awayTeam.mind?.tier ?? 3;
+	const tierGap = Math.abs(homeTier - awayTier);
+
+	// Only apply for significant tier gaps
+	if (tierGap < TIER_GAP_ADJUSTMENT.minTierGap) {
+		return null;
+	}
+
+	// Don't apply if both teams are in the same competitive zone
+	// Same-zone matches (both relegation, both title race) tend to be cagier
+	const sameZone = areInSameZone(context?.homeStakes, context?.awayStakes);
+	if (sameZone) {
+		return null;
+	}
+
+	// Calculate adjustment: base * tierGap, capped at max
+	const adjustment = Math.min(
+		tierGap * TIER_GAP_ADJUSTMENT.baseAdjustment,
+		TIER_GAP_ADJUSTMENT.maxAdjustment,
+	);
+
+	// Determine which team is stronger for the reason text
+	const strongerTeam = homeTier < awayTier ? homeTeam.name : awayTeam.name;
+	const weakerTeam = homeTier < awayTier ? awayTeam.name : homeTeam.name;
+
+	return createAdjustment(
+		"tier_gap_mismatch",
+		adjustment,
+		`Elite vs weak team mismatch (${strongerTeam} tier ${Math.min(homeTier, awayTier)} vs ${weakerTeam} tier ${Math.max(homeTier, awayTier)})`,
+		"other",
+	);
 }

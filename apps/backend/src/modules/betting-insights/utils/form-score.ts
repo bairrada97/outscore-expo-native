@@ -45,10 +45,10 @@ export function calculateFormScore(
   const formPointsDiff = homeFormPoints - awayFormPoints;
 
   // Combine scores:
-  // - Tier difference worth ~30 points per tier level
-  // - Form points difference normalized to ~40 point scale
-  const tierScore = tierDiff * 30;
-  const formScore = (formPointsDiff / 30) * 40;
+  // - Tier difference worth ~36 points per tier level
+  // - Form points difference normalized to ~48 point scale
+  const tierScore = tierDiff * 36;
+  const formScore = (formPointsDiff / 30) * 48;
 
   return clamp(tierScore + formScore, -100, 100);
 }

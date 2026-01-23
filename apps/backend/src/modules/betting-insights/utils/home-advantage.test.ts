@@ -149,12 +149,14 @@ describe("calculateHomeAdvantageScore", () => {
 		expect(weakScore).toBeGreaterThan(strongScore);
 	});
 
-	it("should return low/negative score when home team has no home advantage", () => {
+	it("should return reduced score when home team has no home advantage", () => {
+		// Note: With baseline home advantage of 18, even teams with negative
+		// dynamic advantage will have a positive total score
 		const homeTeam = createTeamData({
 			stats: {
 				...createTeamData().stats,
 				homeAvgScored: 1.0,
-				awayAvgScored: 1.5, // Actually better away
+				awayAvgScored: 1.5, // Actually better away (-7.5 dynamic)
 			},
 		});
 		const awayTeam = createTeamData({
@@ -162,12 +164,15 @@ describe("calculateHomeAdvantageScore", () => {
 			stats: {
 				...createTeamData().stats,
 				homeAvgScored: 1.3,
-				awayAvgScored: 1.4, // Good road team
+				awayAvgScored: 1.4, // Good road team (-1.5 dynamic)
 			},
 		});
 
 		const score = calculateHomeAdvantageScore(homeTeam, awayTeam);
-		expect(score).toBeLessThanOrEqual(0);
+		// Baseline (18) + dynamic avg ((-7.5 + -1.5) / 2 = -4.5) = 13.5
+		// Should be lower than baseline but still positive due to real home advantage
+		expect(score).toBeLessThan(18);
+		expect(score).toBeGreaterThan(0);
 	});
 
 	it("should be clamped between -50 and 100", () => {
@@ -202,7 +207,7 @@ describe("calculateHomeAdvantageScore", () => {
 		expect(typeof score).toBe("number");
 	});
 
-	it("should return balanced score for teams with similar home/away form", () => {
+	it("should return baseline score for teams with similar home/away form", () => {
 		const homeTeam = createTeamData({
 			stats: {
 				...createTeamData().stats,
@@ -220,8 +225,10 @@ describe("calculateHomeAdvantageScore", () => {
 		});
 
 		const score = calculateHomeAdvantageScore(homeTeam, awayTeam);
-		// Should be close to 0 when both teams have similar differentials
-		expect(Math.abs(score)).toBeLessThan(10);
+		// With baseline home advantage of 18, similar differentials should give ~18-20
+		// (baseline + small dynamic component)
+		expect(score).toBeGreaterThanOrEqual(15);
+		expect(score).toBeLessThanOrEqual(25);
 	});
 });
 

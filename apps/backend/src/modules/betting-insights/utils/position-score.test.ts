@@ -171,8 +171,10 @@ describe("calculatePositionScore", () => {
 		const awayTeam = createTeamData(4, 1.0);
 
 		const score = calculatePositionScore(homeTeam, awayTeam);
-		// Tier diff: 4 - 1 = 3, score = 3 * 30 = 90
-		expect(score).toBe(90);
+		// New formula: Tier diff: 4 - 1 = 3 → 3 * 25 = 75
+		// Position diff = 0 (both at position 10), EI diff = 0
+		// Total = 75
+		expect(score).toBe(75);
 	});
 });
 
@@ -275,19 +277,20 @@ describe("determineFavorite", () => {
 		expect(determineFavorite(homeTeam, awayTeam)).toBe("even");
 	});
 
-	it("should return 'even' when score is exactly 25", () => {
-		// Need to find inputs that give exactly 25
-		// This is boundary testing - score > 25 is home, so 25 is even
+	it("should return 'even' when score is around 25", () => {
+		// New formula: tierScore (tierDiff * 25) + positionScore (positionDiff * 2.5, capped ±25) + eiDiff
+		// With both teams at position 10, positionScore = 0
+		// tier diff = 1 -> +25, eiDiff = (1.0-1.0)*20 = 0 -> total 25
 		const homeTeam = createTeamData(2, 1.0);
-		const awayTeam = createTeamData(3, 1.25); // tier diff = 1 (+30), EI diff = -0.25 (-5) = 25
+		const awayTeam = createTeamData(3, 1.0); // tier diff = 1 (+25), EI diff = 0, position diff = 0 -> 25
 
 		const score = calculatePositionScore(homeTeam, awayTeam);
 		expect(score).toBe(25);
 		expect(determineFavorite(homeTeam, awayTeam)).toBe("even");
 	});
 
-	it("should return 'even' when score is exactly -25", () => {
-		const homeTeam = createTeamData(3, 1.25);
+	it("should return 'even' when score is around -25", () => {
+		const homeTeam = createTeamData(3, 1.0);
 		const awayTeam = createTeamData(2, 1.0);
 
 		const score = calculatePositionScore(homeTeam, awayTeam);
@@ -296,11 +299,12 @@ describe("determineFavorite", () => {
 	});
 
 	it("should return 'home' when score is just over 25", () => {
-		const homeTeam = createTeamData(1, 1.0);
+		// tier diff = 1 * 25 = 25, eiDiff = (1.2-1.0)*20 = 4 -> total 29
+		const homeTeam = createTeamData(1, 1.2);
 		const awayTeam = createTeamData(2, 1.0);
 
 		const score = calculatePositionScore(homeTeam, awayTeam);
-		expect(score).toBe(30); // tier diff = 1 * 30 = 30
+		expect(score).toBeGreaterThan(25);
 		expect(determineFavorite(homeTeam, awayTeam)).toBe("home");
 	});
 });

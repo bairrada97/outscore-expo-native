@@ -13,29 +13,29 @@
  * Algorithm: docs/betting-insights-Algorithm.md - BTTS Prediction section
  */
 
-import { DEFAULT_ALGORITHM_CONFIG } from "../config/algorithm-config";
+import { DEFAULT_ALGORITHM_CONFIG, ML_FACTOR_COEFFICIENTS } from "../config/algorithm-config";
 import { BTTS_CALIBRATION } from "../config/btts-calibration";
 import type { MatchContext } from "../match-context/context-adjustments";
 import { getMaxConfidenceForContext } from "../match-context/context-adjustments";
 import { finalizeSimulation } from "../presentation/simulation-presenter";
 import type {
-  Adjustment,
-  AlgorithmConfig,
-  ConfidenceLevel,
-  H2HData,
-  Insight,
-  ProcessedMatch,
-  Simulation,
-  TeamData,
+	Adjustment,
+	AlgorithmConfig,
+	ConfidenceLevel,
+	H2HData,
+	Insight,
+	ProcessedMatch,
+	Simulation,
+	TeamData,
 } from "../types";
-import { buildGoalDistribution } from "./goal-distribution";
-import type { GoalDistributionModifiers } from "./goal-distribution-modifiers";
+import { applyBinaryTemperatureScaling } from "../utils/calibration-utils";
 import {
-	applyCappedAsymmetricAdjustments,
+	applyAdjustments,
 	createAdjustment,
 } from "../utils/capped-adjustments";
 import { clamp } from "../utils/helpers";
-import { applyBinaryTemperatureScaling } from "../utils/calibration-utils";
+import { buildGoalDistribution } from "./goal-distribution";
+import type { GoalDistributionModifiers } from "./goal-distribution-modifiers";
 
 // ============================================================================
 // CONSTANTS
@@ -56,6 +56,73 @@ const THRESHOLDS = {
 	lowCleanSheetRate: 15, // Teams keeping <15% clean sheets
 	highH2HBtts: 70, // H2H BTTS rate >70%
 	lowH2HBtts: 30, // H2H BTTS rate <30%
+} as const;
+
+/**
+ * Scoring drought + elite defense suppression constants
+ * 
+ * When one team is on a scoring drought AND the opponent has elite defense,
+ * BTTS should be suppressed more aggressively than the individual factors suggest.
+ * 
+ * Example: Auxerre (failed to score 2 matches) vs PSG (42% clean sheets)
+ * - Individual factors: -4 (high clean sheet) + maybe -3 (low scoring) = -7
+ * - But combined effect should be stronger because drought + elite defense compound
+ */
+const DROUGHT_ELITE_DEFENSE = {
+	// Minimum consecutive matches without scoring to trigger drought detection
+	droughtMinMatches: 2,
+	// Minimum clean sheet percentage to be considered "elite" defense
+	eliteDefenseThreshold: 35,
+	// Very elite defense threshold (triggers stronger suppression)
+	veryEliteDefenseThreshold: 40,
+	// Base suppression when drought meets elite defense
+	baseSuppression: -4,
+	// Extra suppression for very elite defense
+	veryEliteSuppression: -2,
+	// Extra suppression when H2H also shows dominance (>=3 wins out of 5)
+	h2hDominanceSuppression: -2,
+} as const;
+
+/**
+ * Standalone elite defense suppression (no drought required)
+ * 
+ * When a team has elite defense stats (high clean sheet rate, low goals conceded),
+ * BTTS should be suppressed even if the opponent doesn't have a scoring drought.
+ * 
+ * Example: Inter with 38% clean sheets facing Pisa (10 winless games)
+ * should strongly reduce BTTS Yes probability.
+ */
+const ELITE_DEFENSE_STANDALONE = {
+	// Very high clean sheet rate threshold
+	veryHighCleanSheetThreshold: 38,
+	// Base suppression for very high clean sheet rate
+	cleanSheetSuppression: -4,
+	// Low goals conceded per game threshold
+	lowConcededThreshold: 0.7,
+	// Suppression for very low conceded rate
+	lowConcededSuppression: -2,
+	// Extra suppression when opponent is in poor form (high failed to score %)
+	opponentPoorFormThreshold: 25, // If opponent fails to score in 25%+ of matches
+	opponentPoorFormSuppression: -3,
+	// Extra suppression when opponent has low scoring average
+	opponentLowScoringThreshold: 1.0, // Avg goals scored per game
+	opponentLowScoringSuppression: -2,
+} as const;
+
+/**
+ * Six-pointer suppression for BTTS
+ * 
+ * In six-pointer matches (both teams fighting for same objective like relegation),
+ * BTTS tends to be less likely because:
+ * - Both teams play conservatively and defensively
+ * - Neither can afford to lose, so they prioritize not conceding
+ * - High stakes lead to cagier, more defensive approaches
+ * - Teams focus on "not losing" rather than "winning"
+ * 
+ * This applies a negative adjustment to BTTS Yes probability.
+ */
+const SIX_POINTER_BTTS_SUPPRESSION = {
+	adjustment: -5, // -5% adjustment to BTTS Yes
 } as const;
 
 const normalizeWeights = (
@@ -90,7 +157,8 @@ const normalizeWeights = (
 	};
 };
 
-const scaleAdjustment = (value: number, multiplier: number) => value * multiplier;
+const scaleAdjustment = (value: number, multiplier: number) =>
+	value * multiplier;
 
 // ============================================================================
 // DERIVED METRICS (avoid type/field drift)
@@ -148,6 +216,25 @@ function getRecentBttsRate(team: TeamData): number {
 	return team.dna?.bttsYesRate ?? 50;
 }
 
+/**
+ * Detect consecutive scoring drought (failed to score in X consecutive matches)
+ * Returns the number of consecutive matches without scoring, or 0 if no drought
+ */
+function getScoringDroughtLength(team: TeamData): number {
+	const recent = getMostRecentMatches(team, 5);
+	if (recent.length === 0) return 0;
+	
+	let drought = 0;
+	for (const match of recent) {
+		if (match.goalsScored === 0) {
+			drought++;
+		} else {
+			break; // Drought ends when they score
+		}
+	}
+	return drought;
+}
+
 // ============================================================================
 // MAIN PREDICTION FUNCTION
 // ============================================================================
@@ -203,7 +290,11 @@ export function simulateBTTS(
 		...getScoringRateAdjustments(homeTeam, awayTeam, multipliers.scoringRate),
 	);
 	adjustments.push(
-		...getDefensiveFormAdjustments(homeTeam, awayTeam, multipliers.defensiveForm),
+		...getDefensiveFormAdjustments(
+			homeTeam,
+			awayTeam,
+			multipliers.defensiveForm,
+		),
 	);
 	adjustments.push(
 		...getRecentFormAdjustments(homeTeam, awayTeam, multipliers.recentForm),
@@ -216,8 +307,25 @@ export function simulateBTTS(
 	}
 	adjustments.push(...getFormationAdjustments(homeTeam, awayTeam, 0.8));
 	adjustments.push(...getSafetyFlagAdjustments(homeTeam, awayTeam));
+	// Compounding effect: scoring drought + elite defense opponent
+	adjustments.push(...getDroughtEliteDefenseAdjustments(homeTeam, awayTeam, h2h));
+	// Standalone elite defense suppression (even without opponent drought)
+	adjustments.push(...getEliteDefenseStandaloneAdjustments(homeTeam, awayTeam));
 
-	const result = applyCappedAsymmetricAdjustments(
+	// Six-pointer suppression: reduce BTTS Yes probability in high-stakes same-objective matches
+	// These matches tend to be cagier with both teams playing defensively
+	if (context?.isSixPointer) {
+		adjustments.push(
+			createAdjustment(
+				"six_pointer_btts_suppression",
+				SIX_POINTER_BTTS_SUPPRESSION.adjustment,
+				"Six-pointer match: both teams play conservatively",
+			),
+		);
+	}
+
+	// Use smart adjustment function (selects uncapped mode if enabled)
+	const result = applyAdjustments(
 		baseYesProbability,
 		adjustments,
 		"BothTeamsToScore",
@@ -489,31 +597,217 @@ function getRecentFormAdjustments(
 
 /**
  * Get H2H adjustments
+ * 
+ * Uses ML-derived coefficient (0.28) for proportional adjustment based on
+ * H2H BTTS percentage deviation from neutral (50%).
+ * 
+ * ML training found H2H to be the most important factor (~35% weight),
+ * so we use a strong coefficient to reflect this.
  */
 function getH2HAdjustments(
 	h2h: H2HData,
 	weightMultiplier: number = 1,
 ): Adjustment[] {
 	const adjustments: Adjustment[] = [];
-
-	// Strong H2H BTTS trend
-	if (h2h.bttsPercentage > THRESHOLDS.highH2HBtts) {
+	
+	// Use ML-derived coefficient for H2H BTTS
+	const h2hCoefficient = ML_FACTOR_COEFFICIENTS.btts.h2h; // 0.28
+	
+	// Calculate proportional adjustment based on deviation from 50%
+	// H2H BTTS 100% → (100-50)/100 * 28 = +14
+	// H2H BTTS 80% → (80-50)/100 * 28 = +8.4
+	// H2H BTTS 20% → (20-50)/100 * 28 = -8.4
+	const deviation = h2h.bttsPercentage - 50;
+	const proportionalAdjustment = (deviation / 100) * (h2hCoefficient * 100);
+	
+	// Only apply if deviation is meaningful (>10% from neutral)
+	if (Math.abs(deviation) >= 10) {
+		const reason = deviation > 0
+			? `BTTS in ${h2h.bttsPercentage.toFixed(0)}% of H2H matches`
+			: `BTTS in only ${h2h.bttsPercentage.toFixed(0)}% of H2H matches`;
+		
 		adjustments.push(
 			createAdjustment(
 				"h2h_btts",
-				scaleAdjustment(5, weightMultiplier),
-				`BTTS in ${h2h.bttsPercentage.toFixed(0)}% of H2H matches`,
+				scaleAdjustment(proportionalAdjustment, weightMultiplier),
+				reason,
 			),
 		);
 	}
 
-	// Low H2H BTTS trend
-	if (h2h.bttsPercentage < THRESHOLDS.lowH2HBtts) {
+	return adjustments;
+}
+
+/**
+ * Get scoring drought + elite defense adjustments
+ * 
+ * When one team is on a scoring drought AND faces an opponent with elite defense,
+ * apply compounding suppression to BTTS probability.
+ * 
+ * This addresses cases like Auxerre vs PSG where:
+ * - Auxerre failed to score in 2 consecutive matches
+ * - PSG has 42% clean sheet rate
+ * - H2H shows PSG dominance (4/5 wins)
+ * - BTTS should lean No despite season-wide scoring rates
+ */
+function getDroughtEliteDefenseAdjustments(
+	homeTeam: TeamData,
+	awayTeam: TeamData,
+	h2h?: H2HData,
+): Adjustment[] {
+	const adjustments: Adjustment[] = [];
+
+	const homeDrought = getScoringDroughtLength(homeTeam);
+	const awayDrought = getScoringDroughtLength(awayTeam);
+	const homeCleanSheet = getCleanSheetRateFromDNA(homeTeam);
+	const awayCleanSheet = getCleanSheetRateFromDNA(awayTeam);
+
+	// Check home team drought + away elite defense
+	if (homeDrought >= DROUGHT_ELITE_DEFENSE.droughtMinMatches) {
+		if (awayCleanSheet >= DROUGHT_ELITE_DEFENSE.eliteDefenseThreshold) {
+			let suppression = DROUGHT_ELITE_DEFENSE.baseSuppression;
+			let reason = `Home team drought (${homeDrought} matches) vs elite defense (${awayCleanSheet.toFixed(0)}% CS)`;
+
+			// Extra suppression for very elite defense
+			if (awayCleanSheet >= DROUGHT_ELITE_DEFENSE.veryEliteDefenseThreshold) {
+				suppression += DROUGHT_ELITE_DEFENSE.veryEliteSuppression;
+				reason = `Home team drought (${homeDrought} matches) vs very elite defense (${awayCleanSheet.toFixed(0)}% CS)`;
+			}
+
+			// Extra suppression if H2H shows dominance
+			if (h2h?.hasSufficientData && h2h.awayTeamWins >= 3) {
+				suppression += DROUGHT_ELITE_DEFENSE.h2hDominanceSuppression;
+			}
+
+			adjustments.push(
+				createAdjustment("drought_elite_defense_home", suppression, reason),
+			);
+		}
+	}
+
+	// Check away team drought + home elite defense
+	if (awayDrought >= DROUGHT_ELITE_DEFENSE.droughtMinMatches) {
+		if (homeCleanSheet >= DROUGHT_ELITE_DEFENSE.eliteDefenseThreshold) {
+			let suppression = DROUGHT_ELITE_DEFENSE.baseSuppression;
+			let reason = `Away team drought (${awayDrought} matches) vs elite defense (${homeCleanSheet.toFixed(0)}% CS)`;
+
+			// Extra suppression for very elite defense
+			if (homeCleanSheet >= DROUGHT_ELITE_DEFENSE.veryEliteDefenseThreshold) {
+				suppression += DROUGHT_ELITE_DEFENSE.veryEliteSuppression;
+				reason = `Away team drought (${awayDrought} matches) vs very elite defense (${homeCleanSheet.toFixed(0)}% CS)`;
+			}
+
+			// Extra suppression if H2H shows dominance
+			if (h2h?.hasSufficientData && h2h.homeTeamWins >= 3) {
+				suppression += DROUGHT_ELITE_DEFENSE.h2hDominanceSuppression;
+			}
+
+			adjustments.push(
+				createAdjustment("drought_elite_defense_away", suppression, reason),
+			);
+		}
+	}
+
+	return adjustments;
+}
+
+/**
+ * Get standalone elite defense adjustments (no drought required)
+ * 
+ * Suppresses BTTS when one team has exceptionally strong defensive stats,
+ * even if the opponent is scoring normally.
+ */
+function getEliteDefenseStandaloneAdjustments(
+	homeTeam: TeamData,
+	awayTeam: TeamData,
+): Adjustment[] {
+	const adjustments: Adjustment[] = [];
+
+	const homeCleanSheet = getCleanSheetRateFromDNA(homeTeam);
+	const awayCleanSheet = getCleanSheetRateFromDNA(awayTeam);
+	const homeConceded = homeTeam.stats?.avgGoalsConceded ?? 1.2;
+	const awayConceded = awayTeam.stats?.avgGoalsConceded ?? 1.2;
+	const homeScored = homeTeam.stats?.avgGoalsScored ?? 1.3;
+	const awayScored = awayTeam.stats?.avgGoalsScored ?? 1.3;
+	const homeFailedToScore = homeTeam.dna?.failedToScorePercentage ?? 15;
+	const awayFailedToScore = awayTeam.dna?.failedToScorePercentage ?? 15;
+
+	// Check home team elite defense vs away team scoring
+	if (homeCleanSheet >= ELITE_DEFENSE_STANDALONE.veryHighCleanSheetThreshold) {
 		adjustments.push(
 			createAdjustment(
-				"h2h_btts",
-				scaleAdjustment(-5, weightMultiplier),
-				`BTTS in only ${h2h.bttsPercentage.toFixed(0)}% of H2H matches`,
+				"elite_defense_home",
+				ELITE_DEFENSE_STANDALONE.cleanSheetSuppression,
+				`Home team elite defense (${homeCleanSheet.toFixed(0)}% clean sheets)`,
+			),
+		);
+		
+		// Extra suppression when opponent (away) struggles to score
+		if (awayFailedToScore >= ELITE_DEFENSE_STANDALONE.opponentPoorFormThreshold) {
+			adjustments.push(
+				createAdjustment(
+					"elite_vs_poor_scorer",
+					ELITE_DEFENSE_STANDALONE.opponentPoorFormSuppression,
+					`Elite defense vs opponent who fails to score ${awayFailedToScore.toFixed(0)}% of matches`,
+				),
+			);
+		}
+		if (awayScored <= ELITE_DEFENSE_STANDALONE.opponentLowScoringThreshold) {
+			adjustments.push(
+				createAdjustment(
+					"elite_vs_low_scorer",
+					ELITE_DEFENSE_STANDALONE.opponentLowScoringSuppression,
+					`Elite defense vs opponent averaging ${awayScored.toFixed(1)} goals/game`,
+				),
+			);
+		}
+	}
+	if (homeConceded <= ELITE_DEFENSE_STANDALONE.lowConcededThreshold) {
+		adjustments.push(
+			createAdjustment(
+				"elite_defense_conceded_home",
+				ELITE_DEFENSE_STANDALONE.lowConcededSuppression,
+				`Home team concedes very few (${homeConceded.toFixed(2)} per game)`,
+			),
+		);
+	}
+
+	// Check away team elite defense vs home team scoring
+	if (awayCleanSheet >= ELITE_DEFENSE_STANDALONE.veryHighCleanSheetThreshold) {
+		adjustments.push(
+			createAdjustment(
+				"elite_defense_away",
+				ELITE_DEFENSE_STANDALONE.cleanSheetSuppression,
+				`Away team elite defense (${awayCleanSheet.toFixed(0)}% clean sheets)`,
+			),
+		);
+		
+		// Extra suppression when opponent (home) struggles to score
+		if (homeFailedToScore >= ELITE_DEFENSE_STANDALONE.opponentPoorFormThreshold) {
+			adjustments.push(
+				createAdjustment(
+					"elite_vs_poor_scorer",
+					ELITE_DEFENSE_STANDALONE.opponentPoorFormSuppression,
+					`Elite defense vs opponent who fails to score ${homeFailedToScore.toFixed(0)}% of matches`,
+				),
+			);
+		}
+		if (homeScored <= ELITE_DEFENSE_STANDALONE.opponentLowScoringThreshold) {
+			adjustments.push(
+				createAdjustment(
+					"elite_vs_low_scorer",
+					ELITE_DEFENSE_STANDALONE.opponentLowScoringSuppression,
+					`Elite defense vs opponent averaging ${homeScored.toFixed(1)} goals/game`,
+				),
+			);
+		}
+	}
+	if (awayConceded <= ELITE_DEFENSE_STANDALONE.lowConcededThreshold) {
+		adjustments.push(
+			createAdjustment(
+				"elite_defense_conceded_away",
+				ELITE_DEFENSE_STANDALONE.lowConcededSuppression,
+				`Away team concedes very few (${awayConceded.toFixed(2)} per game)`,
 			),
 		);
 	}
@@ -690,9 +984,10 @@ function calculateBaseConfidence(
 
 /**
  * Build final BTTS prediction response
+ * @deprecated Legacy function, no longer used in goal-distribution mode
  */
 function buildBTTSPrediction(
-	_result: ReturnType<typeof applyCappedAsymmetricAdjustments>,
+	_result: ReturnType<typeof applyAdjustments>,
 	_homeTeam: TeamData,
 	_awayTeam: TeamData,
 	_h2h?: H2HData,
@@ -722,7 +1017,7 @@ function buildBttsInsights(
 	const avgRecentBtts = (recentHomeBtts + recentAwayBtts) / 2;
 
 	const hasH2H = Boolean(h2h?.hasSufficientData);
-	const h2hBtts = hasH2H ? h2h?.bttsPercentage ?? 0 : null;
+	const h2hBtts = hasH2H ? (h2h?.bttsPercentage ?? 0) : null;
 
 	const leansYes = yesProb >= 50;
 	const strongRecentBtts = avgRecentBtts >= 60;
@@ -800,10 +1095,7 @@ function buildBttsInsights(
 			);
 		}
 		if (hasH2H && (h2hBtts ?? 0) <= 35 && !strongRecentBtts && !strongScoring) {
-			pushWatchOut(
-				`Recent head-to-heads have often had a clean sheet.`,
-				62,
-			);
+			pushWatchOut(`Recent head-to-heads have often had a clean sheet.`, 62);
 		}
 	} else {
 		if (avgCleanSheets >= 35) {

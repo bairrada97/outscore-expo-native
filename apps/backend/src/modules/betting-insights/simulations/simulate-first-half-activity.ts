@@ -26,7 +26,7 @@ import type {
   TeamData,
 } from "../types";
 import {
-  applyCappedAsymmetricAdjustments,
+  applyAdjustments,
   createAdjustment,
 } from "../utils/capped-adjustments";
 import { clamp } from "../utils/helpers";
@@ -174,8 +174,8 @@ export function simulateFirstHalfActivity(
 	// Add formation adjustments (20% less impact = 0.8 multiplier)
 	adjustments.push(...getFormationAdjustments(homeTeam, awayTeam, 0.8));
 
-	// Step 3: Apply capped adjustments
-	const result = applyCappedAsymmetricAdjustments(
+	// Step 3: Apply adjustments (uses uncapped mode if enabled)
+	const result = applyAdjustments(
 		baseProbability,
 		adjustments,
 		"FirstHalfActivity",

@@ -14,8 +14,10 @@ import { clamp } from './helpers';
 /**
  * Calculate position/quality score between home and away teams
  *
- * Uses Mind layer (50-match baseline) to determine relative quality.
- * Lower tier = better quality (1 is elite, 4 is struggling).
+ * Uses combination of:
+ * - Mind tier (50-match baseline quality)
+ * - Efficiency Index (granular quality)
+ * - Actual league position (current season standings)
  *
  * @param homeTeam - Home team data
  * @param awayTeam - Away team data
@@ -42,8 +44,22 @@ export function calculatePositionScore(
   const awayEI = awayTeam.mind?.efficiencyIndex ?? 1.0;
   const eiDiff = (homeEI - awayEI) * 20;
 
-  // Combine: tier difference (major factor) + EI difference (refinement)
-  return clamp(tierDiff * 30 + eiDiff, -100, 100);
+  // Use actual league position (current season standings)
+  // Lower position = better (1st is best, 20th is worst)
+  const homePosition = homeTeam.stats?.leaguePosition ?? 10;
+  const awayPosition = awayTeam.stats?.leaguePosition ?? 10;
+  // Position difference: positive if away is lower (worse) in table
+  const positionDiff = awayPosition - homePosition;
+  // Scale: each position difference worth ~2.5 points, capped at ±25
+  const positionScore = clamp(positionDiff * 2.5, -25, 25);
+
+  // Combine: tier (major, 50%), position (35%), EI (15%)
+  // Tier: each tier worth 25 points (was 36)
+  // Position: contributes up to ±25
+  // EI: contributes up to ±20
+  const tierScore = tierDiff * 25;
+  
+  return clamp(tierScore + positionScore + eiDiff, -100, 100);
 }
 
 /**
