@@ -13,7 +13,7 @@ license: MIT
 
 - `docs/betting-insights-algorithm.md` -- Full algorithm design and roadmap
 - `docs/betting-insights-data-requirements.md` -- Manual data prerequisites and checklists
-- `docs/implementation-plans/*` -- Manual data prerequisites and checklists
+- `docs/implementation-plans/*` -- Implementation tasks, timelines, milestones, and checklists
 
 ## When to Use
 

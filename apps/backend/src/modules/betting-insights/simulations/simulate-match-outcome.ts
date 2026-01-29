@@ -1387,12 +1387,16 @@ function buildMatchResultPrediction(
 				? "MEDIUM"
 				: "HIGH";
 
+	const roundHome = Math.round(probs.home * 10) / 10;
+	const roundDraw = Math.round(probs.draw * 10) / 10;
+	const roundAway = clamp(100 - roundHome - roundDraw, 0, 100);
+
 	return finalizeSimulation({
 		scenarioType: "MatchOutcome",
 		probabilityDistribution: {
-			home: Math.round(probs.home * 10) / 10,
-			draw: Math.round(probs.draw * 10) / 10,
-			away: Math.round(probs.away * 10) / 10,
+			home: roundHome,
+			draw: roundDraw,
+			away: roundAway,
 		},
 		modelReliability: confidence,
 		insights: buildMatchOutcomeInsights({
