@@ -1387,8 +1387,11 @@ function buildMatchResultPrediction(
 				? "MEDIUM"
 				: "HIGH";
 
-	const roundHome = Math.round(probs.home * 10) / 10;
-	const roundDraw = Math.round(probs.draw * 10) / 10;
+	const total = probs.home + probs.draw + probs.away;
+	const homePercent = total > 0 ? (probs.home / total) * 100 : 0;
+	const drawPercent = total > 0 ? (probs.draw / total) * 100 : 0;
+	const roundHome = Math.round(homePercent * 10) / 10;
+	const roundDraw = Math.round(drawPercent * 10) / 10;
 	const roundAway = clamp(100 - roundHome - roundDraw, 0, 100);
 
 	return finalizeSimulation({
