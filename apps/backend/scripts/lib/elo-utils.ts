@@ -30,10 +30,14 @@ export const buildWranglerArgs = (params: {
 	return base;
 };
 
-export const loadRows = (args: string[]) => {
+export const loadRows = (args: string[], params: Array<string | number> = []) => {
+	const argsWithParams = [...args];
+	for (const param of params) {
+		argsWithParams.push("--param", String(param));
+	}
 	let raw = "";
 	try {
-		raw = execFileSync("bunx", args, {
+		raw = execFileSync("bunx", argsWithParams, {
 			encoding: "utf-8",
 			stdio: ["ignore", "pipe", "pipe"],
 		});
@@ -129,12 +133,17 @@ export const buildCurrentUpsertSql = (rows: Array<{
 	rows
 		.map(
 			(row) => `INSERT INTO team_elo_current
-  (team_id, elo, games, as_of_date, updated_at)
-  VALUES (${row.teamId}, ${row.elo.toFixed(4)}, ${row.games}, '${row.asOf}', datetime('now'))
+  (team_id, elo, games, as_of_date, source, updated_at)
+  VALUES (${row.teamId}, ${row.elo.toFixed(4)}, ${row.games}, '${row.asOf}', 'api_football', datetime('now'))
   ON CONFLICT(team_id) DO UPDATE SET
     elo = excluded.elo,
     games = excluded.games,
     as_of_date = excluded.as_of_date,
-    updated_at = datetime('now');`,
+    source = excluded.source,
+    updated_at = datetime('now')
+  WHERE team_elo_current.source IS NULL
+    OR team_elo_current.source != 'clubelo'
+    OR (team_elo_current.source = 'clubelo'
+        AND datetime(excluded.as_of_date) >= datetime(team_elo_current.as_of_date));`,
 		)
 		.join("\n");

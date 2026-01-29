@@ -54,6 +54,13 @@ const insightsParamsSchema = z.object({
 		.transform((val) => parseInt(val, 10)),
 });
 
+/**
+ * Query parameters schema
+ */
+const insightsQuerySchema = z.object({
+	debug: z.string().optional(),
+});
+
 // ============================================================================
 // ROUTE CREATION
 // ============================================================================
@@ -70,8 +77,11 @@ export const createInsightsRoutes = () => {
 	insights.get(
 		"/:fixtureId/insights",
 		zValidator("param", insightsParamsSchema),
+		zValidator("query", insightsQuerySchema),
 		async (context) => {
 			const { fixtureId } = context.req.valid("param");
+			const { debug } = context.req.valid("query");
+			const debugEnabled = debug === "1" || debug === "true";
 			const requestStartTime = performance.now();
 
 			console.log(`🎯 [InsightsRoute] Request for fixture ${fixtureId}`);
@@ -100,10 +110,39 @@ export const createInsightsRoutes = () => {
 				context.header("X-Generated-At", result.data.generatedAt);
 				context.header("X-Response-Time", `${responseTime}ms`);
 
+				const matchOutcome = result.data.simulations.find(
+					(simulation) => simulation.scenarioType === "MatchOutcome",
+				);
+
+				const debugPayload = debugEnabled
+					? {
+							matchOutcome: {
+								probabilities: matchOutcome?.probabilityDistribution,
+								factorScores: matchOutcome?.factorScores,
+								adjustmentsApplied: matchOutcome?.adjustmentsApplied,
+								totalAdjustment: matchOutcome?.totalAdjustment,
+								capsHit: matchOutcome?.capsHit,
+								overcorrectionWarning: matchOutcome?.overcorrectionWarning,
+								signalStrength: matchOutcome?.signalStrength,
+								modelReliability: matchOutcome?.modelReliability,
+								mlRawPrediction: result.data.mlDebug?.matchOutcome?.rawPrediction ?? null,
+								mlFeatures: result.data.mlDebug?.matchOutcome?.features ?? null,
+							},
+							elo: {
+								home: result.data.homeTeamContext.elo ?? null,
+								away: result.data.awayTeamContext.elo ?? null,
+							},
+						}
+					: undefined;
+
+				const responseData = debugPayload
+					? { ...result.data, debug: debugPayload }
+					: result.data;
+
 				return context.json({
 					status: "success",
 					source: result.source,
-					data: result.data,
+					data: responseData,
 					meta: {
 						generatedAt: result.data.generatedAt,
 						confidence: result.data.overallConfidence,

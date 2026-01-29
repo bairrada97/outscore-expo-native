@@ -1,0 +1,21 @@
+{
+  "market": "clean_sheet_away",
+  "target": "clean_sheet_away",
+  "type": "binary",
+  "metric": "log_loss",
+  "value": 0.49753005906647996,
+  "best_params": {
+    "learning_rate": 0.02659815732425234,
+    "num_leaves": 29,
+    "min_child_samples": 19,
+    "subsample": 0.723939338040051,
+    "colsample_bytree": 0.6026096250719083,
+    "reg_alpha": 0.003795913621030822,
+    "reg_lambda": 0.11799563784074685
+  },
+  "rows": {
+    "train": 51812,
+    "val": 2344,
+    "test": 2343
+  }
+}

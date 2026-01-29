@@ -1,0 +1,21 @@
+{
+  "market": "away_range_4_6",
+  "target": "away_range_4_6",
+  "type": "binary",
+  "metric": "log_loss",
+  "value": 0.1630437021487155,
+  "best_params": {
+    "learning_rate": 0.04452518842616031,
+    "num_leaves": 23,
+    "min_child_samples": 25,
+    "subsample": 0.6799879866525746,
+    "colsample_bytree": 0.8379243448300935,
+    "reg_alpha": 0.4274874648809679,
+    "reg_lambda": 0.39812516115305296
+  },
+  "rows": {
+    "train": 51812,
+    "val": 2344,
+    "test": 2343
+  }
+}

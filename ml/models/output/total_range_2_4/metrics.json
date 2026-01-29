@@ -1,0 +1,21 @@
+{
+  "market": "total_range_2_4",
+  "target": "total_range_2_4",
+  "type": "binary",
+  "metric": "log_loss",
+  "value": 0.6624701942997632,
+  "best_params": {
+    "learning_rate": 0.0763575400379528,
+    "num_leaves": 19,
+    "min_child_samples": 16,
+    "subsample": 0.6127494280779461,
+    "colsample_bytree": 0.6256961566264628,
+    "reg_alpha": 0.05602257551160428,
+    "reg_lambda": 0.20259118410372812
+  },
+  "rows": {
+    "train": 51812,
+    "val": 2344,
+    "test": 2343
+  }
+}

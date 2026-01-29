@@ -671,13 +671,18 @@ async function updateEloFromCachedFixtures(env: SchedulerEnv): Promise<void> {
 		if (!state) return null;
 		return env.ENTITIES_DB.prepare(
 			`INSERT INTO team_elo_current
-			 (team_id, elo, games, as_of_date, updated_at)
-			 VALUES (?, ?, ?, ?, datetime('now'))
+			 (team_id, elo, games, as_of_date, source, updated_at)
+			 VALUES (?, ?, ?, ?, 'api_football', datetime('now'))
 			 ON CONFLICT(team_id) DO UPDATE SET
 			   elo = excluded.elo,
 			   games = excluded.games,
 			   as_of_date = excluded.as_of_date,
-			   updated_at = datetime('now')`,
+			   source = excluded.source,
+			   updated_at = datetime('now')
+			 WHERE team_elo_current.source IS NULL
+			   OR team_elo_current.source != 'clubelo'
+			   OR (team_elo_current.source = 'clubelo'
+			       AND datetime(excluded.as_of_date) >= datetime(team_elo_current.as_of_date))`,
 		).bind(teamId, state.elo, state.games, state.asOf);
 	});
 

@@ -1,0 +1,21 @@
+{
+  "market": "home_corners",
+  "target": "home_corners",
+  "type": "regression",
+  "metric": "rmse",
+  "value": 2.8544061816177337,
+  "best_params": {
+    "learning_rate": 0.10358389400589818,
+    "num_leaves": 74,
+    "min_child_samples": 35,
+    "subsample": 0.8641162214575245,
+    "colsample_bytree": 0.6099608812825318,
+    "reg_alpha": 0.08779271636138475,
+    "reg_lambda": 0.49656563271892773
+  },
+  "rows": {
+    "train": 37985,
+    "val": 2344,
+    "test": 2343
+  }
+}

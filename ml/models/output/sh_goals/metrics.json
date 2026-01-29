@@ -1,0 +1,21 @@
+{
+  "market": "sh_goals",
+  "target": "sh_goals_total",
+  "type": "regression",
+  "metric": "rmse",
+  "value": 1.1846084485872705,
+  "best_params": {
+    "learning_rate": 0.051088672861323854,
+    "num_leaves": 50,
+    "min_child_samples": 46,
+    "subsample": 0.915771831405681,
+    "colsample_bytree": 0.8459845418751608,
+    "reg_alpha": 0.1874140908229538,
+    "reg_lambda": 0.8440499142627726
+  },
+  "rows": {
+    "train": 51809,
+    "val": 2344,
+    "test": 2343
+  }
+}

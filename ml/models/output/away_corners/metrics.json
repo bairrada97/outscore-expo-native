@@ -1,0 +1,21 @@
+{
+  "market": "away_corners",
+  "target": "away_corners",
+  "type": "regression",
+  "metric": "rmse",
+  "value": 2.499516412004637,
+  "best_params": {
+    "learning_rate": 0.06860029995104894,
+    "num_leaves": 26,
+    "min_child_samples": 69,
+    "subsample": 0.9624404313705641,
+    "colsample_bytree": 0.9834536462290551,
+    "reg_alpha": 0.966705690420778,
+    "reg_lambda": 0.11678031062076377
+  },
+  "rows": {
+    "train": 37985,
+    "val": 2344,
+    "test": 2343
+  }
+}

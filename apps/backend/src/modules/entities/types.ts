@@ -10,6 +10,7 @@
 // ============================================================================
 
 export type Provider = 'api_football' | 'sportmonks';
+export type TeamEloSource = 'api_football' | 'clubelo' | 'uefa';
 export type EntityType = 'league' | 'team' | 'player';
 
 // ============================================================================
@@ -105,6 +106,7 @@ export interface TeamEloCurrent {
   elo: number;
   games: number;
   as_of_date: string;
+  source: TeamEloSource;
   updated_at: string;
 }
 
@@ -113,6 +115,7 @@ export interface TeamEloCurrentUpsert {
   elo: number;
   games: number;
   as_of_date: string;
+  source?: TeamEloSource;
 }
 
 // ============================================================================

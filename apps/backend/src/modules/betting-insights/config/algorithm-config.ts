@@ -9,17 +9,17 @@
  */
 
 import type {
-  AlgorithmConfig,
-  AsymmetricWeightingConfig,
-  ConfidenceDowngradeConfig,
-  CumulativeCapsConfig,
-  FormWeightingConfig,
-  GoalDistributionConfig,
-  H2HRecencyConfig,
-  MarketWeightsConfig,
-  ProbabilityCapsConfig,
-  ScenarioType,
-  TierThresholds,
+	AlgorithmConfig,
+	AsymmetricWeightingConfig,
+	ConfidenceDowngradeConfig,
+	CumulativeCapsConfig,
+	FormWeightingConfig,
+	GoalDistributionConfig,
+	H2HRecencyConfig,
+	MarketWeightsConfig,
+	ProbabilityCapsConfig,
+	ScenarioType,
+	TierThresholds,
 } from "../types";
 
 // ============================================================================
@@ -85,12 +85,12 @@ export const DEFAULT_MARKET_WEIGHTS: MarketWeightsConfig = {
 	 * - League Position (10%): Quality difference
 	 */
 	matchResult: {
-		recentForm: 0.3,
-		h2h: 0.25,
-		homeAdvantage: 0.2,
+		recentForm: 0.153075,
+		h2h: 0.271733,
+		homeAdvantage: 0.089243,
 		motivation: 0.18,
-		rest: 0.12,
-		leaguePosition: 0.1,
+		rest: 0.056428,
+		leaguePosition: 0.249522,
 	},
 
 	/**
@@ -103,10 +103,10 @@ export const DEFAULT_MARKET_WEIGHTS: MarketWeightsConfig = {
 	 * - Defensive Form (20%): Clean sheet rates
 	 */
 	btts: {
-		scoringRate: 0.25,
-		defensiveForm: 0.2,
-		recentForm: 0.35,
-		h2h: 0.25,
+		scoringRate: 0.133003,
+		defensiveForm: 0.125112,
+		recentForm: 0.238278,
+		h2h: 0.503607,
 	},
 
 	/**
@@ -119,10 +119,10 @@ export const DEFAULT_MARKET_WEIGHTS: MarketWeightsConfig = {
 	 * - H2H (20%): Historical goal totals
 	 */
 	overUnderGoals: {
-		avgGoalsPerGame: 0.3,
-		defensiveWeakness: 0.25,
-		recentForm: 0.3,
-		h2h: 0.2,
+		avgGoalsPerGame: 0.183971,
+		defensiveWeakness: 0.134336,
+		recentForm: 0.220855,
+		h2h: 0.460838,
 	},
 
 	/**
@@ -136,10 +136,10 @@ export const DEFAULT_MARKET_WEIGHTS: MarketWeightsConfig = {
 	 * - Motivation (10%): High stakes = cautious starts
 	 */
 	firstHalf: {
-		firstHalfScoring: 0.4,
-		recentForm: 0.25,
-		h2h: 0.2,
-		homeAdvantage: 0.15,
+		firstHalfScoring: 0.158537,
+		recentForm: 0.205035,
+		h2h: 0.396048,
+		homeAdvantage: 0.14038,
 		motivation: 0.1,
 	},
 };
@@ -175,12 +175,12 @@ export const DEFAULT_TIER_THRESHOLDS: TierThresholds = {
  * These are the "safe launch" values
  */
 export const DEFAULT_PROBABILITY_CAPS: ProbabilityCapsConfig = {
-	/** Maximum swing from base probability (±22%) */
-	maxSwing: 22,
-	/** Minimum probability (never below 20%) */
-	minProb: 20,
-	/** Maximum probability (never above 80%) */
-	maxProb: 80,
+	/** Maximum swing from base probability (±38%) */
+	maxSwing: 38,
+	/** Minimum probability (never below 15%) */
+	minProb: 15,
+	/** Maximum probability (never above 90%) */
+	maxProb: 90,
 };
 
 // ============================================================================
@@ -220,26 +220,26 @@ export const DEFAULT_CONFIDENCE_DOWNGRADE: ConfidenceDowngradeConfig = {
  */
 export const DEFAULT_ASYMMETRIC_WEIGHTING: AsymmetricWeightingConfig = {
 	btts: {
-		upMax: 12, // Strict upward cap
+		upMax: 16, // Strict upward cap
 		downMax: 20, // More lenient downward
 		upRiskMultiplier: 1.2,
 		downRiskMultiplier: 1.0,
 	},
 	overUnderGoals: {
-		upMax: 18, // More lenient upward
-		downMax: 15, // Stricter downward
+		upMax: 22, // More lenient upward
+		downMax: 18, // Stricter downward
 		upRiskMultiplier: 0.9,
 		downRiskMultiplier: 1.1,
 	},
 	matchResult: {
-		upMax: 10, // Very strict upward (favorites)
-		downMax: 25, // Very lenient downward (underdogs)
+		upMax: 24, // Very strict upward (favorites)
+		downMax: 38, // Very lenient downward (underdogs)
 		upRiskMultiplier: 1.5,
 		downRiskMultiplier: 0.8,
 	},
 	firstHalf: {
-		upMax: 15, // Balanced
-		downMax: 18, // Balanced
+		upMax: 18, // Balanced
+		downMax: 20, // Balanced
 		upRiskMultiplier: 1.0,
 		downRiskMultiplier: 1.0,
 	},
@@ -277,6 +277,138 @@ export const DEFAULT_GOAL_DISTRIBUTION: GoalDistributionConfig = {
 	recentFormWeight: 0.15,
 	recentMatchesCount: 8,
 	dixonColesRho: -0.05,
+};
+
+// ============================================================================
+// UNCAPPED MODE CONFIGURATION
+// ============================================================================
+
+/**
+ * Uncapped mode configuration
+ *
+ * When enabled, bypasses cumulative caps, asymmetric caps, and overcorrection detection.
+ * Uses ML-learned coefficients to directly translate factor scores to probability adjustments.
+ * Only soft bounds are applied (5% min, 95% max) for safety.
+ *
+ * This mode produces probabilities closer to bookmaker-implied odds.
+ */
+export const UNCAPPED_MODE = {
+	/** Enable uncapped mode (bypass all caps except soft bounds) */
+	enabled: false,
+	/** Minimum probability (soft bound) */
+	softMinProb: 5,
+	/** Maximum probability (soft bound) */
+	softMaxProb: 95,
+};
+
+function parseEnvBoolean(value?: string): boolean | undefined {
+	if (value === undefined) return undefined;
+	const normalized = value.trim().toLowerCase();
+	if (["1", "true", "yes", "on"].includes(normalized)) return true;
+	if (["0", "false", "no", "off"].includes(normalized)) return false;
+	return undefined;
+}
+
+export function getUncappedModeEnabled(
+	config?: AlgorithmConfig,
+): boolean {
+	if (typeof config?.uncappedModeEnabled === "boolean") {
+		return config.uncappedModeEnabled;
+	}
+	const envValue = parseEnvBoolean(process.env.UNCAPPED_MODE_ENABLED);
+	return envValue ?? false;
+}
+
+// ============================================================================
+// ML-LEARNED FACTOR COEFFICIENTS (LEGACY/FALLBACK)
+// ============================================================================
+
+/**
+ * Legacy factor coefficients for rule-based prediction mode
+ *
+ * IMPORTANT: When USE_ML_PREDICTION is enabled (default), these coefficients
+ * are NOT used for base probability calculation. Instead, the trained LightGBM
+ * models are used directly for inference.
+ *
+ * These coefficients are only used when:
+ * 1. ML mode is explicitly disabled (useML: false)
+ * 2. As fallback if ML models fail to load
+ *
+ * Each factor score ranges from -100 to +100.
+ * The coefficient determines how much that factor can swing the probability.
+ * Example: positionScore of -100 with coefficient 0.15 = -15% adjustment
+ */
+export const ML_FACTOR_COEFFICIENTS = {
+	/** Match Outcome (1X2) factor coefficients (legacy - only used when ML disabled)
+	 * 
+	 * When ML is enabled, these are NOT used. The LightGBM model at
+	 * ml/models/output/1x2/model.json handles the base probability calculation.
+	 */
+	matchOutcome: {
+		/** Recent form comparison (-100 to +100) -> max ±12% */
+		formScore: 0.12,
+		/** Head-to-head record -> max ±22% (ML training showed 0.30, using conservative value) */
+		h2hScore: 0.22,
+		/** Dynamic home advantage -> max ±12% */
+		homeAdvantageScore: 0.12,
+		/** Motivation/stakes difference -> max ±7% */
+		motivationScore: 0.07,
+		/** Rest advantage -> max ±4% */
+		restScore: 0.04,
+		/** Quality/tier difference -> max ±15% */
+		positionScore: 0.15,
+	},
+	/** BTTS factor coefficients */
+	btts: {
+		/** Combined scoring rate -> max ±12% */
+		scoringRate: 0.12,
+		/** Defensive weakness (inverse clean sheets) -> max ±10% */
+		defensiveForm: 0.10,
+		/** Recent BTTS patterns -> max ±15% */
+		recentForm: 0.15,
+		/** H2H BTTS rate -> max ±28% (ML training: 0.35, using 0.28 conservatively) */
+		h2h: 0.28,
+	},
+	/** Total Goals factor coefficients */
+	totalGoals: {
+		/** Average goals per game profile -> max ±15% */
+		avgGoalsPerGame: 0.15,
+		/** Defensive weakness -> max ±12% */
+		defensiveWeakness: 0.12,
+		/** Recent form totals -> max ±12% */
+		recentForm: 0.12,
+		/** H2H totals tendency -> max ±15% (reduced from 0.26 to prevent overcorrection) */
+		h2h: 0.15,
+	},
+};
+
+// ============================================================================
+// INJURY TIER MULTIPLIERS
+// ============================================================================
+
+/**
+ * Injury impact multipliers based on team tier
+ *
+ * Elite teams have more squad depth, so injuries hurt less.
+ * Weaker teams are more affected by missing players.
+ */
+export const INJURY_TIER_MULTIPLIERS: Record<number, number> = {
+	1: 0.4, // Elite teams: injuries hurt 40% as much
+	2: 0.6, // Strong teams: 60%
+	3: 0.85, // Average teams: 85%
+	4: 1.0, // Weak teams: full impact
+};
+
+/**
+ * Opponent tier multiplier for injuries
+ *
+ * Injuries matter less when playing against weak opponents.
+ */
+export const INJURY_OPPONENT_MULTIPLIERS: Record<number, number> = {
+	1: 1.0, // vs Elite: full impact
+	2: 1.0, // vs Strong: full impact
+	3: 0.7, // vs Average: 70%
+	4: 0.5, // vs Weak: 50%
 };
 
 // ============================================================================

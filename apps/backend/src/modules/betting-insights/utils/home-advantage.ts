@@ -2,13 +2,21 @@
  * Home Advantage Score Calculation
  *
  * Calculates dynamic home advantage based on actual performance differences
- * between home and away matches for both teams.
+ * between home and away matches for both teams, plus a baseline home advantage.
  *
  * Reference: docs/betting-insights-algorithm.md - Section 4.6.1 Factor 3
  */
 
 import type { TeamData } from '../types';
 import { clamp } from './helpers';
+import { getUncappedModeEnabled } from '../config/algorithm-config';
+
+/**
+ * Baseline home advantage in football.
+ * Research shows home teams win ~46% vs ~27% for away teams historically.
+ * This provides a starting point before dynamic adjustments.
+ */
+const BASELINE_HOME_ADVANTAGE = 18;
 
 /**
  * Calculate dynamic home advantage score
@@ -16,10 +24,11 @@ import { clamp } from './helpers';
  * Uses goal scoring differential as a proxy for home/away performance:
  * - Home team's scoring boost when playing at home vs away
  * - Away team's scoring penalty when playing away vs home
+ * - Plus a baseline home advantage that exists in football
  *
  * @param homeTeam - Home team data
  * @param awayTeam - Away team data
- * @returns Score from -50 (no/negative home advantage) to +100 (strong home advantage)
+ * @returns Score from -30 (elite road team vs poor home team) to +100 (strong home advantage)
  *
  * @example
  * // Home team scores 2.0 at home, 1.2 away (strong home boost)
@@ -41,10 +50,14 @@ export function calculateHomeAdvantageScore(
   const awayTeamHomeScoringRate = awayTeam.stats?.homeAvgScored ?? 1.5;
   const awayPenalty = (awayTeamHomeScoringRate - awayTeamAwayScoringRate) * 15;
 
-  // Combine: home team's home boost + away team's road struggles
-  const score = (homeBoost + awayPenalty) / 2;
+  // Combine: baseline + home team's home boost + away team's road struggles
+  // In uncapped mode, include baseline; in legacy mode, keep original behavior
+  const dynamicScore = (homeBoost + awayPenalty) / 2;
+  const baseline = getUncappedModeEnabled() ? BASELINE_HOME_ADVANTAGE : 0;
+  const score = baseline + dynamicScore;
 
-  return clamp(score, -50, 100);
+  // Allow slightly negative for elite road teams, but cap at -30
+  return clamp(score, -30, 100);
 }
 
 /**

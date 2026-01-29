@@ -179,18 +179,20 @@ export async function upsertCurrentTeamElo(
   db: D1Database,
   data: TeamEloCurrentUpsert
 ): Promise<void> {
+  const source = data.source ?? 'api_football';
   await db
     .prepare(
       `INSERT INTO team_elo_current
-       (team_id, elo, games, as_of_date, updated_at)
-       VALUES (?, ?, ?, ?, datetime('now'))
+       (team_id, elo, games, as_of_date, source, updated_at)
+       VALUES (?, ?, ?, ?, ?, datetime('now'))
        ON CONFLICT(team_id) DO UPDATE SET
          elo = excluded.elo,
          games = excluded.games,
          as_of_date = excluded.as_of_date,
+         source = excluded.source,
          updated_at = datetime('now')`
     )
-    .bind(data.team_id, data.elo, data.games, data.as_of_date)
+    .bind(data.team_id, data.elo, data.games, data.as_of_date, source)
     .run();
 }
 
@@ -348,6 +350,23 @@ export async function getUefaClubKeyForTeam(
        WHERE team_id = ? AND as_of_season = ?`
     )
     .bind(teamId, asOfSeason)
+    .first<{ uefa_club_key: string }>();
+
+  return row?.uefa_club_key ?? null;
+}
+
+export async function getUefaClubKeyForApiTeam(
+  db: D1Database,
+  apiFootballTeamId: number,
+  asOfSeason: number
+): Promise<string | null> {
+  const row = await db
+    .prepare(
+      `SELECT uefa_club_key
+       FROM uefa_club_team_map
+       WHERE api_football_team_id = ? AND as_of_season = ?`
+    )
+    .bind(apiFootballTeamId, asOfSeason)
     .first<{ uefa_club_key: string }>();
 
   return row?.uefa_club_key ?? null;

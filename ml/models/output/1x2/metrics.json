@@ -1,0 +1,21 @@
+{
+  "market": "1x2",
+  "target": "result",
+  "type": "multiclass",
+  "metric": "log_loss",
+  "value": 0.9807821433995313,
+  "best_params": {
+    "learning_rate": 0.1438934888152913,
+    "num_leaves": 26,
+    "min_child_samples": 11,
+    "subsample": 0.6910467891206741,
+    "colsample_bytree": 0.7707286416220485,
+    "reg_alpha": 0.14714972113961455,
+    "reg_lambda": 0.883039597901148
+  },
+  "rows": {
+    "train": 51812,
+    "val": 2344,
+    "test": 2343
+  }
+}

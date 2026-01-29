@@ -199,6 +199,13 @@ build
 *.pem
 dist
 
+# ML pipeline data outputs
+ml/data/
+ml/models/output/
+ml/models/**/*.pkl
+ml/models/**/metrics.json
+ml/models/**/model.json
+
 # debug
 npm-debug.log*
 yarn-debug.log*

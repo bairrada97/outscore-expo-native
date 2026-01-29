@@ -26,6 +26,8 @@ import type {
 import {
   DEFAULT_ALGORITHM_CONFIG,
   getAsymmetricCaps,
+  getUncappedModeEnabled,
+  UNCAPPED_MODE,
 } from '../config/algorithm-config';
 
 // ============================================================================
@@ -185,6 +187,170 @@ export function applyCappedAsymmetricAdjustments(
     confidenceLevel,
     adjustmentSummary: summary,
   };
+}
+
+// ============================================================================
+// UNCAPPED DIRECT ADJUSTMENTS (NEW)
+// ============================================================================
+
+/**
+ * Apply adjustments directly without caps (uncapped mode)
+ *
+ * This function bypasses:
+ * - Cumulative caps per category
+ * - Overcorrection detection and reduction
+ * - Asymmetric caps per market
+ * - Hard swing caps
+ *
+ * Only soft bounds are applied (5% min, 95% max) for safety.
+ * This produces probabilities closer to bookmaker-implied odds.
+ *
+ * @param baseProbability - Starting probability before adjustments (0-100)
+ * @param adjustments - Array of adjustments to apply
+ * @param scenarioType - Market type (for tracking purposes)
+ * @param baseConfidence - Starting confidence level
+ * @returns CappedAdjustmentResult with final probability and metadata
+ */
+export function applyDirectAdjustments(
+  baseProbability: number,
+  adjustments: Adjustment[],
+  scenarioType: ScenarioType,
+  baseConfidence: ConfidenceLevel = 'MEDIUM',
+): CappedAdjustmentResult {
+  // Calculate total adjustment directly (no caps)
+  const totalAdjustment = adjustments.reduce(
+    (sum, adj) => sum + adj.value,
+    0,
+  );
+
+  // Calculate what caps would have been hit (for monitoring)
+  const wouldHitCumulativeCaps = checkWouldHitCumulativeCaps(adjustments);
+  const wouldHitAsymmetricCaps = checkWouldHitAsymmetricCaps(adjustments, scenarioType);
+  const wouldHitSwingCap = Math.abs(totalAdjustment) > 38; // old maxSwing
+
+  // Calculate final probability with only soft bounds
+  const finalProbabilityBeforeBounds = baseProbability + totalAdjustment;
+  const finalProbability = Math.max(
+    UNCAPPED_MODE.softMinProb,
+    Math.min(UNCAPPED_MODE.softMaxProb, finalProbabilityBeforeBounds),
+  );
+  const boundsApplied =
+    Math.abs(finalProbability - finalProbabilityBeforeBounds) > 0.0001;
+
+  // Build summary
+  const summary = buildAdjustmentSummary(adjustments);
+
+  // Confidence: only downgrade for very large swings (>25%) in uncapped mode
+  // Since we're trusting the ML weights more, we don't penalize moderate swings
+  let confidenceLevel = baseConfidence;
+  if (Math.abs(totalAdjustment) > 25) {
+    confidenceLevel = downgradeConfidence(baseConfidence, 1);
+  }
+
+  return {
+    finalProbability,
+    baseProbability,
+    totalAdjustment,
+    cappedAdjustments: adjustments, // Return original (uncapped) adjustments
+    wasCapped: boundsApplied, // Only true if soft bounds were hit
+    overcorrectionWarning: wouldHitCumulativeCaps || wouldHitAsymmetricCaps || wouldHitSwingCap
+      ? `Uncapped mode: would have hit caps (cumulative: ${wouldHitCumulativeCaps}, asymmetric: ${wouldHitAsymmetricCaps}, swing: ${wouldHitSwingCap})`
+      : undefined,
+    confidenceLevel,
+    adjustmentSummary: summary,
+  };
+}
+
+/**
+ * Smart adjustment application - uses uncapped mode if enabled
+ *
+ * This is the preferred entry point that automatically selects
+ * between capped and uncapped mode based on configuration.
+ */
+export function applyAdjustments(
+  baseProbability: number,
+  adjustments: Adjustment[],
+  scenarioType: ScenarioType,
+  config: AlgorithmConfig = DEFAULT_ALGORITHM_CONFIG,
+  baseConfidence: ConfidenceLevel = 'MEDIUM',
+): CappedAdjustmentResult {
+  if (getUncappedModeEnabled(config)) {
+    return applyDirectAdjustments(
+      baseProbability,
+      adjustments,
+      scenarioType,
+      baseConfidence,
+    );
+  }
+  return applyCappedAsymmetricAdjustments(
+    baseProbability,
+    adjustments,
+    scenarioType,
+    config,
+    baseConfidence,
+  );
+}
+
+/**
+ * Check if cumulative caps would have been hit
+ */
+function checkWouldHitCumulativeCaps(adjustments: Adjustment[]): boolean {
+  const byCategory = new Map<AdjustmentCategory, number>();
+
+  for (const adj of adjustments) {
+    const category = categorizeAdjustment(adj);
+    const current = byCategory.get(category) || 0;
+    byCategory.set(category, current + adj.value);
+  }
+
+  // Check against default caps
+  const defaultCaps: Record<AdjustmentCategory, number> = {
+    formation: 15,
+    injuries: 15,
+    dna: 8,
+    safety: 12,
+    rest: 5,
+    motivation: 15,
+    h2h: 15,
+    context: 15,
+    other: 15,
+  };
+
+  for (const [category, total] of byCategory) {
+    if (Math.abs(total) > defaultCaps[category]) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Check if asymmetric caps would have been hit
+ */
+function checkWouldHitAsymmetricCaps(
+  adjustments: Adjustment[],
+  scenarioType: ScenarioType,
+): boolean {
+  const caps = getAsymmetricCaps(scenarioType, DEFAULT_ALGORITHM_CONFIG);
+
+  for (const adj of adjustments) {
+    if (adj.value > 0 && adj.value > caps.upMax) return true;
+    if (adj.value < 0 && Math.abs(adj.value) > caps.downMax) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Downgrade confidence by N levels
+ */
+function downgradeConfidence(
+  confidence: ConfidenceLevel,
+  levels: number,
+): ConfidenceLevel {
+  const num = confidenceToNumber(confidence);
+  return numberToConfidence(Math.max(0, num - levels));
 }
 
 // ============================================================================

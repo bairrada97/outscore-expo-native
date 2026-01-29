@@ -1,0 +1,21 @@
+{
+  "market": "btts",
+  "target": "btts_yes",
+  "type": "binary",
+  "metric": "log_loss",
+  "value": 0.6869695738164097,
+  "best_params": {
+    "learning_rate": 0.03902227657740716,
+    "num_leaves": 102,
+    "min_child_samples": 40,
+    "subsample": 0.7878940818483247,
+    "colsample_bytree": 0.8161886540417124,
+    "reg_alpha": 0.8481293354626106,
+    "reg_lambda": 0.9530124531567855
+  },
+  "rows": {
+    "train": 51812,
+    "val": 2344,
+    "test": 2343
+  }
+}

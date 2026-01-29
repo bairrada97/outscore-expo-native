@@ -824,6 +824,8 @@ export interface AlgorithmConfig {
   asymmetricWeighting: AsymmetricWeightingConfig;
   cumulativeCaps: CumulativeCapsConfig;
   goalDistribution: GoalDistributionConfig;
+  /** Optional override for uncapped mode (otherwise uses env) */
+  uncappedModeEnabled?: boolean;
 }
 
 // ============================================================================
@@ -901,7 +903,44 @@ export interface TeamContext {
   elo?: {
     rating: number;
     games: number;
+    updatedAt?: string;
     confidence: number;
+  };
+  /** Timestamp for Elo rating snapshot (if available) */
+  eloUpdatedAt?: string;
+}
+
+export interface MlDebugInfo {
+  matchOutcome?: {
+    rawPrediction: {
+      home: number;
+      draw: number;
+      away: number;
+    };
+    features: Record<string, number | null | undefined>;
+  };
+}
+
+export interface InsightsDebugPayload {
+  matchOutcome?: {
+    probabilities?: ProbabilityDistribution;
+    factorScores?: MatchOutcomeFactorScores;
+    adjustmentsApplied?: Adjustment[];
+    totalAdjustment?: number;
+    capsHit?: boolean;
+    overcorrectionWarning?: string;
+    signalStrength?: SignalStrength;
+    modelReliability?: ConfidenceLevel;
+    mlRawPrediction?: {
+      home: number;
+      draw: number;
+      away: number;
+    } | null;
+    mlFeatures?: Record<string, number | null | undefined> | null;
+  };
+  elo?: {
+    home?: TeamContext["elo"] | null;
+    away?: TeamContext["elo"] | null;
   };
 }
 
@@ -963,6 +1002,12 @@ export interface BettingInsightsResponse {
   overallConfidence: ConfidenceLevel;
   /** Data sanity warnings (debug/quality signals) */
   sanityWarnings?: string[];
+  /** Optional ML debug payload (raw model outputs + feature vector) */
+  mlDebug?: MlDebugInfo;
+  /** Optional debug payload for testing/analysis */
+  debug?: InsightsDebugPayload;
+  /** Snapshot timestamp when insights were generated */
+  snapshotGeneratedAt?: string;
   /** Generated timestamp */
   generatedAt: string;
   /** Cache source (for debugging) */

@@ -1,0 +1,21 @@
+{
+  "market": "home_cards",
+  "target": "home_cards",
+  "type": "regression",
+  "metric": "rmse",
+  "value": 1.4238557805390315,
+  "best_params": {
+    "learning_rate": 0.025593120581746138,
+    "num_leaves": 111,
+    "min_child_samples": 93,
+    "subsample": 0.8454767401190253,
+    "colsample_bytree": 0.6240145862715937,
+    "reg_alpha": 0.1967023129686738,
+    "reg_lambda": 0.0021837310304425595
+  },
+  "rows": {
+    "train": 38369,
+    "val": 2344,
+    "test": 2343
+  }
+}
