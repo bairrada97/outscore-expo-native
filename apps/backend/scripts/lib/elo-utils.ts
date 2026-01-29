@@ -30,10 +30,14 @@ export const buildWranglerArgs = (params: {
 	return base;
 };
 
-export const loadRows = (args: string[]) => {
+export const loadRows = (args: string[], params: Array<string | number> = []) => {
+	const argsWithParams = [...args];
+	for (const param of params) {
+		argsWithParams.push("--param", String(param));
+	}
 	let raw = "";
 	try {
-		raw = execFileSync("bunx", args, {
+		raw = execFileSync("bunx", argsWithParams, {
 			encoding: "utf-8",
 			stdio: ["ignore", "pipe", "pipe"],
 		});

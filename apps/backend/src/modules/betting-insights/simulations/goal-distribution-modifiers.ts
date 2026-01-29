@@ -1,5 +1,8 @@
 import { calculateEloBalanceShift } from "../../elo";
-import { DEFAULT_ALGORITHM_CONFIG, UNCAPPED_MODE } from "../config/algorithm-config";
+import {
+	DEFAULT_ALGORITHM_CONFIG,
+	getUncappedModeEnabled,
+} from "../config/algorithm-config";
 import type { MatchContext } from "../match-context/context-adjustments";
 import type { H2HData, TeamData } from "../types";
 import { calculateFormScore } from "../utils/form-score";
@@ -189,7 +192,7 @@ function applyTierGapTotalGoalsBoost(
 	context?: MatchContext,
 ): void {
 	if (!homeTeam || !awayTeam) return;
-	if (!UNCAPPED_MODE.enabled) return;
+	if (!getUncappedModeEnabled()) return;
 
 	const homeTier = homeTeam.mind?.tier ?? 3;
 	const awayTier = awayTeam.mind?.tier ?? 3;
@@ -234,7 +237,7 @@ function applyLowScoringScenarioSuppression(
 	context?: MatchContext,
 ): void {
 	if (!homeTeam || !awayTeam) return;
-	if (!UNCAPPED_MODE.enabled) return;
+	if (!getUncappedModeEnabled()) return;
 
 	// Check if tier-gap boost was likely applied (skip suppression in that case)
 	const homeTier = homeTeam.mind?.tier ?? 3;
@@ -410,7 +413,7 @@ function applyBalanceShift(
 		// Same zone: use reduced balance shift regardless of tier gap
 		// This makes outcomes more unpredictable (desperation equalizes)
 		maxBalanceShift = SAME_ZONE_BALANCE_SHIFT;
-	} else if (UNCAPPED_MODE.enabled && tierGap >= 2) {
+	} else if (getUncappedModeEnabled() && tierGap >= 2) {
 		// Large tier gap with different objectives: use larger shift
 		// Example: PSG (tier 1, title race) vs Auxerre (tier 4, relegation) = gap of 3
 		maxBalanceShift = LARGE_GAP_MAX_BALANCE_SHIFT;

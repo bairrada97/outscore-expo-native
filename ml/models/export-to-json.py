@@ -111,7 +111,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def export_model(model_dir: Path, market: str, minify: bool = True) -> dict:
+def export_model(model_dir: Path, market: str, *, minify: bool = True) -> dict:
     """Export a single model to JSON format.
     
     Args:
@@ -223,8 +223,8 @@ def main() -> None:
     print(f"  {'TOTAL':12} | {' '*4}       | {' '*3}          | {total_json_size:8.1f} KB")
     
     if minify:
-        print(f"\n💡 Models are minified. Use --no-minify to keep all fields.")
-    print(f"\n✅ All models exported successfully!")
+        print("\n💡 Models are minified. Use --no-minify to keep all fields.")
+    print("\n✅ All models exported successfully!")
 
 
 if __name__ == "__main__":

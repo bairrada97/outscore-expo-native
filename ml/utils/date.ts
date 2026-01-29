@@ -4,8 +4,15 @@ export const parseDate = (value: string): Date | null => {
 	const trimmed = value.trim();
 	if (!trimmed) return null;
 
-	const direct = new Date(trimmed);
-	if (!Number.isNaN(direct.getTime())) return direct;
+	const isoDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(trimmed);
+	if (isoDateOnly) {
+		const [year, month, day] = trimmed.split("-").map(Number);
+		const date = new Date(Date.UTC(year, month - 1, day));
+		if (!Number.isNaN(date.getTime())) return date;
+	} else {
+		const direct = new Date(trimmed);
+		if (!Number.isNaN(direct.getTime())) return direct;
+	}
 
 	const slashMatch = trimmed.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/);
 	if (slashMatch) {

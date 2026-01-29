@@ -1,7 +1,8 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { similarityRatio } from "../../../ml/data-acquisition/fuzzy-matching";
 import { normalizeTeamName } from "../../../ml/data-acquisition/team-name-normalizer";
 import { parseCsv, toRecords } from "../../../ml/utils/csv";
@@ -20,6 +21,8 @@ type MappingOutput = {
 type TeamNameMap = {
 	mappings: Record<string, string>;
 };
+
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 
 const ALIAS_TOKENS: Record<string, string> = {
 	ath: "athletic",
@@ -223,7 +226,7 @@ const main = async () => {
 	const teamMapPath = parseArg(args, "--team-map");
 	const countryMapPath = parseArg(args, "--country-map");
 	const configPath =
-		parseArg(args, "--config") ?? resolve(__dirname, "../wrangler.toml");
+		parseArg(args, "--config") ?? resolve(SCRIPT_DIR, "../wrangler.toml");
 	const canonicalPath = parseArg(args, "--canonical");
 	const teamMapOut =
 		parseArg(args, "--team-map-out") ??
@@ -300,7 +303,7 @@ const main = async () => {
 	if (isRemote) importArgs.push("--remote");
 	if (apply) importArgs.push("--apply");
 
-	const importScript = resolve(__dirname, "clubelo-import.ts");
+	const importScript = resolve(SCRIPT_DIR, "clubelo-import.ts");
 	runScript(importScript, importArgs);
 };
 

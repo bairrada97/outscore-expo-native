@@ -8,7 +8,11 @@
  * Reference: docs/implementation-plan/phase4.md - Section 4.2
  */
 
-import { DEFAULT_ALGORITHM_CONFIG, ML_FACTOR_COEFFICIENTS, UNCAPPED_MODE } from "../config/algorithm-config";
+import {
+	DEFAULT_ALGORITHM_CONFIG,
+	getUncappedModeEnabled,
+	ML_FACTOR_COEFFICIENTS,
+} from "../config/algorithm-config";
 import { TOTAL_GOALS_CALIBRATION } from "../config/total-goals-calibration";
 import type { MatchContext } from "../match-context/context-adjustments";
 import { getMaxConfidenceForContext } from "../match-context/context-adjustments";
@@ -708,7 +712,7 @@ function getTierGapAdjustment(
 	context?: MatchContext,
 ): Adjustment | null {
 	// Only apply in uncapped mode
-	if (!UNCAPPED_MODE.enabled) return null;
+	if (!getUncappedModeEnabled(config)) return null;
 
 	// Only apply to applicable lines (2.5, 3.5 where gap is worst)
 	if (!TIER_GAP_ADJUSTMENT.applicableLines.includes(line as 2.5 | 3.5)) {

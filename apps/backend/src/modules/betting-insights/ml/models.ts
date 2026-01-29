@@ -122,12 +122,12 @@ function calculateConfidence(
 	// Check home team data quality
 	if (homeTeam.mood?.formString && homeTeam.mood.formString.length >= 5) score++;
 	if (homeTeam.mind?.matchCount >= 20) score++;
-	if (homeTeam.elo?.confidence && homeTeam.elo.confidence > 0.7) score++;
+	if (homeTeam.elo?.confidence > 0.7) score++;
 
 	// Check away team data quality
 	if (awayTeam.mood?.formString && awayTeam.mood.formString.length >= 5) score++;
 	if (awayTeam.mind?.matchCount >= 20) score++;
-	if (awayTeam.elo?.confidence && awayTeam.elo.confidence > 0.7) score++;
+	if (awayTeam.elo?.confidence > 0.7) score++;
 
 	// Check H2H data quality
 	if (h2h && h2h.h2hMatchCount >= 3) score++;

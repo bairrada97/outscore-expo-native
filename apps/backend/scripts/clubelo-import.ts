@@ -193,9 +193,16 @@ const main = async () => {
 	}> = [];
 	const current = new Map<number, { asOf: string; elo: number; games: number }>();
 	const unmapped: Array<{ club: string; country: string | null }> = [];
+	let invalidDateCount = 0;
 
 	for (const row of rows) {
-		const date = String(row[dateCol]).slice(0, 10);
+		const rawDate = String(row[dateCol] ?? "").trim();
+		const parsedDate = rawDate ? new Date(rawDate) : null;
+		if (!parsedDate || !Number.isFinite(parsedDate.getTime())) {
+			invalidDateCount += 1;
+			continue;
+		}
+		const date = parsedDate.toISOString().slice(0, 10);
 		const clubRaw = String(row[clubCol] ?? "").trim();
 		if (!clubRaw) continue;
 		const mappedClub = teamMap?.mappings?.[normalizeTeamName(clubRaw)] ?? clubRaw;
@@ -250,6 +257,11 @@ const main = async () => {
 	console.log(`✅ Snapshots: ${inserts.length}`);
 	if (unmapped.length) {
 		console.warn(`⚠️ Unmapped clubs: ${unmapped.length}`);
+	}
+	if (invalidDateCount > 0) {
+		console.warn(
+			`⚠️ Skipped ${invalidDateCount} rows with invalid dates in ${inputPath}.`,
+		);
 	}
 
 	if (apply) {

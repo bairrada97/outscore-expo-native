@@ -201,7 +201,10 @@ dist
 
 # ML pipeline data outputs
 ml/data/
-ml/output/
+ml/models/output/
+ml/models/**/*.pkl
+ml/models/**/metrics.json
+ml/models/**/model.json
 
 # debug
 npm-debug.log*

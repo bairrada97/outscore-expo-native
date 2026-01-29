@@ -80,6 +80,17 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--trials", type=int, default=30, help="Optuna trials.")
     parser.add_argument(
+        "--timeout",
+        type=int,
+        default=600,
+        help="Optuna timeout in seconds (per market).",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Enable verbose Optuna logging.",
+    )
+    parser.add_argument(
         "--train-end", type=int, default=2022, help="Last season for training."
     )
     parser.add_argument("--val", type=int, default=2023, help="Validation season.")
@@ -151,6 +162,7 @@ def objective(trial, X_train, y_train, X_val, y_val, market_type):
         "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
         "reg_alpha": trial.suggest_float("reg_alpha", 0.0, 1.0),
         "reg_lambda": trial.suggest_float("reg_lambda", 0.0, 1.0),
+        "verbose": -1,
     }
 
     if market_type == "regression":
@@ -206,12 +218,15 @@ def train_market(
     X_test = prepare_features(test, target_columns)
     y_test = test[target]
 
+    verbosity = optuna.logging.INFO if args.verbose else optuna.logging.WARNING
+    optuna.logging.set_verbosity(verbosity)
     study = optuna.create_study(direction="minimize")
     study.optimize(
         lambda trial: objective(
             trial, X_train, y_train, X_val, y_val, market_type
         ),
         n_trials=args.trials,
+        timeout=args.timeout,
     )
 
     best_params = study.best_params
@@ -250,9 +265,9 @@ def train_market(
         "value": float(metric),
         "best_params": best_params,
         "rows": {
-            "train": int(len(train)),
-            "val": int(len(val)),
-            "test": int(len(test)),
+            "train": len(train),
+            "val": len(val),
+            "test": len(test),
         },
     }
     (output_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))

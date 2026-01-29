@@ -7,74 +7,12 @@ from pathlib import Path
 import pandas as pd
 
 
-LEAGUE_NAME_MAP = {
-    "premier league": 39,
-    "english premier league": 39,
-    "epl": 39,
-    "e0": 39,
-    "la liga": 140,
-    "spanish la liga": 140,
-    "primera division": 140,
-    "primera división": 140,
-    "sp1": 140,
-    "serie a": 135,
-    "italian serie a": 135,
-    "i1": 135,
-    "bundesliga": 78,
-    "german bundesliga": 78,
-    "d1": 78,
-    "ligue 1": 61,
-    "french ligue 1": 61,
-    "f1": 61,
-    "primeira liga": 94,
-    "liga portugal": 94,
-    "portuguese league": 94,
-    "p1": 94,
-    "eredivisie": 88,
-    "dutch eredivisie": 88,
-    "n1": 88,
-}
+CONFIG_PATH = Path(__file__).resolve().parents[1] / "config" / "league-name-map.json"
+LEAGUE_DATA = json.loads(CONFIG_PATH.read_text())
 
-STOP_WORDS = {
-    "fc",
-    "cf",
-    "sc",
-    "afc",
-    "ac",
-    "ss",
-    "cd",
-    "ud",
-    "de",
-    "al",
-    "the",
-}
-
-REPLACEMENTS = {
-    "á": "a",
-    "à": "a",
-    "â": "a",
-    "ã": "a",
-    "ä": "a",
-    "é": "e",
-    "è": "e",
-    "ê": "e",
-    "ë": "e",
-    "í": "i",
-    "ì": "i",
-    "î": "i",
-    "ï": "i",
-    "ó": "o",
-    "ò": "o",
-    "ô": "o",
-    "õ": "o",
-    "ö": "o",
-    "ú": "u",
-    "ù": "u",
-    "û": "u",
-    "ü": "u",
-    "ç": "c",
-    "ñ": "n",
-}
+LEAGUE_NAME_MAP = LEAGUE_DATA["leagueNameMap"]
+STOP_WORDS = set(LEAGUE_DATA["stopWords"])
+REPLACEMENTS = LEAGUE_DATA["replacements"]
 
 
 def normalize_team_name(raw: str) -> str:

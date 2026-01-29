@@ -23,7 +23,7 @@ import { createAdjustment } from './capped-adjustments';
 import {
   INJURY_TIER_MULTIPLIERS,
   INJURY_OPPONENT_MULTIPLIERS,
-  UNCAPPED_MODE,
+  getUncappedModeEnabled,
 } from '../config/algorithm-config';
 
 // ============================================================================
@@ -101,11 +101,11 @@ export function calculateInjuryAdjustments(
   const awayImpact = assessInjuryImpact(injuries.awayInjuries, 'away');
 
   // In uncapped mode, apply tier-proportional adjustments
-  const homeAdjustments = UNCAPPED_MODE.enabled && homeTeam && awayTeam
+  const homeAdjustments = getUncappedModeEnabled() && homeTeam && awayTeam
     ? buildTierProportionalInjuryAdjustments(homeImpact, 'home', homeTeam, awayTeam)
     : buildInjuryAdjustments(homeImpact, 'home');
 
-  const awayAdjustments = UNCAPPED_MODE.enabled && homeTeam && awayTeam
+  const awayAdjustments = getUncappedModeEnabled() && homeTeam && awayTeam
     ? buildTierProportionalInjuryAdjustments(awayImpact, 'away', awayTeam, homeTeam)
     : buildInjuryAdjustments(awayImpact, 'away');
 

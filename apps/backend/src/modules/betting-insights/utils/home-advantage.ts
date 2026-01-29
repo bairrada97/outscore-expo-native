@@ -9,7 +9,7 @@
 
 import type { TeamData } from '../types';
 import { clamp } from './helpers';
-import { UNCAPPED_MODE } from '../config/algorithm-config';
+import { getUncappedModeEnabled } from '../config/algorithm-config';
 
 /**
  * Baseline home advantage in football.
@@ -53,7 +53,7 @@ export function calculateHomeAdvantageScore(
   // Combine: baseline + home team's home boost + away team's road struggles
   // In uncapped mode, include baseline; in legacy mode, keep original behavior
   const dynamicScore = (homeBoost + awayPenalty) / 2;
-  const baseline = UNCAPPED_MODE.enabled ? BASELINE_HOME_ADVANTAGE : 0;
+  const baseline = getUncappedModeEnabled() ? BASELINE_HOME_ADVANTAGE : 0;
   const score = baseline + dynamicScore;
 
   // Allow slightly negative for elite road teams, but cap at -30

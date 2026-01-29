@@ -166,6 +166,37 @@ const calcDaysSince = (matches: HistoryMatch[], current: Date) => {
 };
 
 const features: FeatureRow[] = [];
+const fallbackHeader = [
+	"date",
+	"season",
+	"leagueId",
+	"leagueName",
+	"homeTeam",
+	"awayTeam",
+	"homeForm",
+	"awayForm",
+	"homeFormScore",
+	"awayFormScore",
+	"homePPG10",
+	"awayPPG10",
+	"homeGF10",
+	"homeGA10",
+	"awayGF10",
+	"awayGA10",
+	"homeDaysSince",
+	"awayDaysSince",
+	"homeHomeFormScore",
+	"awayAwayFormScore",
+	"homeElo",
+	"awayElo",
+	"eloDiff",
+	"homeTier",
+	"awayTier",
+	"tierGap",
+	"result",
+	"homeGoals",
+	"awayGoals",
+];
 
 for (const row of rows) {
 	const date = row.parsedDate;
@@ -258,9 +289,12 @@ writeFileSync(
 	"utf-8",
 );
 
+const headerKeys = features.length ? Object.keys(features[0]) : fallbackHeader;
 const csvRows = [
-	Object.keys(features[0] ?? {}),
-	...features.map((row) => Object.values(row).map((value) => String(value ?? ""))),
+	headerKeys,
+	...features.map((row) =>
+		headerKeys.map((key) => String(row[key as keyof FeatureRow] ?? "")),
+	),
 ];
 
 writeCsv(csvPath, csvRows);

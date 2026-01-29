@@ -33,10 +33,25 @@ if (process.env.ADMIN_CACHE_TOKEN) {
   headers["x-admin-token"] = process.env.ADMIN_CACHE_TOKEN;
 }
 
-const response = await fetch(url.toString(), {
-  method: "POST",
-  headers,
-});
+const controller = new AbortController();
+const timeoutMs = 10_000;
+const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+let response: Response;
+try {
+  response = await fetch(url.toString(), {
+    method: "POST",
+    headers,
+    signal: controller.signal,
+  });
+} catch (error) {
+  if (error instanceof DOMException && error.name === "AbortError") {
+    throw new Error(`Cache purge timed out after ${timeoutMs / 1000}s.`);
+  }
+  throw error;
+} finally {
+  clearTimeout(timeoutId);
+}
 
 const body = await response.text();
 

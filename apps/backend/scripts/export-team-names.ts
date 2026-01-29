@@ -14,7 +14,11 @@ type CliArgs = {
 const parseArg = (args: string[], key: string) => {
 	const index = args.findIndex((a) => a === key);
 	if (index === -1) return null;
-	return args[index + 1] ?? null;
+	const value = args[index + 1];
+	if (!value || value.startsWith("-")) {
+		throw new Error(`Missing value for ${key}.`);
+	}
+	return value;
 };
 
 const hasFlag = (args: string[], key: string) => args.includes(key);
@@ -34,9 +38,9 @@ const parseArgs = (): CliArgs => {
 		parseArg(args, "--config") ?? resolve(__dirname, "../wrangler.toml");
 	const outputPath =
 		parseArg(args, "--out") ?? resolve(__dirname, "../../../ml/data/api-team-names.json");
+	const parsedLeagueIds = parseLeagueIds(parseArg(args, "--league-ids"));
 	const leagueIds =
-		parseLeagueIds(parseArg(args, "--league-ids")) ??
-		[39, 140, 135, 78, 61, 94, 88];
+		parsedLeagueIds.length > 0 ? parsedLeagueIds : [39, 140, 135, 78, 61, 94, 88];
 
 	return {
 		dbName,
@@ -50,14 +54,17 @@ const parseArgs = (): CliArgs => {
 
 const buildTeamQuery = (params: { leagueIds: number[]; allTeams: boolean }) => {
 	if (params.allTeams || params.leagueIds.length === 0) {
-		return "SELECT DISTINCT name FROM teams ORDER BY name;";
+		return { sql: "SELECT DISTINCT name FROM teams ORDER BY name;", params: [] };
 	}
-	const idList = params.leagueIds.join(", ");
-	return `SELECT DISTINCT t.name AS name
+	const placeholders = params.leagueIds.map(() => "?").join(", ");
+	return {
+		sql: `SELECT DISTINCT t.name AS name
 FROM teams t
 JOIN team_season_context c ON c.team_id = t.id
-WHERE c.league_id IN (${idList})
-ORDER BY t.name;`;
+WHERE c.league_id IN (${placeholders})
+ORDER BY t.name;`,
+		params: params.leagueIds,
+	};
 };
 
 const main = () => {
@@ -67,16 +74,19 @@ const main = () => {
 		allTeams: args.allTeams,
 	});
 
-	const rows = loadRows([
-		...buildWranglerArgs({
-			dbName: args.dbName,
-			configPath: args.configPath,
-			isRemote: args.isRemote,
-		}),
-		"--command",
-		query,
-		"--json",
-	]);
+	const rows = loadRows(
+		[
+			...buildWranglerArgs({
+				dbName: args.dbName,
+				configPath: args.configPath,
+				isRemote: args.isRemote,
+			}),
+			"--command",
+			query.sql,
+			"--json",
+		],
+		query.params,
+	);
 
 	const names = rows
 		.map((row) => String(row.name ?? "").trim())

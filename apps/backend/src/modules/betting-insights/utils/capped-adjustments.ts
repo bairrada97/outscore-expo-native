@@ -26,6 +26,7 @@ import type {
 import {
   DEFAULT_ALGORITHM_CONFIG,
   getAsymmetricCaps,
+  getUncappedModeEnabled,
   UNCAPPED_MODE,
 } from '../config/algorithm-config';
 
@@ -273,7 +274,7 @@ export function applyAdjustments(
   config: AlgorithmConfig = DEFAULT_ALGORITHM_CONFIG,
   baseConfidence: ConfidenceLevel = 'MEDIUM',
 ): CappedAdjustmentResult {
-  if (UNCAPPED_MODE.enabled) {
+  if (getUncappedModeEnabled(config)) {
     return applyDirectAdjustments(
       baseProbability,
       adjustments,

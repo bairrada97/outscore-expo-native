@@ -294,12 +294,30 @@ export const DEFAULT_GOAL_DISTRIBUTION: GoalDistributionConfig = {
  */
 export const UNCAPPED_MODE = {
 	/** Enable uncapped mode (bypass all caps except soft bounds) */
-	enabled: true,
+	enabled: false,
 	/** Minimum probability (soft bound) */
 	softMinProb: 5,
 	/** Maximum probability (soft bound) */
 	softMaxProb: 95,
 };
+
+function parseEnvBoolean(value?: string): boolean | undefined {
+	if (value === undefined) return undefined;
+	const normalized = value.trim().toLowerCase();
+	if (["1", "true", "yes", "on"].includes(normalized)) return true;
+	if (["0", "false", "no", "off"].includes(normalized)) return false;
+	return undefined;
+}
+
+export function getUncappedModeEnabled(
+	config?: AlgorithmConfig,
+): boolean {
+	if (typeof config?.uncappedModeEnabled === "boolean") {
+		return config.uncappedModeEnabled;
+	}
+	const envValue = parseEnvBoolean(process.env.UNCAPPED_MODE_ENABLED);
+	return envValue ?? false;
+}
 
 // ============================================================================
 // ML-LEARNED FACTOR COEFFICIENTS (LEGACY/FALLBACK)

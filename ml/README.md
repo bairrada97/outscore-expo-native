@@ -101,4 +101,4 @@ python ml/models/extract-weights.py \
 - League filtering uses `ml/config/leagues.ts`. Add or tweak league names there.
 - Column detection uses `ml/config/columns.ts`. Add candidates if your dataset uses different headers.
 - Team mapping uses normalized keys. Update `ml/data/team-name-map.json` after review.
- - Override aliases live in `ml/config/team-name-overrides.json`.
+- Override aliases live in `ml/config/team-name-overrides.json`.

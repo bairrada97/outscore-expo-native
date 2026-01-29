@@ -824,6 +824,8 @@ export interface AlgorithmConfig {
   asymmetricWeighting: AsymmetricWeightingConfig;
   cumulativeCaps: CumulativeCapsConfig;
   goalDistribution: GoalDistributionConfig;
+  /** Optional override for uncapped mode (otherwise uses env) */
+  uncappedModeEnabled?: boolean;
 }
 
 // ============================================================================

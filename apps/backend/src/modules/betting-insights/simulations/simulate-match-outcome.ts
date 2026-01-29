@@ -19,8 +19,8 @@
 import { calculateEloGapAdjustment } from "../../elo";
 import {
 	DEFAULT_ALGORITHM_CONFIG,
+	getUncappedModeEnabled,
 	ML_FACTOR_COEFFICIENTS,
-	UNCAPPED_MODE,
 } from "../config/algorithm-config";
 import { MATCH_OUTCOME_CALIBRATION } from "../config/match-outcome-calibration";
 import type { MatchContext } from "../match-context/context-adjustments";
@@ -160,7 +160,7 @@ function addFactorScoreAdjustments(params: {
 	} = params;
 
 	// Use ML-learned coefficients in uncapped mode, fall back to legacy scaling otherwise
-	if (UNCAPPED_MODE.enabled) {
+	if (getUncappedModeEnabled(config)) {
 		const coeffs = ML_FACTOR_COEFFICIENTS.matchOutcome;
 
 		// Check if both teams are in the same competitive zone
@@ -227,9 +227,6 @@ function addFactorScoreAdjustments(params: {
 		// enough to justify the complexity. Now using fixed coefficients.
 		//
 		// Keeping homeTier/awayTier params for potential future use.
-		const _tierGap = Math.abs(homeTier - awayTier); // Unused, kept for reference
-		void _tierGap;
-
 		// No dynamic scaling - use coefficients directly
 		const dynamicScale = 1.0;
 
@@ -886,9 +883,32 @@ function simulateMatchOutcomeML(
 	const cappedHomeAdj = clamp(totalHomeAdj, -maxAdjustment, maxAdjustment);
 	const cappedAwayAdj = clamp(totalAwayAdj, -maxAdjustment, maxAdjustment);
 
-	homeProb += cappedHomeAdj;
-	awayProb += cappedAwayAdj;
-	// Draw absorbs the difference
+	const minDraw = 1;
+	let adjustedHomeAdj = cappedHomeAdj;
+	let adjustedAwayAdj = cappedAwayAdj;
+	let tentativeHome = homeProb + adjustedHomeAdj;
+	let tentativeAway = awayProb + adjustedAwayAdj;
+	const maxTotal = 100 - minDraw;
+
+	if (tentativeHome + tentativeAway > maxTotal) {
+		const excess = tentativeHome + tentativeAway - maxTotal;
+		const adjMagnitude = Math.abs(adjustedHomeAdj) + Math.abs(adjustedAwayAdj);
+		if (adjMagnitude > 0) {
+			const homeShare = Math.abs(adjustedHomeAdj) / adjMagnitude;
+			const awayShare = Math.abs(adjustedAwayAdj) / adjMagnitude;
+			adjustedHomeAdj -= excess * homeShare;
+			adjustedAwayAdj -= excess * awayShare;
+		} else {
+			const half = excess / 2;
+			adjustedHomeAdj -= half;
+			adjustedAwayAdj -= half;
+		}
+		tentativeHome = homeProb + adjustedHomeAdj;
+		tentativeAway = awayProb + adjustedAwayAdj;
+	}
+
+	homeProb = tentativeHome;
+	awayProb = tentativeAway;
 	drawProb = 100 - homeProb - awayProb;
 
 	// Ensure valid probabilities
