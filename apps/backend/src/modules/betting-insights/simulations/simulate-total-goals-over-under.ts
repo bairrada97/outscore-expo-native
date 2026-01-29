@@ -12,6 +12,7 @@ import { DEFAULT_ALGORITHM_CONFIG, ML_FACTOR_COEFFICIENTS, UNCAPPED_MODE } from 
 import { TOTAL_GOALS_CALIBRATION } from "../config/total-goals-calibration";
 import type { MatchContext } from "../match-context/context-adjustments";
 import { getMaxConfidenceForContext } from "../match-context/context-adjustments";
+import { predictOverUnder as mlPredictOverUnder } from "../ml";
 import { finalizeSimulation } from "../presentation/simulation-presenter";
 import type {
 	Adjustment,
@@ -32,6 +33,20 @@ import { applyBinaryTemperatureScaling } from "../utils/calibration-utils";
 import { clamp } from "../utils/helpers";
 import { buildGoalDistribution } from "./goal-distribution";
 import type { GoalDistributionModifiers } from "./goal-distribution-modifiers";
+
+// ============================================================================
+// ML PREDICTION MODE
+// ============================================================================
+
+/**
+ * Enable ML-based predictions instead of rule-based factor adjustments.
+ * Applies to lines where we have trained models.
+ */
+export const USE_ML_PREDICTION = true;
+
+/** Lines supported by ML models */
+const ML_SUPPORTED_LINES = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5] as const;
+type MLSupportedLine = typeof ML_SUPPORTED_LINES[number];
 
 // ============================================================================
 // TIER-GAP ADJUSTMENT CONSTANTS
@@ -159,8 +174,26 @@ export function simulateTotalGoalsOverUnder(
 	distributionModifiers?: GoalDistributionModifiers,
 	options?: {
 		skipCalibration?: boolean;
+		useML?: boolean;
+		season?: number;
+		leagueId?: number | null;
 	},
 ): Simulation {
+	// Check if ML prediction should be used (only for supported lines)
+	const useML = options?.useML ?? USE_ML_PREDICTION;
+	const isMLSupportedLine = ML_SUPPORTED_LINES.includes(line as MLSupportedLine);
+
+	if (useML && isMLSupportedLine) {
+		return simulateTotalGoalsML(
+			homeTeam,
+			awayTeam,
+			h2h,
+			context,
+			line as MLSupportedLine,
+			options,
+		);
+	}
+
 	const distribution = buildGoalDistribution(
 		homeTeam,
 		awayTeam,
@@ -306,6 +339,98 @@ export function simulateTotalGoalsOverUnder(
 		totalAdjustment: result.totalAdjustment,
 		capsHit: result.wasCapped,
 		overcorrectionWarning: result.overcorrectionWarning,
+	});
+}
+
+// ============================================================================
+// ML-BASED PREDICTION FUNCTION
+// ============================================================================
+
+/**
+ * Predict Total Goals using ML model + rule-based adjustments
+ *
+ * Uses trained LightGBM model for base probabilities, then applies
+ * rule-based adjustments for context that ML doesn't capture.
+ */
+function simulateTotalGoalsML(
+	homeTeam: TeamData,
+	awayTeam: TeamData,
+	h2h: H2HData | undefined,
+	context: MatchContext | undefined,
+	line: MLSupportedLine,
+	options?: {
+		skipCalibration?: boolean;
+		season?: number;
+		leagueId?: number | null;
+	},
+): Simulation {
+	// =========================================================================
+	// STEP 1: Get ML base probability
+	// =========================================================================
+	const season = options?.season ?? new Date().getFullYear();
+	const leagueId = options?.leagueId ?? null;
+
+	const mlPrediction = mlPredictOverUnder(
+		homeTeam,
+		awayTeam,
+		h2h,
+		season,
+		leagueId,
+		line,
+	);
+	let overProbability = mlPrediction.over;
+
+	// =========================================================================
+	// STEP 2: Collect ONLY rule-based adjustments (things ML doesn't know)
+	// =========================================================================
+	const adjustments: Adjustment[] = [];
+
+	// Six-pointer suppression
+	if (
+		context?.isSixPointer &&
+		SIX_POINTER_SUPPRESSION.applicableLines.includes(line as 2.5 | 3.5)
+	) {
+		adjustments.push(
+			createAdjustment(
+				"six_pointer_suppression",
+				SIX_POINTER_SUPPRESSION.adjustment,
+				"Six-pointer match: both teams play conservatively",
+			),
+		);
+	}
+
+	// =========================================================================
+	// STEP 3: Apply rule-based adjustments
+	// =========================================================================
+	const totalAdj = adjustments.reduce((sum, adj) => sum + adj.value, 0);
+	const maxAdjustment = 10; // Max ±10% from rule-based
+	const cappedAdj = clamp(totalAdj, -maxAdjustment, maxAdjustment);
+
+	overProbability += cappedAdj;
+	overProbability = clamp(overProbability, 5, 95);
+	const underProbability = 100 - overProbability;
+
+	// =========================================================================
+	// STEP 4: Build result
+	// =========================================================================
+	let baseConfidence = calculateBaseConfidence(overProbability);
+	if (context) {
+		const maxConfidence = getMaxConfidenceForContext(context);
+		baseConfidence = minConfidence(baseConfidence, maxConfidence);
+	}
+
+	return finalizeSimulation({
+		scenarioType: "TotalGoalsOverUnder",
+		line,
+		probabilityDistribution: {
+			over: Math.round(overProbability * 10) / 10,
+			under: Math.round(underProbability * 10) / 10,
+		},
+		modelReliability: baseConfidence,
+		insights: buildInsights(overProbability, line, homeTeam, awayTeam, h2h),
+		adjustmentsApplied: adjustments,
+		totalAdjustment: totalAdj,
+		capsHit: Math.abs(totalAdj) > maxAdjustment,
 	});
 }
 
@@ -620,6 +745,5 @@ function getTierGapAdjustment(
 		"tier_gap_mismatch",
 		adjustment,
 		`Elite vs weak team mismatch (${strongerTeam} tier ${Math.min(homeTier, awayTier)} vs ${weakerTeam} tier ${Math.max(homeTier, awayTier)})`,
-		"other",
 	);
 }

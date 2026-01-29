@@ -1,18 +1,123 @@
 [
   {
+    "market": "1x2",
+    "target": "result",
+    "type": "multiclass",
+    "metric": "log_loss",
+    "value": 0.9807821433995313,
+    "best_params": {
+      "learning_rate": 0.1438934888152913,
+      "num_leaves": 26,
+      "min_child_samples": 11,
+      "subsample": 0.6910467891206741,
+      "colsample_bytree": 0.7707286416220485,
+      "reg_alpha": 0.14714972113961455,
+      "reg_lambda": 0.883039597901148
+    },
+    "rows": {
+      "train": 51812,
+      "val": 2344,
+      "test": 2343
+    }
+  },
+  {
+    "market": "btts",
+    "target": "btts_yes",
+    "type": "binary",
+    "metric": "log_loss",
+    "value": 0.6869695738164097,
+    "best_params": {
+      "learning_rate": 0.03902227657740716,
+      "num_leaves": 102,
+      "min_child_samples": 40,
+      "subsample": 0.7878940818483247,
+      "colsample_bytree": 0.8161886540417124,
+      "reg_alpha": 0.8481293354626106,
+      "reg_lambda": 0.9530124531567855
+    },
+    "rows": {
+      "train": 51812,
+      "val": 2344,
+      "test": 2343
+    }
+  },
+  {
+    "market": "ou_0_5",
+    "target": "ou_over_0_5",
+    "type": "binary",
+    "metric": "log_loss",
+    "value": 0.21446744018097666,
+    "best_params": {
+      "learning_rate": 0.05007878270230714,
+      "num_leaves": 76,
+      "min_child_samples": 31,
+      "subsample": 0.9768228254028839,
+      "colsample_bytree": 0.8410731135341944,
+      "reg_alpha": 0.034175343868660835,
+      "reg_lambda": 0.4958359862290559
+    },
+    "rows": {
+      "train": 51812,
+      "val": 2344,
+      "test": 2343
+    }
+  },
+  {
+    "market": "ou_1_5",
+    "target": "ou_over_1_5",
+    "type": "binary",
+    "metric": "log_loss",
+    "value": 0.5214239622412441,
+    "best_params": {
+      "learning_rate": 0.09191279680746356,
+      "num_leaves": 38,
+      "min_child_samples": 83,
+      "subsample": 0.8118766041933051,
+      "colsample_bytree": 0.716111819956856,
+      "reg_alpha": 0.11362412324177706,
+      "reg_lambda": 0.23954119216227077
+    },
+    "rows": {
+      "train": 51812,
+      "val": 2344,
+      "test": 2343
+    }
+  },
+  {
+    "market": "ou_2_5",
+    "target": "ou_over_2_5",
+    "type": "binary",
+    "metric": "log_loss",
+    "value": 0.6786481600233921,
+    "best_params": {
+      "learning_rate": 0.03741364581385257,
+      "num_leaves": 99,
+      "min_child_samples": 54,
+      "subsample": 0.7645971162209039,
+      "colsample_bytree": 0.8406347463549921,
+      "reg_alpha": 0.42586341761219504,
+      "reg_lambda": 0.38884114200749864
+    },
+    "rows": {
+      "train": 51812,
+      "val": 2344,
+      "test": 2343
+    }
+  },
+  {
     "market": "ou_3_5",
     "target": "ou_over_3_5",
     "type": "binary",
     "metric": "log_loss",
-    "value": 0.6112932636128084,
+    "value": 0.6069888218204721,
     "best_params": {
-      "learning_rate": 0.042048407291988915,
-      "num_leaves": 43,
-      "min_child_samples": 84,
-      "subsample": 0.975195634512884,
-      "colsample_bytree": 0.7624693448411624,
-      "reg_alpha": 0.937121287021963,
-      "reg_lambda": 0.5813322955570102
+      "learning_rate": 0.028912247146921317,
+      "num_leaves": 102,
+      "min_child_samples": 54,
+      "subsample": 0.7832198739478621,
+      "colsample_bytree": 0.7536753548814351,
+      "reg_alpha": 0.5401634302316648,
+      "reg_lambda": 0.05584332636891087
     },
     "rows": {
       "train": 51812,
@@ -25,15 +130,15 @@
     "target": "ou_over_4_5",
     "type": "binary",
     "metric": "log_loss",
-    "value": 0.42082303613057354,
+    "value": 0.4181806382690765,
     "best_params": {
-      "learning_rate": 0.010628178823189264,
-      "num_leaves": 60,
-      "min_child_samples": 71,
-      "subsample": 0.8512050274231514,
-      "colsample_bytree": 0.8816922893320772,
-      "reg_alpha": 0.2521729286956853,
-      "reg_lambda": 0.41144090724736565
+      "learning_rate": 0.027029681635646695,
+      "num_leaves": 77,
+      "min_child_samples": 17,
+      "subsample": 0.9217198005567008,
+      "colsample_bytree": 0.6034293849904828,
+      "reg_alpha": 0.5917387839261149,
+      "reg_lambda": 0.9614052994580551
     },
     "rows": {
       "train": 51812,
@@ -46,81 +151,18 @@
     "target": "ou_over_5_5",
     "type": "binary",
     "metric": "log_loss",
-    "value": 0.2269617542413282,
+    "value": 0.22786262077212716,
     "best_params": {
-      "learning_rate": 0.03383355953043635,
-      "num_leaves": 52,
-      "min_child_samples": 100,
-      "subsample": 0.9298457443812922,
-      "colsample_bytree": 0.7187151125346383,
-      "reg_alpha": 0.46818514501951736,
-      "reg_lambda": 0.7735387364649146
+      "learning_rate": 0.02736579838187243,
+      "num_leaves": 74,
+      "min_child_samples": 86,
+      "subsample": 0.8309039910145066,
+      "colsample_bytree": 0.7035166170795877,
+      "reg_alpha": 0.6786143854094184,
+      "reg_lambda": 0.2267872602323735
     },
     "rows": {
       "train": 51812,
-      "val": 2344,
-      "test": 2343
-    }
-  },
-  {
-    "market": "fh_1x2",
-    "target": "fh_result",
-    "type": "multiclass",
-    "metric": "log_loss",
-    "value": 1.0438847546659724,
-    "best_params": {
-      "learning_rate": 0.035434788340123494,
-      "num_leaves": 28,
-      "min_child_samples": 18,
-      "subsample": 0.8816067257256079,
-      "colsample_bytree": 0.9210107625622681,
-      "reg_alpha": 0.5542596318612083,
-      "reg_lambda": 0.8788408183281144
-    },
-    "rows": {
-      "train": 51809,
-      "val": 2344,
-      "test": 2343
-    }
-  },
-  {
-    "market": "fh_goals",
-    "target": "fh_goals_total",
-    "type": "regression",
-    "metric": "rmse",
-    "value": 1.1141162097098913,
-    "best_params": {
-      "learning_rate": 0.022772177199859075,
-      "num_leaves": 28,
-      "min_child_samples": 58,
-      "subsample": 0.9641727024312938,
-      "colsample_bytree": 0.9560444078144789,
-      "reg_alpha": 0.41932714993863995,
-      "reg_lambda": 0.7534131586722187
-    },
-    "rows": {
-      "train": 51809,
-      "val": 2344,
-      "test": 2343
-    }
-  },
-  {
-    "market": "sh_goals",
-    "target": "sh_goals_total",
-    "type": "regression",
-    "metric": "rmse",
-    "value": 1.1775395807348175,
-    "best_params": {
-      "learning_rate": 0.056604249871653876,
-      "num_leaves": 17,
-      "min_child_samples": 75,
-      "subsample": 0.8730633892267997,
-      "colsample_bytree": 0.7353051075034269,
-      "reg_alpha": 0.3222852209004763,
-      "reg_lambda": 0.3266745305448697
-    },
-    "rows": {
-      "train": 51809,
       "val": 2344,
       "test": 2343
     }

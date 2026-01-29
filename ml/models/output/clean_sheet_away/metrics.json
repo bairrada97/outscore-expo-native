@@ -3,15 +3,15 @@
   "target": "clean_sheet_away",
   "type": "binary",
   "metric": "log_loss",
-  "value": 5.8956017866632415e-06,
+  "value": 0.49753005906647996,
   "best_params": {
-    "learning_rate": 0.18679962072613332,
-    "num_leaves": 42,
-    "min_child_samples": 53,
-    "subsample": 0.7118410207251885,
-    "colsample_bytree": 0.8220806044057356,
-    "reg_alpha": 0.11186939936816598,
-    "reg_lambda": 0.5665072419626435
+    "learning_rate": 0.02659815732425234,
+    "num_leaves": 29,
+    "min_child_samples": 19,
+    "subsample": 0.723939338040051,
+    "colsample_bytree": 0.6026096250719083,
+    "reg_alpha": 0.003795913621030822,
+    "reg_lambda": 0.11799563784074685
   },
   "rows": {
     "train": 51812,

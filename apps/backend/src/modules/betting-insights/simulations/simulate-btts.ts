@@ -17,6 +17,7 @@ import { DEFAULT_ALGORITHM_CONFIG, ML_FACTOR_COEFFICIENTS } from "../config/algo
 import { BTTS_CALIBRATION } from "../config/btts-calibration";
 import type { MatchContext } from "../match-context/context-adjustments";
 import { getMaxConfidenceForContext } from "../match-context/context-adjustments";
+import { predictBTTS as mlPredictBTTS } from "../ml";
 import { finalizeSimulation } from "../presentation/simulation-presenter";
 import type {
 	Adjustment,
@@ -36,6 +37,15 @@ import {
 import { clamp } from "../utils/helpers";
 import { buildGoalDistribution } from "./goal-distribution";
 import type { GoalDistributionModifiers } from "./goal-distribution-modifiers";
+
+// ============================================================================
+// ML PREDICTION MODE
+// ============================================================================
+
+/**
+ * Enable ML-based predictions instead of rule-based factor adjustments.
+ */
+export const USE_ML_PREDICTION = true;
 
 // ============================================================================
 // CONSTANTS
@@ -258,8 +268,18 @@ export function simulateBTTS(
 	distributionModifiers?: GoalDistributionModifiers,
 	options?: {
 		skipCalibration?: boolean;
+		useML?: boolean;
+		season?: number;
+		leagueId?: number | null;
 	},
 ): Simulation {
+	// Check if ML prediction should be used
+	const useML = options?.useML ?? USE_ML_PREDICTION;
+
+	if (useML) {
+		return simulateBTTSML(homeTeam, awayTeam, h2h, context, options);
+	}
+
 	// Shared goal distribution (Poisson + Dixon-Coles)
 	const distribution = buildGoalDistribution(
 		homeTeam,
@@ -355,6 +375,91 @@ export function simulateBTTS(
 		totalAdjustment: result.totalAdjustment,
 		capsHit: result.wasCapped,
 		overcorrectionWarning: result.overcorrectionWarning,
+	});
+}
+
+// ============================================================================
+// ML-BASED PREDICTION FUNCTION
+// ============================================================================
+
+/**
+ * Predict BTTS using ML model + rule-based adjustments
+ *
+ * Uses trained LightGBM model for base probabilities, then applies
+ * rule-based adjustments for context that ML doesn't capture.
+ */
+function simulateBTTSML(
+	homeTeam: TeamData,
+	awayTeam: TeamData,
+	h2h?: H2HData,
+	context?: MatchContext,
+	options?: {
+		skipCalibration?: boolean;
+		season?: number;
+		leagueId?: number | null;
+	},
+): Simulation {
+	// =========================================================================
+	// STEP 1: Get ML base probability
+	// =========================================================================
+	const season = options?.season ?? new Date().getFullYear();
+	const leagueId = options?.leagueId ?? null;
+
+	const mlPrediction = mlPredictBTTS(homeTeam, awayTeam, h2h, season, leagueId);
+	let yesProbability = mlPrediction.yes;
+
+	// =========================================================================
+	// STEP 2: Collect ONLY rule-based adjustments (things ML doesn't know)
+	// =========================================================================
+	const adjustments: Adjustment[] = [];
+
+	// Six-pointer suppression
+	if (context?.isSixPointer) {
+		adjustments.push(
+			createAdjustment(
+				"six_pointer_btts_suppression",
+				SIX_POINTER_BTTS_SUPPRESSION.adjustment,
+				"Six-pointer match: both teams play conservatively",
+			),
+		);
+	}
+
+	// Context adjustments (derby intensity, etc.)
+	if (context) {
+		adjustments.push(...getContextAdjustments(context));
+	}
+
+	// =========================================================================
+	// STEP 3: Apply rule-based adjustments
+	// =========================================================================
+	const totalAdj = adjustments.reduce((sum, adj) => sum + adj.value, 0);
+	const maxAdjustment = 12; // Max ±12% from rule-based
+	const cappedAdj = clamp(totalAdj, -maxAdjustment, maxAdjustment);
+
+	yesProbability += cappedAdj;
+	yesProbability = clamp(yesProbability, 5, 95);
+	const noProbability = 100 - yesProbability;
+
+	// =========================================================================
+	// STEP 4: Build result
+	// =========================================================================
+	let baseConfidence = calculateBaseConfidence(homeTeam, awayTeam, h2h);
+	if (context) {
+		const maxConfidence = getMaxConfidenceForContext(context);
+		baseConfidence = minConfidence(baseConfidence, maxConfidence);
+	}
+
+	return finalizeSimulation({
+		scenarioType: "BothTeamsToScore",
+		probabilityDistribution: {
+			yes: Math.round(yesProbability * 10) / 10,
+			no: Math.round(noProbability * 10) / 10,
+		},
+		modelReliability: baseConfidence,
+		insights: buildBttsInsights(yesProbability, homeTeam, awayTeam, h2h),
+		adjustmentsApplied: adjustments,
+		totalAdjustment: totalAdj,
+		capsHit: Math.abs(totalAdj) > maxAdjustment,
 	});
 }
 

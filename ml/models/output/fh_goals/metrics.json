@@ -3,15 +3,15 @@
   "target": "fh_goals_total",
   "type": "regression",
   "metric": "rmse",
-  "value": 1.1141162097098913,
+  "value": 1.110624871199397,
   "best_params": {
-    "learning_rate": 0.022772177199859075,
-    "num_leaves": 28,
-    "min_child_samples": 58,
-    "subsample": 0.9641727024312938,
-    "colsample_bytree": 0.9560444078144789,
-    "reg_alpha": 0.41932714993863995,
-    "reg_lambda": 0.7534131586722187
+    "learning_rate": 0.041441651879385887,
+    "num_leaves": 71,
+    "min_child_samples": 64,
+    "subsample": 0.9867010378797445,
+    "colsample_bytree": 0.6548557862010339,
+    "reg_alpha": 0.17859937387944158,
+    "reg_lambda": 0.10080413331875437
   },
   "rows": {
     "train": 51809,

@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseCsv, toRecords, writeCsv } from "../utils/csv";
 import { parseDate } from "../utils/date";
+import { getLeagueTier } from "./elo";
 import { buildFormString, calculateWeightedFormScore, type FormResult } from "./form-features";
 
 type CleanMatchRow = {
@@ -14,6 +15,13 @@ type CleanMatchRow = {
 	homeGoals: number;
 	awayGoals: number;
 	result: "HOME" | "DRAW" | "AWAY";
+	homeElo?: number | null;
+	awayElo?: number | null;
+	oddHome?: number | null;
+	oddDraw?: number | null;
+	oddAway?: number | null;
+	over25?: number | null;
+	under25?: number | null;
 };
 
 type HistoryMatch = {
@@ -45,10 +53,20 @@ type FeatureRow = {
 	awayDaysSince: number | null;
 	homeHomeFormScore: number;
 	awayAwayFormScore: number;
+	// NEW: ELO and Tier features
+	homeElo: number;
+	awayElo: number;
+	eloDiff: number;
+	homeTier: number;
+	awayTier: number;
+	tierGap: number;
 	result: "HOME" | "DRAW" | "AWAY";
 	homeGoals: number;
 	awayGoals: number;
 };
+
+const DEFAULT_ELO = 1500;
+const HOME_ADVANTAGE_ELO = 100;
 
 const args = process.argv.slice(2);
 const inputIndex = args.indexOf("--input");
@@ -87,16 +105,29 @@ const loadRows = (): CleanMatchRow[] => {
 		homeGoals: Number(record.homeGoals),
 		awayGoals: Number(record.awayGoals),
 		result: record.result as "HOME" | "DRAW" | "AWAY",
+		homeElo: record.homeElo ? Number(record.homeElo) : null,
+		awayElo: record.awayElo ? Number(record.awayElo) : null,
+		oddHome: record.oddHome ? Number(record.oddHome) : null,
+		oddDraw: record.oddDraw ? Number(record.oddDraw) : null,
+		oddAway: record.oddAway ? Number(record.oddAway) : null,
+		over25: record.over25 ? Number(record.over25) : null,
+		under25: record.under25 ? Number(record.under25) : null,
 	}));
 };
 
+type DatedRow = CleanMatchRow & { parsedDate: Date | null };
+
 const rows = loadRows()
-	.map((row) => ({
-		...row,
-		parsedDate: parseDate(row.date),
-	}))
-	.filter((row) => row.parsedDate)
-	.sort((a, b) => a.parsedDate!.getTime() - b.parsedDate!.getTime());
+	.map(
+		(row): DatedRow => ({
+			...row,
+			parsedDate: parseDate(row.date),
+		}),
+	)
+	.filter((row): row is CleanMatchRow & { parsedDate: Date } =>
+		Boolean(row.parsedDate),
+	)
+	.sort((a, b) => a.parsedDate.getTime() - b.parsedDate.getTime());
 
 const history = new Map<string, HistoryMatch[]>();
 
@@ -116,7 +147,7 @@ const average = (values: number[]) =>
 const buildStats = (matches: HistoryMatch[], n: number) => {
 	const slice = lastN(matches, n);
 	const results = slice.map((match) => match.result);
-	const points = slice.map((result) => (result === "W" ? 3 : result === "D" ? 1 : 0));
+	const points = slice.map((match) => (match.result === "W" ? 3 : match.result === "D" ? 1 : 0));
 	const goalsFor = slice.map((match) => match.goalsFor);
 	const goalsAgainst = slice.map((match) => match.goalsAgainst);
 	return {
@@ -137,9 +168,18 @@ const calcDaysSince = (matches: HistoryMatch[], current: Date) => {
 const features: FeatureRow[] = [];
 
 for (const row of rows) {
-	const date = row.parsedDate!;
+	const date = row.parsedDate;
 	const homeHistory = getHistory(row.homeTeam);
 	const awayHistory = getHistory(row.awayTeam);
+
+	const homeElo = row.homeElo ?? DEFAULT_ELO;
+	const awayElo = row.awayElo ?? DEFAULT_ELO;
+	const eloDiff = homeElo + HOME_ADVANTAGE_ELO - awayElo;
+
+	// Get tier information
+	const homeTier = getLeagueTier(row.leagueId);
+	const awayTier = getLeagueTier(row.leagueId); // Same league for domestic matches
+	const tierGap = homeTier - awayTier; // 0 for domestic matches
 
 	if (homeHistory.length >= minHistory && awayHistory.length >= minHistory) {
 		const homeStats = buildStats(homeHistory, 10);
@@ -172,6 +212,13 @@ for (const row of rows) {
 			awayDaysSince: calcDaysSince(awayHistory, date),
 			homeHomeFormScore: calculateWeightedFormScore(homeHomeStats.results),
 			awayAwayFormScore: calculateWeightedFormScore(awayAwayStats.results),
+			// NEW: ELO and Tier features
+			homeElo,
+			awayElo,
+			eloDiff,
+			homeTier,
+			awayTier,
+			tierGap,
 			result: row.result,
 			homeGoals: row.homeGoals,
 			awayGoals: row.awayGoals,

@@ -302,25 +302,29 @@ export const UNCAPPED_MODE = {
 };
 
 // ============================================================================
-// ML-LEARNED FACTOR COEFFICIENTS
+// ML-LEARNED FACTOR COEFFICIENTS (LEGACY/FALLBACK)
 // ============================================================================
 
 /**
- * ML-learned coefficients for direct factor score translation
+ * Legacy factor coefficients for rule-based prediction mode
+ *
+ * IMPORTANT: When USE_ML_PREDICTION is enabled (default), these coefficients
+ * are NOT used for base probability calculation. Instead, the trained LightGBM
+ * models are used directly for inference.
+ *
+ * These coefficients are only used when:
+ * 1. ML mode is explicitly disabled (useML: false)
+ * 2. As fallback if ML models fail to load
  *
  * Each factor score ranges from -100 to +100.
  * The coefficient determines how much that factor can swing the probability.
- * Example: positionScore of -100 with coefficient 0.18 = -18% adjustment
- *
- * These coefficients are tuned via LightGBM + Optuna on historical data.
+ * Example: positionScore of -100 with coefficient 0.15 = -15% adjustment
  */
 export const ML_FACTOR_COEFFICIENTS = {
-	/** Match Outcome (1X2) factor coefficients
+	/** Match Outcome (1X2) factor coefficients (legacy - only used when ML disabled)
 	 * 
-	 * Fixed coefficients - no dynamic tier-based scaling.
-	 * Each factor score ranges from -100 to +100.
-	 * The coefficient determines how much that factor can swing the probability.
-	 * Example: positionScore of -100 with coefficient 0.15 = -15% adjustment
+	 * When ML is enabled, these are NOT used. The LightGBM model at
+	 * ml/models/output/1x2/model.json handles the base probability calculation.
 	 */
 	matchOutcome: {
 		/** Recent form comparison (-100 to +100) -> max ±12% */

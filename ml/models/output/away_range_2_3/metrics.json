@@ -3,15 +3,15 @@
   "target": "away_range_2_3",
   "type": "binary",
   "metric": "log_loss",
-  "value": 2.153077715912443e-05,
+  "value": 0.6163060495465376,
   "best_params": {
-    "learning_rate": 0.19095054284204804,
-    "num_leaves": 65,
-    "min_child_samples": 60,
-    "subsample": 0.8162188605698784,
-    "colsample_bytree": 0.9957780622611333,
-    "reg_alpha": 0.5546154505876488,
-    "reg_lambda": 0.25211964677123333
+    "learning_rate": 0.046892188087230696,
+    "num_leaves": 24,
+    "min_child_samples": 52,
+    "subsample": 0.6832843196392329,
+    "colsample_bytree": 0.6051730301944771,
+    "reg_alpha": 0.31375470006922423,
+    "reg_lambda": 0.5310066247293911
   },
   "rows": {
     "train": 51812,

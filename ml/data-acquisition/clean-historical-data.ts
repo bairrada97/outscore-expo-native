@@ -1,5 +1,5 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 import { COLUMN_CANDIDATES, resolveColumn } from "../config/columns";
 import { resolveLeagueId } from "../config/leagues";
 import { parseCsv, toRecords, writeCsv } from "../utils/csv";
@@ -16,6 +16,13 @@ type CleanMatchRow = {
 	homeGoals: number;
 	awayGoals: number;
 	result: "HOME" | "DRAW" | "AWAY";
+	homeElo: number | null;
+	awayElo: number | null;
+	oddHome: number | null;
+	oddDraw: number | null;
+	oddAway: number | null;
+	over25: number | null;
+	under25: number | null;
 };
 
 type TeamNameMap = {
@@ -58,6 +65,13 @@ const homeGoalsCol = resolveColumn(headers, COLUMN_CANDIDATES.homeGoals);
 const awayGoalsCol = resolveColumn(headers, COLUMN_CANDIDATES.awayGoals);
 const leagueCol = resolveColumn(headers, COLUMN_CANDIDATES.league);
 const seasonCol = resolveColumn(headers, COLUMN_CANDIDATES.season);
+const homeEloCol = resolveColumn(headers, COLUMN_CANDIDATES.homeElo);
+const awayEloCol = resolveColumn(headers, COLUMN_CANDIDATES.awayElo);
+const oddHomeCol = resolveColumn(headers, COLUMN_CANDIDATES.oddHome);
+const oddDrawCol = resolveColumn(headers, COLUMN_CANDIDATES.oddDraw);
+const oddAwayCol = resolveColumn(headers, COLUMN_CANDIDATES.oddAway);
+const over25Col = resolveColumn(headers, COLUMN_CANDIDATES.over25);
+const under25Col = resolveColumn(headers, COLUMN_CANDIDATES.under25);
 
 if (!dateCol || !homeCol || !awayCol || !homeGoalsCol || !awayGoalsCol || !leagueCol) {
 	throw new Error(
@@ -78,6 +92,13 @@ const inferSeason = (date: Date) => {
 	const year = date.getUTCFullYear();
 	const month = date.getUTCMonth() + 1;
 	return month >= 7 ? year : year - 1;
+};
+
+const parseOptionalNumber = (value: unknown) => {
+	if (value === null || value === undefined) return null;
+	if (typeof value === "string" && value.trim() === "") return null;
+	const parsed = Number(value);
+	return Number.isFinite(parsed) ? parsed : null;
 };
 
 for (const record of records) {
@@ -127,6 +148,13 @@ for (const record of records) {
 		homeGoals,
 		awayGoals,
 		result,
+		homeElo: homeEloCol ? parseOptionalNumber(record[homeEloCol]) : null,
+		awayElo: awayEloCol ? parseOptionalNumber(record[awayEloCol]) : null,
+		oddHome: oddHomeCol ? parseOptionalNumber(record[oddHomeCol]) : null,
+		oddDraw: oddDrawCol ? parseOptionalNumber(record[oddDrawCol]) : null,
+		oddAway: oddAwayCol ? parseOptionalNumber(record[oddAwayCol]) : null,
+		over25: over25Col ? parseOptionalNumber(record[over25Col]) : null,
+		under25: under25Col ? parseOptionalNumber(record[under25Col]) : null,
 	});
 }
 
@@ -151,6 +179,13 @@ const csvRows = [
 		"homeGoals",
 		"awayGoals",
 		"result",
+		"homeElo",
+		"awayElo",
+		"oddHome",
+		"oddDraw",
+		"oddAway",
+		"over25",
+		"under25",
 	],
 	...cleaned.map((row) => [
 		row.date,
@@ -162,6 +197,13 @@ const csvRows = [
 		String(row.homeGoals),
 		String(row.awayGoals),
 		row.result,
+		row.homeElo === null ? "" : String(row.homeElo),
+		row.awayElo === null ? "" : String(row.awayElo),
+		row.oddHome === null ? "" : String(row.oddHome),
+		row.oddDraw === null ? "" : String(row.oddDraw),
+		row.oddAway === null ? "" : String(row.oddAway),
+		row.over25 === null ? "" : String(row.over25),
+		row.under25 === null ? "" : String(row.under25),
 	]),
 ];
 

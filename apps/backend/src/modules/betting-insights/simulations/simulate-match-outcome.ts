@@ -25,6 +25,8 @@ import {
 import { MATCH_OUTCOME_CALIBRATION } from "../config/match-outcome-calibration";
 import type { MatchContext } from "../match-context/context-adjustments";
 import { detectDerby } from "../match-context/derby-detector";
+import { predictMatchOutcome as mlPredictMatchOutcome } from "../ml";
+import { computeMLFeatures, featuresToRecord } from "../ml/compute-features";
 import { finalizeSimulation } from "../presentation/simulation-presenter";
 import type {
 	Adjustment,
@@ -38,6 +40,7 @@ import type {
 } from "../types";
 import { applyTemperatureScaling } from "../utils/calibration-utils";
 import {
+	type AdjustmentCategory,
 	applyAdjustments,
 	createAdjustment,
 } from "../utils/capped-adjustments";
@@ -56,6 +59,17 @@ import { calculatePositionScore } from "../utils/position-score";
 import { calculateRestScore } from "../utils/rest-score";
 import { buildGoalDistribution } from "./goal-distribution";
 import type { GoalDistributionModifiers } from "./goal-distribution-modifiers";
+
+// ============================================================================
+// ML PREDICTION MODE
+// ============================================================================
+
+/**
+ * Enable ML-based predictions instead of rule-based factor adjustments.
+ * When enabled, uses trained LightGBM model for base probabilities,
+ * then applies rule-based adjustments for context (injuries, six-pointer, etc.)
+ */
+export const USE_ML_PREDICTION = true;
 
 const MATCH_OUTCOME_NEUTRAL_GOAL_STATS = {
 	avgGoalsScored: 1.2,
@@ -79,31 +93,36 @@ function withNeutralGoalStats(team: TeamData): TeamData {
 /**
  * Competitive zones for same-zone detection
  */
-type CompetitiveZone = 'RELEGATION' | 'TITLE' | 'EUROPEAN' | 'MID_TABLE' | 'OTHER';
+type CompetitiveZone =
+	| "RELEGATION"
+	| "TITLE"
+	| "EUROPEAN"
+	| "MID_TABLE"
+	| "OTHER";
 
 function getCompetitiveZone(stakes?: string): CompetitiveZone {
-	if (!stakes) return 'OTHER';
+	if (!stakes) return "OTHER";
 	switch (stakes) {
-		case 'RELEGATION_BATTLE':
-		case 'ALREADY_RELEGATED':
-			return 'RELEGATION';
-		case 'TITLE_RACE':
-			return 'TITLE';
-		case 'CL_QUALIFICATION':
-		case 'EUROPA_RACE':
-		case 'CONFERENCE_RACE':
-			return 'EUROPEAN';
-		case 'NOTHING_TO_PLAY':
-			return 'MID_TABLE';
+		case "RELEGATION_BATTLE":
+		case "ALREADY_RELEGATED":
+			return "RELEGATION";
+		case "TITLE_RACE":
+			return "TITLE";
+		case "CL_QUALIFICATION":
+		case "EUROPA_RACE":
+		case "CONFERENCE_RACE":
+			return "EUROPEAN";
+		case "NOTHING_TO_PLAY":
+			return "MID_TABLE";
 		default:
-			return 'OTHER';
+			return "OTHER";
 	}
 }
 
 function areInSameZone(homeStakes?: string, awayStakes?: string): boolean {
 	const homeZone = getCompetitiveZone(homeStakes);
 	const awayZone = getCompetitiveZone(awayStakes);
-	if (homeZone === 'OTHER' || awayZone === 'OTHER') return false;
+	if (homeZone === "OTHER" || awayZone === "OTHER") return false;
 	return homeZone === awayZone;
 }
 
@@ -159,12 +178,12 @@ function addFactorScoreAdjustments(params: {
 		// This prevents tier differences alone from swinging predictions too much
 		// in "coin-flip" matches where H2H is balanced, form is similar, etc.
 		let positionDampener = 1.0;
-		
+
 		// Same zone dampening: tier matters less when both teams fight for the same thing
 		if (sameZone) {
 			positionDampener *= 0.5; // 50% reduction for same zone
 		}
-		
+
 		if (signalsAreNeutral && Math.abs(positionScore) > 50) {
 			// When signals are neutral but position gap is large, dampen by 40%
 			positionDampener = 0.6;
@@ -202,11 +221,11 @@ function addFactorScoreAdjustments(params: {
 		// =========================================================================
 		// TIER-BASED SCALING (DISABLED)
 		// =========================================================================
-		// 
+		//
 		// Previously implemented dynamic scaling based on tier gap, but this was
 		// hurting performance on international matches and not improving league matches
 		// enough to justify the complexity. Now using fixed coefficients.
-		// 
+		//
 		// Keeping homeTier/awayTier params for potential future use.
 		const _tierGap = Math.abs(homeTier - awayTier); // Unused, kept for reference
 		void _tierGap;
@@ -534,8 +553,26 @@ export function simulateMatchOutcome(
 	distributionModifiers?: GoalDistributionModifiers,
 	options?: {
 		skipCalibration?: boolean;
+		useML?: boolean;
+		season?: number;
+		leagueId?: number | null;
 	},
 ): Simulation {
+	// Check if ML prediction should be used
+	const useML = options?.useML ?? USE_ML_PREDICTION;
+
+	if (useML) {
+		return simulateMatchOutcomeML(
+			homeTeam,
+			awayTeam,
+			h2h,
+			context,
+			config,
+			injuries,
+			options,
+		);
+	}
+
 	// Ignore season goal-rate stats for MatchOutcome calculations.
 	const homeOutcomeTeam = withNeutralGoalStats(homeTeam);
 	const awayOutcomeTeam = withNeutralGoalStats(awayTeam);
@@ -631,9 +668,6 @@ export function simulateMatchOutcome(
 		awayAdjustments,
 	);
 
-	const injuryAdjustmentsHome = injuries?.homeAdjustments ?? [];
-	const injuryAdjustmentsAway = injuries?.awayAdjustments ?? [];
-
 	const homeMidweek = buildMidweekLoadAdjustment(homeOutcomeTeam);
 	if (homeMidweek) homeAdjustments.push(homeMidweek.adj);
 	const awayMidweek = buildMidweekLoadAdjustment(awayOutcomeTeam);
@@ -694,6 +728,229 @@ export function simulateMatchOutcome(
 	// Apply post-calibration floor to prevent extreme underdog predictions
 	// Bookmakers rarely price home teams below 5-7% even in extreme mismatches
 	const floored = applyProbabilityFloors(drawBoosted);
+
+	return buildMatchResultPrediction(
+		floored,
+		homeResult,
+		awayResult,
+		homeTeam,
+		awayTeam,
+		context,
+		h2h,
+		injuries?.homeImpact ?? null,
+		injuries?.awayImpact ?? null,
+		{
+			formScore,
+			h2hScore,
+			homeAdvantageScore,
+			motivationScore,
+			restScore,
+			positionScore,
+		},
+		[],
+	);
+}
+
+// ============================================================================
+// ML-BASED PREDICTION FUNCTION
+// ============================================================================
+
+/**
+ * Predict Match Result using ML model + rule-based adjustments
+ *
+ * Uses trained LightGBM model for base probabilities, then applies
+ * rule-based adjustments for context that ML doesn't capture:
+ * - Injuries (not in training data)
+ * - Six-pointer matches (contextual)
+ * - Derby hangover (contextual)
+ * - Formation adjustments (tactical)
+ */
+function simulateMatchOutcomeML(
+	homeTeam: TeamData,
+	awayTeam: TeamData,
+	h2h?: H2HData,
+	context?: MatchContext,
+	_config: AlgorithmConfig = DEFAULT_ALGORITHM_CONFIG,
+	injuries?: {
+		homeAdjustments?: Adjustment[];
+		awayAdjustments?: Adjustment[];
+		homeImpact?: InjuryImpactAssessment | null;
+		awayImpact?: InjuryImpactAssessment | null;
+	},
+	options?: {
+		skipCalibration?: boolean;
+		season?: number;
+		leagueId?: number | null;
+	},
+): Simulation {
+	const homeOutcomeTeam = withNeutralGoalStats(homeTeam);
+	const awayOutcomeTeam = withNeutralGoalStats(awayTeam);
+
+	// =========================================================================
+	// STEP 1: Get ML base probabilities
+	// =========================================================================
+	const season = options?.season ?? new Date().getFullYear();
+	const leagueId = options?.leagueId ?? null;
+
+	const mlPrediction = mlPredictMatchOutcome(
+		homeTeam,
+		awayTeam,
+		h2h,
+		season,
+		leagueId,
+	);
+	console.log(
+		`[ML] 1X2 raw prediction for ${homeTeam.name} vs ${awayTeam.name}:`,
+		mlPrediction,
+	);
+	const mlFeatures = computeMLFeatures(
+		homeTeam,
+		awayTeam,
+		h2h,
+		season,
+		leagueId,
+	);
+	console.log(
+		`[ML] 1X2 feature vector for ${homeTeam.name} vs ${awayTeam.name}:`,
+		featuresToRecord(mlFeatures),
+	);
+
+	// ML returns probabilities in percentages (0-100)
+	let homeProb = mlPrediction.home;
+	let drawProb = mlPrediction.draw;
+	let awayProb = mlPrediction.away;
+
+	// =========================================================================
+	// STEP 2: Calculate factor scores for tracking/insights (not for prediction)
+	// =========================================================================
+	const formScore = calculateFormScore(homeOutcomeTeam, awayOutcomeTeam);
+	const h2hScore = calculateH2HScore(h2h);
+	const homeAdvantageScore = calculateHomeAdvantageScore(
+		homeOutcomeTeam,
+		awayOutcomeTeam,
+	);
+	const motivationScore = calculateMotivationScore(
+		homeOutcomeTeam,
+		awayOutcomeTeam,
+	);
+	const restScore = calculateRestScore(homeOutcomeTeam, awayOutcomeTeam);
+	const positionScore = calculatePositionScore(
+		homeOutcomeTeam,
+		awayOutcomeTeam,
+	);
+
+	// =========================================================================
+	// STEP 3: Collect ONLY rule-based adjustments (things ML doesn't know)
+	// =========================================================================
+	const homeAdjustments: Adjustment[] = [];
+	const awayAdjustments: Adjustment[] = [];
+
+	// Injury adjustments - ML doesn't have injury data
+	const injuryAdjustmentsHome = injuries?.homeAdjustments ?? [];
+	const injuryAdjustmentsAway = injuries?.awayAdjustments ?? [];
+	homeAdjustments.push(...injuryAdjustmentsHome);
+	awayAdjustments.push(...injuryAdjustmentsAway);
+
+	// Derby hangover - contextual, ML doesn't know recent match type
+	const homeDerbyHangover = buildPostDerbyHangoverAdjustment({
+		team: homeOutcomeTeam,
+	});
+	if (homeDerbyHangover) homeAdjustments.push(homeDerbyHangover.adj);
+	const awayDerbyHangover = buildPostDerbyHangoverAdjustment({
+		team: awayOutcomeTeam,
+	});
+	if (awayDerbyHangover) awayAdjustments.push(awayDerbyHangover.adj);
+
+	// Formation adjustments - tactical context
+	addFormationAdjustments(
+		homeOutcomeTeam,
+		awayOutcomeTeam,
+		homeAdjustments,
+		awayAdjustments,
+		0.5, // Reduced weight since ML already captures team quality
+	);
+
+	// Context adjustments (motivation, derby intensity, etc.)
+	if (context) {
+		addContextAdjustments(context, homeAdjustments, awayAdjustments);
+	}
+
+	// =========================================================================
+	// STEP 4: Apply rule-based adjustments to ML probabilities
+	// =========================================================================
+	const totalHomeAdj = homeAdjustments.reduce((sum, adj) => sum + adj.value, 0);
+	const totalAwayAdj = awayAdjustments.reduce((sum, adj) => sum + adj.value, 0);
+
+	// Apply adjustments (capped to prevent extreme swings)
+	const maxAdjustment = 15; // Max ±15% adjustment from rule-based
+	const cappedHomeAdj = clamp(totalHomeAdj, -maxAdjustment, maxAdjustment);
+	const cappedAwayAdj = clamp(totalAwayAdj, -maxAdjustment, maxAdjustment);
+
+	homeProb += cappedHomeAdj;
+	awayProb += cappedAwayAdj;
+	// Draw absorbs the difference
+	drawProb = 100 - homeProb - awayProb;
+
+	// Ensure valid probabilities
+	homeProb = clamp(homeProb, 1, 98);
+	awayProb = clamp(awayProb, 1, 98);
+	drawProb = clamp(drawProb, 1, 98);
+
+	// Normalize
+	const normalized = normalizeProbabilities(homeProb, drawProb, awayProb);
+
+	// =========================================================================
+	// STEP 5: Apply six-pointer draw boost and floors
+	// =========================================================================
+	const drawBoosted = applySixPointerDrawBoost(normalized, context);
+	const floored = applyProbabilityFloors(drawBoosted);
+
+	// =========================================================================
+	// STEP 6: Build result with tracking info
+	// =========================================================================
+	const baseConfidence = calculateBaseConfidence(
+		homeOutcomeTeam,
+		awayOutcomeTeam,
+	);
+
+	// Helper to summarize adjustments by category
+	const summarizeAdjustments = (adjs: Adjustment[]) => {
+		const categorySummary: Record<string, number> = {};
+		let totalPositive = 0;
+		let totalNegative = 0;
+		for (const adj of adjs) {
+			const cat = adj.type || "other";
+			categorySummary[cat] = (categorySummary[cat] || 0) + adj.value;
+			if (adj.value > 0) totalPositive += adj.value;
+			else totalNegative += adj.value;
+		}
+		return {
+			totalPositive,
+			totalNegative,
+			adjustmentCount: adjs.length,
+			categorySummary: categorySummary as Record<AdjustmentCategory, number>,
+		};
+	};
+
+	// Create result objects compatible with CappedAdjustmentResult
+	const homeResult = {
+		finalProbability: floored.home,
+		baseProbability: mlPrediction.home,
+		totalAdjustment: totalHomeAdj,
+		cappedAdjustments: homeAdjustments,
+		wasCapped: Math.abs(totalHomeAdj) > maxAdjustment,
+		confidenceLevel: baseConfidence,
+		adjustmentSummary: summarizeAdjustments(homeAdjustments),
+	};
+	const awayResult = {
+		finalProbability: floored.away,
+		baseProbability: mlPrediction.away,
+		totalAdjustment: totalAwayAdj,
+		cappedAdjustments: awayAdjustments,
+		wasCapped: Math.abs(totalAwayAdj) > maxAdjustment,
+		confidenceLevel: baseConfidence,
+		adjustmentSummary: summarizeAdjustments(awayAdjustments),
+	};
 
 	return buildMatchResultPrediction(
 		floored,
@@ -947,12 +1204,12 @@ function normalizeProbabilities(
 
 /**
  * Apply post-calibration floors to prevent extreme predictions
- * 
+ *
  * Bookmakers rarely price any outcome below certain thresholds:
  * - Home win: rarely below 5% even in extreme mismatches
  * - Draw: rarely below 8% in league matches
  * - Away win: rarely below 5%
- * 
+ *
  * This prevents the model from being overconfident on heavy favorites.
  */
 const PROBABILITY_FLOORS = {
@@ -963,18 +1220,18 @@ const PROBABILITY_FLOORS = {
 
 /**
  * Six-pointer draw boost configuration
- * 
+ *
  * In six-pointer matches (both teams fighting for same objective like relegation),
  * draws are historically more common because:
  * - Both teams play conservatively
  * - Neither can afford to lose
  * - High stakes lead to cagier, more defensive approaches
- * 
+ *
  * Bookmakers typically price draws higher in these matches.
  */
 const SIX_POINTER_DRAW_BOOST = {
 	boostAmount: 6, // +6% to draw probability
-	maxDraw: 38,    // Don't boost draw above 38%
+	maxDraw: 38, // Don't boost draw above 38%
 } as const;
 
 function applySixPointerDrawBoost(
@@ -987,21 +1244,21 @@ function applySixPointerDrawBoost(
 	}
 
 	const { home, draw, away } = probs;
-	
+
 	// Calculate boost amount, capped to not exceed maxDraw
 	const potentialDraw = draw + SIX_POINTER_DRAW_BOOST.boostAmount;
 	const newDraw = Math.min(potentialDraw, SIX_POINTER_DRAW_BOOST.maxDraw);
 	const actualBoost = newDraw - draw;
-	
+
 	if (actualBoost <= 0) {
 		return probs;
 	}
-	
+
 	// Redistribute the boost equally from home and away
 	const reduction = actualBoost / 2;
 	const newHome = Math.max(home - reduction, PROBABILITY_FLOORS.home);
 	const newAway = Math.max(away - reduction, PROBABILITY_FLOORS.away);
-	
+
 	// Normalize to ensure sum is 100
 	const total = newHome + newDraw + newAway;
 	return {
@@ -1011,35 +1268,37 @@ function applySixPointerDrawBoost(
 	};
 }
 
-function applyProbabilityFloors(
-	probs: { home: number; draw: number; away: number },
-): { home: number; draw: number; away: number } {
+function applyProbabilityFloors(probs: {
+	home: number;
+	draw: number;
+	away: number;
+}): { home: number; draw: number; away: number } {
 	let { home, draw, away } = probs;
-	
+
 	// Apply floors
 	const homeFloored = Math.max(home, PROBABILITY_FLOORS.home);
 	const drawFloored = Math.max(draw, PROBABILITY_FLOORS.draw);
 	const awayFloored = Math.max(away, PROBABILITY_FLOORS.away);
-	
+
 	// If floors were applied, we need to redistribute the excess
 	const homeAdded = homeFloored - home;
 	const drawAdded = drawFloored - draw;
 	const awayAdded = awayFloored - away;
 	const totalAdded = homeAdded + drawAdded + awayAdded;
-	
+
 	if (totalAdded === 0) {
 		// No floors applied, return as-is
 		return probs;
 	}
-	
+
 	// Redistribute: subtract from the highest probability proportionally
 	home = homeFloored;
 	draw = drawFloored;
 	away = awayFloored;
-	
+
 	// Find which outcome had the highest probability to reduce
 	const total = home + draw + away;
-	
+
 	// Normalize back to 100%
 	return {
 		home: Math.round((home / total) * 1000) / 10,

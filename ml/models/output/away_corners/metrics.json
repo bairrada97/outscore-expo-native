@@ -3,15 +3,15 @@
   "target": "away_corners",
   "type": "regression",
   "metric": "rmse",
-  "value": 2.534237636506161,
+  "value": 2.499516412004637,
   "best_params": {
-    "learning_rate": 0.059882140573016565,
-    "num_leaves": 48,
-    "min_child_samples": 28,
-    "subsample": 0.8647276959284411,
-    "colsample_bytree": 0.6556709641092594,
-    "reg_alpha": 0.5165628922537572,
-    "reg_lambda": 0.9789026664433859
+    "learning_rate": 0.06860029995104894,
+    "num_leaves": 26,
+    "min_child_samples": 69,
+    "subsample": 0.9624404313705641,
+    "colsample_bytree": 0.9834536462290551,
+    "reg_alpha": 0.966705690420778,
+    "reg_lambda": 0.11678031062076377
   },
   "rows": {
     "train": 37985,
