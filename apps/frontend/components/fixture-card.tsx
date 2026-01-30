@@ -1,5 +1,4 @@
 import { useGoalDetection } from "@/hooks/useGoalDetection";
-import { cn } from "@/lib/utils";
 import { formatH2HDate, getMatchOutcome } from "@/utils/fixture-to-match";
 import {
 	FIXTURE_BREAK_TIME,
@@ -17,6 +16,7 @@ import { Pressable, View } from "react-native";
 import { FixtureStatus } from "./fixture-status";
 import { FixtureTeam } from "./fixture-team";
 import { Text } from "./ui/text";
+import { MatchOutcomeBadge } from "./match-outcome-badge/match-outcome-badge";
 
 // Extended match with optional type for H2H/favorites
 type ExtendedFormattedMatch = FormattedMatch & {
@@ -60,22 +60,6 @@ function getStatusText(fixture: ExtendedFormattedMatch): string {
 
 	// Finished or other status
 	return statusShort;
-}
-
-/** W/D/L outcome badge for H2H view */
-function OutcomeBadge({ outcome }: { outcome: "W" | "D" | "L" }) {
-	return (
-		<View
-			className={cn(
-				"h-[22px] w-[22px] items-center justify-center rounded-[4px]",
-				outcome === "W" && "bg-dark-green",
-				outcome === "D" && "bg-neu-09",
-				outcome === "L" && "bg-red",
-			)}
-		>
-			<Text variant="body-02--semi" className="text-neu-01">{outcome}</Text>
-		</View>
-	);
 }
 
 /** H2H date display component */
@@ -182,7 +166,7 @@ export function FixtureCard({
 				{/* W/D/L Badge or Icons placeholder */}
 				{matchOutcome ? (
 					<View className="ml-8">
-						<OutcomeBadge outcome={matchOutcome} />
+						<MatchOutcomeBadge outcome={matchOutcome} />
 					</View>
 				) : (
 					<View className="ml-8 flex-row items-center gap-x-8">

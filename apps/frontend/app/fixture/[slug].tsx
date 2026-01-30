@@ -13,6 +13,8 @@ import { FixtureBestStats } from "@/components/fixture-best-stats/fixture-best-s
 import { FixtureEventsBlock } from "@/components/fixture-events-block";
 import { FixtureH2H } from "@/components/fixture-h2h/fixture-h2h";
 import { FixtureInfoHeader } from "@/components/fixture-info-header";
+import { FixtureOverviewDetails } from "@/components/fixture-overview-details/fixture-overview-details";
+import { FixtureTeamForm } from "@/components/fixture-team-form/fixture-team-form";
 import { FixtureStatistics } from "@/components/fixture-statistics/fixture-statistics";
 import { GoalAnalysisCard } from "@/components/insights/goal-analysis-card/goal-analysis-card";
 import { InsightsSectionHeader } from "@/components/insights/insights-section-header";
@@ -341,9 +343,16 @@ export default function FixtureDetailScreen() {
 							key: "overview",
 							title: "OVERVIEW",
 							render: () => (
-								<View className="p-16">
+								<View className="p-16 gap-16">
 									<FixtureBestStats fixture={fixture} />
 									<FixtureEventsBlock fixture={fixture} />
+									<FixtureTeamForm
+										homeTeamId={fixture.teams.home.id}
+										awayTeamId={fixture.teams.away.id}
+										homeTeamFixtures={contextData?.homeTeamFixtures ?? []}
+										awayTeamFixtures={contextData?.awayTeamFixtures ?? []}
+									/>
+									<FixtureOverviewDetails fixture={fixture} />
 								</View>
 							),
 						},
