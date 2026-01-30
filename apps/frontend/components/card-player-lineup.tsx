@@ -120,16 +120,16 @@ function getEventIcon(detail?: string, isAssist?: boolean): ReactElement | null 
 		default:
 			if (detail?.startsWith("Substitution")) {
 				return isAssist ? (
-					<SvgB044
-						width={ICON_SIZE}
-						height={ICON_SIZE}
-						className="text-red"
-					/>
-				) : (
 					<SvgB043
 						width={ICON_SIZE}
 						height={ICON_SIZE}
 						className="text-m-01-light-02"
+					/>
+				) : (
+					<SvgB044
+						width={ICON_SIZE}
+						height={ICON_SIZE}
+						className="text-red"
 					/>
 				);
 			}
@@ -219,8 +219,10 @@ export function CardPlayerLineup({
 				</Text>
 			)}
 
-			{/* Event icons */}
-			{(events?.length ?? 0) > 0 || (assistEvents?.length ?? 0) > 0 ? (
+			{/* Event + injury icons */}
+			{(events?.length ?? 0) > 0 ||
+			(assistEvents?.length ?? 0) > 0 ||
+			playerInjury ? (
 				<View className="ml-auto flex-row-reverse items-center gap-8">
 					{events?.map((event, index) => {
 						const icon = getEventIcon(event.detail);
@@ -234,15 +236,9 @@ export function CardPlayerLineup({
 						const key = `assist-${event.time.elapsed}-${event.detail}-${index}`;
 						return <View key={key}>{icon}</View>;
 					})}
+					{playerInjury ? getInjuryIcon(playerInjury) : null}
 				</View>
 			) : null}
-
-			{/* Injury icon */}
-			{playerInjury && (
-				<View className="ml-auto flex-row items-center gap-8">
-					{getInjuryIcon(playerInjury)}
-				</View>
-			)}
 		</View>
 	);
 }

@@ -125,7 +125,7 @@ export function Tabs({
 												"uppercase",
 												isActive
 													? "text-m-01 dark:text-m-01-light-04"
-													: "text-neu-09 dark:text-m-01-light-04",
+													: "text-neu-09 dark:text-neu-04",
 											)}
 										>
 											{tab.title}

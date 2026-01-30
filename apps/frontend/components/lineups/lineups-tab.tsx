@@ -126,7 +126,7 @@ export function LineupsTab({ fixture }: LineupsTabProps) {
 
 	const isWebPlatform = Platform.OS === "web";
 	// Calculate pitch dimensions (cap width on web for desktop layouts)
-	const maxPitchWidth = isWebPlatform ? 768 : 768;
+	const maxPitchWidth = 768;
 	const pitchWidth = Math.min(screenWidth - 32, maxPitchWidth);
 	const pitchHeight = isWebPlatform
 		? pitchWidth / PITCH_ASPECT_RATIO
