@@ -1239,7 +1239,7 @@ export const fixturesService = {
 		leagueId,
 		season,
 		env,
-		ctx: _ctx,
+		ctx,
 	}: {
 		leagueId: number;
 		season: number;
@@ -1250,13 +1250,80 @@ export const fixturesService = {
 			`🔍 [Standings] Request: leagueId=${leagueId}, season=${season}`,
 		);
 
-		const url = new URL(`${env.FOOTBALL_API_URL}/standings`);
-		url.searchParams.append("league", leagueId.toString());
-		url.searchParams.append("season", season.toString());
+		const params = {
+			leagueId: leagueId.toString(),
+			season: season.toString(),
+		};
+		const dedupKey = getCacheKey("standings", params);
 
-		const dedupKey = `standings:${leagueId}:${season}`;
+		// 1. Check cache first
+		const cacheResult = await cacheGet<StandingsApiResponse["response"][0]>(
+			env,
+			"standings",
+			params,
+		);
 
+		if (cacheResult.data && cacheResult.source !== "none") {
+			if (!isStale(cacheResult.meta, "standings", params)) {
+				console.log(`✅ [Standings] Cache hit for league ${leagueId}`);
+				return {
+					data: cacheResult.data,
+					source:
+						cacheResult.source === "edge"
+							? "Edge Cache"
+							: cacheResult.source === "r2"
+								? "R2"
+								: "KV",
+				};
+			}
+
+			// Stale-while-revalidate: return stale data and refresh in background
+			console.log(`⏳ [Standings] Cache data is stale`);
+			ctx.waitUntil(
+				withDeduplication(dedupKey, async () => {
+					const refreshed = await fetchStandingsFromApi();
+					if (refreshed) {
+						await cacheSet(env, "standings", params, refreshed).catch((err) => {
+							console.error(
+								`❌ [Standings] Failed to cache league ${leagueId} standings:`,
+								err,
+							);
+						});
+					}
+				}),
+			);
+
+			return {
+				data: cacheResult.data,
+				source: "Stale Cache",
+			};
+		}
+
+		// 2. Cache miss: fetch with deduplication
 		return withDeduplication(dedupKey, async () => {
+			const fresh = await fetchStandingsFromApi();
+			if (!fresh) return null;
+
+			ctx.waitUntil(
+				cacheSet(env, "standings", params, fresh).catch((err) => {
+					console.error(
+						`❌ [Standings] Failed to cache league ${leagueId} standings:`,
+						err,
+					);
+				}),
+			);
+
+			return {
+				data: fresh,
+				source: "API",
+			};
+		});
+
+		async function fetchStandingsFromApi() {
+			const url = new URL(`${env.FOOTBALL_API_URL}/standings`);
+			url.searchParams.append("league", leagueId.toString());
+			url.searchParams.append("season", season.toString());
+
 			const controller = new AbortController();
 			const timeoutMs = 15000;
 			const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -1284,17 +1351,14 @@ export const fixturesService = {
 					return null;
 				}
 
-				return {
-					data: rawStandings,
-					source: "API",
-				};
+				return rawStandings;
 			} catch (error) {
 				console.error(`❌ [Standings] Error fetching standings:`, error);
 				return null;
 			} finally {
 				clearTimeout(timeoutId);
 			}
-		});
+		}
 	},
 };
 

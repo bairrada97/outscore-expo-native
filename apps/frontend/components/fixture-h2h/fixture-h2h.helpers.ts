@@ -71,7 +71,9 @@ export function filterMatchesByVenue(
 
 	return fixtures.filter((f) => {
 		const isHome = f.teams.home.id === teamId;
+		const isAway = f.teams.away.id === teamId;
 		if (filter === "home") return isHome;
-		return !isHome; // away
+		if (filter === "away") return isAway;
+		return isHome || isAway;
 	});
 }
