@@ -963,6 +963,78 @@ export interface FactCard {
 }
 
 /**
+ * Raw fixture data for H2H tab display
+ */
+export interface RawFixtureForDisplay {
+  id: number;
+  date: string;
+  timestamp: number;
+  status: {
+    short: string;
+    long: string;
+  };
+  teams: {
+    home: {
+      id: number;
+      name: string;
+      logo: string;
+      winner: boolean | null;
+    };
+    away: {
+      id: number;
+      name: string;
+      logo: string;
+      winner: boolean | null;
+    };
+  };
+  goals: {
+    home: number | null;
+    away: number | null;
+  };
+  score: {
+    fulltime: {
+      home: number | null;
+      away: number | null;
+    };
+    penalty: {
+      home: number | null;
+      away: number | null;
+    };
+  };
+  league: {
+    id: number;
+    name: string;
+    season: number;
+  };
+}
+
+/**
+ * Raw standings data for standings tab display
+ */
+export interface RawStandingsForDisplay {
+  leagueId: number;
+  season: number;
+  rows: Array<{
+    rank: number;
+    team: {
+      id: number;
+      name: string;
+      logo?: string;
+    };
+    points: number;
+    goalsDiff: number;
+    played: number;
+    win: number;
+    draw: number;
+    loss: number;
+    goalsFor: number;
+    goalsAgainst: number;
+    form: string | null;
+    description: string | null;
+  }>;
+}
+
+/**
  * Complete betting insights API response
  */
 export interface BettingInsightsResponse {
@@ -1012,6 +1084,14 @@ export interface BettingInsightsResponse {
   generatedAt: string;
   /** Cache source (for debugging) */
   source?: string;
+  /** Raw H2H fixtures for display (last 5) */
+  h2hFixtures?: RawFixtureForDisplay[];
+  /** Raw home team fixtures for display (last 50) */
+  homeTeamFixtures?: RawFixtureForDisplay[];
+  /** Raw away team fixtures for display (last 50) */
+  awayTeamFixtures?: RawFixtureForDisplay[];
+  /** Raw standings for display */
+  standings?: RawStandingsForDisplay;
 }
 
 // ============================================================================

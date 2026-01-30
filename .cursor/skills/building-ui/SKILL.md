@@ -61,6 +61,7 @@ Expo Go supports a huge range of features out of the box:
 - Always remove old route files when moving or restructuring navigation
 - Never use special characters in file names
 - Configure tsconfig.json with path aliases, and prefer aliases over relative imports for refactors.
+- Never add utils files directly under `components/`; create a component folder for helpers.
 
 ## Routes
 

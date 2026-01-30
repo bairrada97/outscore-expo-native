@@ -22,6 +22,13 @@ function slugify(text: string): string {
  * Example: "tottenham-hotspur-vs-afc-bournemouth-1234567"
  */
 export function generateFixtureSlug(fixture: FormattedMatch): string {
+	// Guard against invalid fixture data
+	if (!fixture?.id || !fixture?.teams?.home?.name || !fixture?.teams?.away?.name) {
+		console.error("[generateFixtureSlug] Invalid fixture data:", fixture);
+		// Return a fallback slug that won't break navigation
+		return `invalid-fixture-${fixture?.id ?? "unknown"}`;
+	}
+
 	const homeTeam = slugify(fixture.teams.home.name);
 	const awayTeam = slugify(fixture.teams.away.name);
 	const fixtureId = fixture.id;
@@ -33,6 +40,12 @@ export function generateFixtureSlug(fixture: FormattedMatch): string {
  * The ID is always the last segment after the final hyphen
  */
 export function parseFixtureSlug(slug: string): number {
+	// Guard against undefined or invalid slug
+	if (!slug || slug === "undefined" || typeof slug !== "string") {
+		console.error("[parseFixtureSlug] Invalid slug:", slug);
+		return Number.NaN;
+	}
+
 	const parts = slug.split("-");
 	return parseInt(parts[parts.length - 1], 10);
 }

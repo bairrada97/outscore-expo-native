@@ -1121,4 +1121,362 @@ export const fixturesService = {
 			}
 		});
 	},
+
+	/**
+	 * Get fixture context data (H2H, team fixtures, standings)
+	 * Independent of insights - works for any match status
+	 */
+	async getFixtureContext({
+		fixtureId,
+		env,
+		ctx,
+	}: {
+		fixtureId: number;
+		env: FixturesEnv;
+		ctx: ExecutionContext;
+	}): Promise<FixtureContextServiceResult> {
+		console.log(`🔍 [FixtureContext] Request: fixtureId=${fixtureId}`);
+
+		// 1. First get fixture detail to know the teams and league
+		const fixtureResult = await this.getFixtureDetail({
+			fixtureId,
+			env,
+			ctx,
+		});
+
+		const fixture = fixtureResult.data.response?.[0];
+		if (!fixture) {
+			throw new Error(`Fixture ${fixtureId} not found`);
+		}
+
+		const homeTeamId = fixture.teams.home.id;
+		const awayTeamId = fixture.teams.away.id;
+		const leagueId = fixture.league.id;
+		const season = fixture.league.season;
+
+		// 2. Fetch all context data in parallel
+		const [h2hResult, homeTeamResult, awayTeamResult, standingsResult] =
+			await Promise.all([
+				this.getH2HFixtures({
+					team1: homeTeamId,
+					team2: awayTeamId,
+					last: 5,
+					env,
+					ctx,
+				}).catch((err) => {
+					console.warn(`⚠️ [FixtureContext] H2H fetch failed:`, err);
+					return null;
+				}),
+				this.getTeamFixtures({
+					teamId: homeTeamId,
+					last: 50,
+					env,
+					ctx,
+				}).catch((err) => {
+					console.warn(`⚠️ [FixtureContext] Home team fixtures failed:`, err);
+					return null;
+				}),
+				this.getTeamFixtures({
+					teamId: awayTeamId,
+					last: 50,
+					env,
+					ctx,
+				}).catch((err) => {
+					console.warn(`⚠️ [FixtureContext] Away team fixtures failed:`, err);
+					return null;
+				}),
+				this.getStandings({
+					leagueId,
+					season,
+					env,
+					ctx,
+				}).catch((err) => {
+					console.warn(`⚠️ [FixtureContext] Standings fetch failed:`, err);
+					return null;
+				}),
+			]);
+
+		// 3. Convert to display format
+		const h2hFixtures = convertFixturesToDisplay(
+			h2hResult?.data.response ?? [],
+			fixtureId,
+		);
+		const homeTeamFixtures = convertFixturesToDisplay(
+			homeTeamResult?.data.response ?? [],
+			fixtureId,
+		);
+		const awayTeamFixtures = convertFixturesToDisplay(
+			awayTeamResult?.data.response ?? [],
+			fixtureId,
+		);
+		const standings = standingsResult?.data
+			? convertStandingsToDisplay(standingsResult.data)
+			: undefined;
+
+		return {
+			data: {
+				h2hFixtures,
+				homeTeamFixtures,
+				awayTeamFixtures,
+				standings,
+			},
+			source: "API",
+		};
+	},
+
+	/**
+	 * Get standings for a league (reuses or creates from API)
+	 */
+	async getStandings({
+		leagueId,
+		season,
+		env,
+		ctx: _ctx,
+	}: {
+		leagueId: number;
+		season: number;
+		env: FixturesEnv;
+		ctx: ExecutionContext;
+	}): Promise<StandingsServiceResult | null> {
+		console.log(
+			`🔍 [Standings] Request: leagueId=${leagueId}, season=${season}`,
+		);
+
+		const url = new URL(`${env.FOOTBALL_API_URL}/standings`);
+		url.searchParams.append("league", leagueId.toString());
+		url.searchParams.append("season", season.toString());
+
+		try {
+			const response = await fetch(url.toString(), {
+				headers: {
+					"x-rapidapi-host": "api-football-v1.p.rapidapi.com",
+					"x-rapidapi-key": env.RAPIDAPI_KEY,
+				},
+			});
+
+			if (!response.ok) {
+				console.warn(
+					`⚠️ [Standings] Failed to fetch standings for league ${leagueId}`,
+				);
+				return null;
+			}
+
+			const data = (await response.json()) as StandingsApiResponse;
+			const rawStandings = data.response?.[0];
+
+			if (!rawStandings?.league?.standings?.[0]) {
+				return null;
+			}
+
+			return {
+				data: rawStandings,
+				source: "API",
+			};
+		} catch (error) {
+			console.error(`❌ [Standings] Error fetching standings:`, error);
+			return null;
+		}
+	},
 };
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+interface RawFixtureForDisplay {
+	id: number;
+	date: string;
+	timestamp: number;
+	status: {
+		short: string;
+		long: string;
+	};
+	teams: {
+		home: {
+			id: number;
+			name: string;
+			logo: string;
+			winner: boolean | null;
+		};
+		away: {
+			id: number;
+			name: string;
+			logo: string;
+			winner: boolean | null;
+		};
+	};
+	goals: {
+		home: number | null;
+		away: number | null;
+	};
+	score: {
+		fulltime: {
+			home: number | null;
+			away: number | null;
+		};
+		penalty: {
+			home: number | null;
+			away: number | null;
+		};
+	};
+	league: {
+		id: number;
+		name: string;
+		season: number;
+	};
+}
+
+interface RawStandingsForDisplay {
+	leagueId: number;
+	season: number;
+	rows: Array<{
+		rank: number;
+		team: {
+			id: number;
+			name: string;
+			logo?: string;
+		};
+		points: number;
+		goalsDiff: number;
+		played: number;
+		win: number;
+		draw: number;
+		loss: number;
+		goalsFor: number;
+		goalsAgainst: number;
+		form: string | null;
+		description: string | null;
+	}>;
+}
+
+export interface FixtureContextServiceResult {
+	data: {
+		h2hFixtures: RawFixtureForDisplay[];
+		homeTeamFixtures: RawFixtureForDisplay[];
+		awayTeamFixtures: RawFixtureForDisplay[];
+		standings?: RawStandingsForDisplay;
+	};
+	source: string;
+}
+
+interface StandingsServiceResult {
+	data: StandingsApiResponse["response"][0];
+	source: string;
+}
+
+interface StandingsApiResponse {
+	response: Array<{
+		league: {
+			id: number;
+			name: string;
+			country: string;
+			logo: string;
+			flag: string | null;
+			season: number;
+			standings: Array<
+				Array<{
+					rank: number;
+					team: {
+						id: number;
+						name: string;
+						logo: string;
+					};
+					points: number;
+					goalsDiff: number;
+					group: string;
+					form: string | null;
+					status: string;
+					description: string | null;
+					all: {
+						played: number;
+						win: number;
+						draw: number;
+						lose: number;
+						goals: { for: number; against: number };
+					};
+				}>
+			>;
+		};
+	}>;
+}
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+/**
+ * Convert API fixtures to display format
+ */
+function convertFixturesToDisplay(
+	fixtures: Fixture[],
+	excludeFixtureId?: number,
+): RawFixtureForDisplay[] {
+	return fixtures
+		.filter((f) => f.fixture.id !== excludeFixtureId)
+		.filter((f) => ["FT", "AET", "PEN"].includes(f.fixture.status.short))
+		.map((f) => ({
+			id: f.fixture.id,
+			date: f.fixture.date,
+			timestamp: f.fixture.timestamp,
+			status: {
+				short: f.fixture.status.short,
+				long: f.fixture.status.long,
+			},
+			teams: {
+				home: {
+					id: f.teams.home.id,
+					name: f.teams.home.name,
+					logo: f.teams.home.logo,
+					winner: f.teams.home.winner,
+				},
+				away: {
+					id: f.teams.away.id,
+					name: f.teams.away.name,
+					logo: f.teams.away.logo,
+					winner: f.teams.away.winner,
+				},
+			},
+			goals: f.goals,
+			score: {
+				fulltime: f.score.fulltime,
+				penalty: f.score.penalty,
+			},
+			league: {
+				id: f.league.id,
+				name: f.league.name,
+				season: f.league.season,
+			},
+		}));
+}
+
+/**
+ * Convert API standings to display format
+ */
+function convertStandingsToDisplay(
+	raw: StandingsApiResponse["response"][0],
+): RawStandingsForDisplay {
+	const standingsRows = raw.league.standings[0] ?? [];
+
+	return {
+		leagueId: raw.league.id,
+		season: raw.league.season,
+		rows: standingsRows.map((row) => ({
+			rank: row.rank,
+			team: {
+				id: row.team.id,
+				name: row.team.name,
+				logo: row.team.logo,
+			},
+			points: row.points,
+			goalsDiff: row.goalsDiff,
+			played: row.all.played,
+			win: row.all.win,
+			draw: row.all.draw,
+			loss: row.all.lose,
+			goalsFor: row.all.goals.for,
+			goalsAgainst: row.all.goals.against,
+			form: row.form,
+			description: row.description,
+		})),
+	};
+}
