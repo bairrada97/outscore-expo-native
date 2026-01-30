@@ -3,7 +3,7 @@ import { cva } from "class-variance-authority";
 import { View } from "react-native";
 import { Text } from "./ui/text";
 
-const fixtureTeam = cva(["flex flex-row gap-y-0 gap-x-8"], {
+const fixtureTeam = cva(["flex flex-row gap-y-0 gap-x-8 dark:text-neu-04"], {
 	variants: {
 		bold: {
 			true: ["font-sans-bold", "dark:text-neu-01"],

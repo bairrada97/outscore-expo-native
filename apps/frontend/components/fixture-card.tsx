@@ -1,4 +1,6 @@
 import { useGoalDetection } from "@/hooks/useGoalDetection";
+import { cn } from "@/lib/utils";
+import { formatH2HDate, getMatchOutcome } from "@/utils/fixture-to-match";
 import {
 	FIXTURE_BREAK_TIME,
 	FIXTURE_HALF_TIME,
@@ -14,6 +16,7 @@ import {
 import { Pressable, View } from "react-native";
 import { FixtureStatus } from "./fixture-status";
 import { FixtureTeam } from "./fixture-team";
+import { Text } from "./ui/text";
 
 // Extended match with optional type for H2H/favorites
 type ExtendedFormattedMatch = FormattedMatch & {
@@ -25,6 +28,8 @@ interface FixtureCardProps {
 	isLastMatch?: boolean;
 	onPress?: () => void;
 	onPressIn?: () => void;
+	/** Team ID to show W/D/L outcome badge for (used in H2H view) */
+	perspectiveTeamId?: number;
 }
 
 // Compute status text directly without hooks
@@ -57,13 +62,46 @@ function getStatusText(fixture: ExtendedFormattedMatch): string {
 	return statusShort;
 }
 
+/** W/D/L outcome badge for H2H view */
+function OutcomeBadge({ outcome }: { outcome: "W" | "D" | "L" }) {
+	return (
+		<View
+			className={cn(
+				"h-[22px] w-[22px] items-center justify-center rounded-[4px]",
+				outcome === "W" && "bg-dark-green",
+				outcome === "D" && "bg-neu-09",
+				outcome === "L" && "bg-red",
+			)}
+		>
+			<Text variant="body-02--semi" className="text-neu-01">{outcome}</Text>
+		</View>
+	);
+}
+
+/** H2H date display component */
+function H2HDateDisplay({ dateStr }: { dateStr: string }) {
+	const { day, year } = formatH2HDate(dateStr);
+
+	return (
+		<View className="min-w-40 items-start">
+			<Text variant="body-02--semi" className="text-neu-10 dark:text-neu-04">
+				{day}
+			</Text>
+			{year && (
+				<Text variant="body-02--semi" className="text-neu-07 dark:text-neu-06">{year}</Text>
+			)}
+		</View>
+	);
+}
+
 export function FixtureCard({
 	fixture,
 	isLastMatch = false,
 	onPress,
 	onPressIn,
+	perspectiveTeamId,
 }: FixtureCardProps) {
-	const { status, teams, score, goals, type = null } = fixture;
+	const { status, teams, score, goals, type = null, date } = fixture;
 
 	const statusShort = status?.short;
 	const matchIsLive = statusShort ? isLiveStatus(statusShort) : false;
@@ -71,7 +109,8 @@ export function FixtureCard({
 	const matchHasNotStarted = statusShort
 		? isNotStartedStatus(statusShort)
 		: false;
-	const notH2H = type !== "H2H";
+	const isH2H = type === "H2H";
+	const notH2H = !isH2H;
 
 	// Compute status text directly
 	const statusText = getStatusText(fixture);
@@ -87,6 +126,15 @@ export function FixtureCard({
 		matchIsLive ? homeTeamGoals : null,
 		matchIsLive ? awayTeamGoals : null,
 	);
+
+	// Get match outcome for H2H badge
+	const matchOutcome =
+		perspectiveTeamId && matchIsFinished
+			? getMatchOutcome(fixture, perspectiveTeamId)
+			: null;
+
+	// Show H2H date for finished H2H matches
+	const showH2HDate = isH2H && matchIsFinished;
 
 	return (
 		<Pressable
@@ -105,11 +153,15 @@ export function FixtureCard({
 					<View className="absolute inset-1 rounded-[4px] bg-m-01-light-02 opacity-10 dark:bg-m-01-light-04" />
 				)}
 
-				{/* Status */}
-				<FixtureStatus
-					status={statusText}
-					matchIsLiveOrFinished={matchIsLive || (matchIsFinished && notH2H)}
-				/>
+				{/* Status or H2H Date */}
+				{showH2HDate ? (
+					<H2HDateDisplay dateStr={date} />
+				) : (
+					<FixtureStatus
+						status={statusText}
+						matchIsLiveOrFinished={matchIsLive || (matchIsFinished && notH2H)}
+					/>
+				)}
 
 				{/* Teams container */}
 				<View className="flex flex-1 flex-col justify-center gap-y-1">
@@ -127,13 +179,19 @@ export function FixtureCard({
 					/>
 				</View>
 
-				{/* Icons placeholder - Star + More */}
-				<View className="ml-8 flex-row items-center gap-x-8">
-					{/* Favorite star icon will go here */}
-					<View className="h-24 w-24" />
-					{/* More options icon will go here */}
-					<View className="h-24 w-24" />
-				</View>
+				{/* W/D/L Badge or Icons placeholder */}
+				{matchOutcome ? (
+					<View className="ml-8">
+						<OutcomeBadge outcome={matchOutcome} />
+					</View>
+				) : (
+					<View className="ml-8 flex-row items-center gap-x-8">
+						{/* Favorite star icon will go here */}
+						<View className="h-24 w-24" />
+						{/* More options icon will go here */}
+						<View className="h-24 w-24" />
+					</View>
+				)}
 			</View>
 
 			{!isLastMatch && (

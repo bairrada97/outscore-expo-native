@@ -5,6 +5,78 @@ import { FetchError, fetchJsonWithTimeout } from "@/utils/fetch-with-timeout";
  * Minimal typing for the insights response we render in the fixture screen.
  * (Backend types are not shared with the frontend package.)
  */
+/**
+ * Raw fixture data for H2H display (from insights response)
+ */
+export type RawFixtureForDisplay = {
+  id: number;
+  date: string;
+  timestamp: number;
+  status: {
+    short: string;
+    long: string;
+  };
+  teams: {
+    home: {
+      id: number;
+      name: string;
+      logo: string;
+      winner: boolean | null;
+    };
+    away: {
+      id: number;
+      name: string;
+      logo: string;
+      winner: boolean | null;
+    };
+  };
+  goals: {
+    home: number | null;
+    away: number | null;
+  };
+  score: {
+    fulltime: {
+      home: number | null;
+      away: number | null;
+    };
+    penalty: {
+      home: number | null;
+      away: number | null;
+    };
+  };
+  league: {
+    id: number;
+    name: string;
+    season: number;
+  };
+};
+
+/**
+ * Raw standings data for standings display (from insights response)
+ */
+export type RawStandingsForDisplay = {
+  leagueId: number;
+  season: number;
+  rows: Array<{
+    rank: number;
+    team: {
+      id: number;
+      name: string;
+      logo?: string;
+    };
+    points: number;
+    goalsDiff: number;
+    played: number;
+    win: number;
+    draw: number;
+    loss: number;
+    goalsFor: number;
+    goalsAgainst: number;
+    form: string | null;
+    description: string | null;
+  }>;
+};
+
 export type BettingInsightsResponse = {
   fixtureId: number;
   match: {
@@ -97,6 +169,14 @@ export type BettingInsightsResponse = {
   };
   overallConfidence?: "HIGH" | "MEDIUM" | "LOW";
   generatedAt?: string;
+  /** Raw H2H fixtures for H2H tab display */
+  h2hFixtures?: RawFixtureForDisplay[];
+  /** Raw home team fixtures for H2H tab display */
+  homeTeamFixtures?: RawFixtureForDisplay[];
+  /** Raw away team fixtures for H2H tab display */
+  awayTeamFixtures?: RawFixtureForDisplay[];
+  /** Raw standings for standings tab display */
+  standings?: RawStandingsForDisplay;
 };
 
 /**

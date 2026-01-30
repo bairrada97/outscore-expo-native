@@ -1,5 +1,19 @@
+import type {
+	Fixture,
+	FixturesResponse,
+	FormattedCountry,
+	FormattedLeague,
+	FormattedMatch,
+} from "@outscore/shared-types";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useRef } from "react";
+import { ActivityIndicator, View } from "react-native";
+import { FixtureBestStats } from "@/components/fixture-best-stats/fixture-best-stats";
 import { FixtureEventsBlock } from "@/components/fixture-events-block";
+import { FixtureH2H } from "@/components/fixture-h2h/fixture-h2h";
 import { FixtureInfoHeader } from "@/components/fixture-info-header";
+import { FixtureStatistics } from "@/components/fixture-statistics/fixture-statistics";
 import { GoalAnalysisCard } from "@/components/insights/goal-analysis-card/goal-analysis-card";
 import { InsightsSectionHeader } from "@/components/insights/insights-section-header";
 import { KeyInsightsList } from "@/components/insights/key-insights-list";
@@ -13,6 +27,7 @@ import {
 	fixtureByIdQuery,
 	getFixtureRefetchInterval,
 } from "@/queries/fixture-by-id";
+import { fixtureContextQuery } from "@/queries/fixture-context";
 import { createFixturesQueryKey } from "@/queries/fixtures-by-date";
 import { insightsByFixtureIdQuery } from "@/queries/insights-by-fixture-id";
 import { FIFTEEN_SECONDS_CACHE } from "@/utils/constants";
@@ -23,17 +38,6 @@ import {
 	FIXTURE_IS_LIVE_STATUS,
 } from "@/utils/fixtures-status-constants";
 import { isWeb } from "@/utils/platform";
-import type {
-	Fixture,
-	FixturesResponse,
-	FormattedCountry,
-	FormattedLeague,
-	FormattedMatch,
-} from "@outscore/shared-types";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useRef } from "react";
-import { ActivityIndicator, View } from "react-native";
 
 const FIXTURE_TABS = [
 	{ key: "overview", title: "OVERVIEW" },
@@ -126,8 +130,6 @@ function placeholderFixtureResponseFromCache(
 			id: match.id,
 			referee: null,
 			timezone: match.timezone,
-			// Include kickoff time to avoid local-midnight parsing (e.g. 01:00 flashes)
-			// match.time is already formatted (HH:mm) in fixtures-by-date.
 			date: `${match.date}T${match.time}:00`,
 			timestamp: match.timestamp,
 			periods: { first: null, second: null },
@@ -259,6 +261,14 @@ export default function FixtureDetailScreen() {
 		},
 	});
 
+	// Fetch context data (H2H, team fixtures, standings) AFTER insights completes
+	// This avoids duplicate backend API calls since insights caches the same data
+	const { data: contextData, isLoading: isContextLoading } = useQuery({
+		...fixtureContextQuery({ fixtureId }),
+		// Only enable after insights query completes (success, error, or disabled)
+		enabled: !isInsightsLoading && Number.isFinite(fixtureId) && fixtureId > 0,
+	});
+
 	const matchOutcomeSimulation = insightsData?.simulations?.find(
 		(simulation) => simulation.scenarioType === "MatchOutcome",
 	);
@@ -291,7 +301,9 @@ export default function FixtureDetailScreen() {
 		);
 	}
 
-	if (!data) {
+	const fixture = data?.response?.[0];
+
+	if (!data || !fixture) {
 		return (
 			<>
 				<Stack.Screen options={{ headerShown: false }} />
@@ -301,8 +313,6 @@ export default function FixtureDetailScreen() {
 			</>
 		);
 	}
-
-	const fixture = data.response?.[0];
 
 	return (
 		<>
@@ -332,6 +342,7 @@ export default function FixtureDetailScreen() {
 							title: "OVERVIEW",
 							render: () => (
 								<View className="p-16">
+									<FixtureBestStats fixture={fixture} />
 									<FixtureEventsBlock fixture={fixture} />
 								</View>
 							),
@@ -446,9 +457,7 @@ export default function FixtureDetailScreen() {
 							title: "STATISTICS",
 							render: () => (
 								<View className="p-16">
-									<Text className="text-neu-07 dark:text-neu-06">
-										Coming soon
-									</Text>
+									<FixtureStatistics fixture={fixture} />
 								</View>
 							),
 						},
@@ -456,10 +465,12 @@ export default function FixtureDetailScreen() {
 							key: "h2h",
 							title: "H2H",
 							render: () => (
-								<View className="p-16">
-									<Text className="text-neu-07 dark:text-neu-06">
-										Coming soon
-									</Text>
+								<View className="pt-24 px-16 pb-16">
+									<FixtureH2H
+										fixture={fixture}
+										contextData={contextData}
+										isContextLoading={isContextLoading}
+									/>
 								</View>
 							),
 						},

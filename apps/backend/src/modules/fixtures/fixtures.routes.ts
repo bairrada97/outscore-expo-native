@@ -1,9 +1,15 @@
 import { zValidator } from "@hono/zod-validator";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { z } from "zod";
 import { isValidTimezone } from "../timezones";
 import { type FixturesEnv, fixturesService } from "./fixtures.service";
 import { parseH2HParam } from "./utils";
+
+type FixturesContext = Context<
+	{ Bindings: FixturesEnv },
+	string,
+	Record<string, unknown>
+>;
 
 export const createFixturesRoutes = () => {
 	const fixtures = new Hono<{ Bindings: FixturesEnv }>();
@@ -150,6 +156,28 @@ export const createFixturesRoutes = () => {
 		},
 	);
 
+	// Context query schema (for fixture detail page H2H/Standings tabs)
+	const contextParamsSchema = z.object({
+		fixtureId: z
+			.string()
+			.regex(/^\d+$/, "Fixture ID must be a number")
+			.transform((val) => parseInt(val, 10)),
+	});
+
+	/**
+	 * GET /fixtures/:fixtureId/context - Get H2H, team fixtures, and standings
+	 * Independent of insights - works for any match status
+	 */
+	fixtures.get(
+		"/:fixtureId/context",
+		zValidator("param", contextParamsSchema),
+		async (context) => {
+			const { fixtureId } = context.req.valid("param");
+			const requestStartTime = performance.now();
+			return handleFixtureContext(context, fixtureId, requestStartTime);
+		},
+	);
+
 	return fixtures;
 };
 
@@ -157,7 +185,7 @@ export const createFixturesRoutes = () => {
  * Handle fixture detail request
  */
 async function handleFixtureDetail(
-	context: Parameters<Parameters<ReturnType<typeof Hono.prototype.get>>[1]>[0],
+	context: FixturesContext,
 	fixtureId: number,
 	requestStartTime: number,
 ) {
@@ -275,7 +303,7 @@ async function handleFixtureDetail(
  * Handle fixtures list request
  */
 async function handleFixturesList(
-	context: Parameters<Parameters<ReturnType<typeof Hono.prototype.get>>[1]>[0],
+	context: FixturesContext,
 	date: string | undefined,
 	from: string | undefined,
 	to: string | undefined,
@@ -407,7 +435,7 @@ async function handleFixturesList(
  * Handle team fixtures request
  */
 async function handleTeamFixtures(
-	context: Parameters<Parameters<ReturnType<typeof Hono.prototype.get>>[1]>[0],
+	context: FixturesContext,
 	teamId: number,
 	last: number,
 	requestStartTime: number,
@@ -472,7 +500,7 @@ async function handleTeamFixtures(
  * Handle H2H fixtures request
  */
 async function handleH2HFixtures(
-	context: Parameters<Parameters<ReturnType<typeof Hono.prototype.get>>[1]>[0],
+	context: FixturesContext,
 	h2h: string,
 	last: number,
 	requestStartTime: number,
@@ -553,7 +581,7 @@ async function handleH2HFixtures(
  * Handle injuries request
  */
 async function handleInjuries(
-	context: Parameters<Parameters<ReturnType<typeof Hono.prototype.get>>[1]>[0],
+	context: FixturesContext,
 	fixtureId: number,
 	season: number,
 	requestStartTime: number,
@@ -593,6 +621,76 @@ async function handleInjuries(
 
 		if (error instanceof Error) {
 			if (error.message.includes("API rate limit")) {
+				errorMessage = "API rate limit exceeded. Please try again later.";
+				statusCode = 429;
+			} else if (error.message.includes("API request failed")) {
+				errorMessage = "External API request failed. Please try again later.";
+				statusCode = 502;
+			}
+		}
+
+		return context.json(
+			{
+				status: "error",
+				message: errorMessage,
+				error: error instanceof Error ? error.message : String(error),
+			},
+			statusCode,
+		);
+	}
+}
+
+/**
+ * Handle fixture context request (H2H, team fixtures, standings)
+ * Independent of insights - works for any match status
+ */
+async function handleFixtureContext(
+	context: FixturesContext,
+	fixtureId: number,
+	requestStartTime: number,
+) {
+	try {
+		const result = await fixturesService.getFixtureContext({
+			fixtureId,
+			env: context.env,
+			ctx: context.executionCtx,
+		});
+
+		const responseTime = (performance.now() - requestStartTime).toFixed(2);
+
+		console.log(
+			`📊 [FixtureContext] fixtureId=${fixtureId}, ` +
+				`h2h=${result.data.h2hFixtures?.length ?? 0}, ` +
+				`home=${result.data.homeTeamFixtures?.length ?? 0}, ` +
+				`away=${result.data.awayTeamFixtures?.length ?? 0}, ` +
+				`standings=${Boolean(result.data.standings)}, ` +
+				`time=${responseTime}ms`,
+		);
+
+		// Cache for 1 hour (standings/H2H don't change often)
+		context.header(
+			"Cache-Control",
+			"public, max-age=3600, stale-while-revalidate=7200",
+		);
+		context.header("X-Source", result.source);
+
+		return context.json({
+			status: "success",
+			fixtureId,
+			source: result.source,
+			data: result.data,
+		});
+	} catch (error) {
+		console.error("❌ [FixtureContext] Error:", error);
+
+		let errorMessage = "Failed to fetch fixture context";
+		let statusCode: 500 | 429 | 502 | 404 = 500;
+
+		if (error instanceof Error) {
+			if (error.message.includes("not found")) {
+				errorMessage = "Fixture not found";
+				statusCode = 404;
+			} else if (error.message.includes("API rate limit")) {
 				errorMessage = "API rate limit exceeded. Please try again later.";
 				statusCode = 429;
 			} else if (error.message.includes("API request failed")) {

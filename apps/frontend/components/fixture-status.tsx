@@ -6,7 +6,7 @@ import { Text } from "./ui/text";
 const fixtureStatus = cva([], {
 	variants: {
 		matchIsLiveOrFinished: {
-			true: ["text-neu-10", "dark:text-neu-04"],
+			true: ["text-neu-10", "dark:text-neu-06"],
 		},
 	},
 });
