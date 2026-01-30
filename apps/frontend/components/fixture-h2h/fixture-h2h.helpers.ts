@@ -34,6 +34,8 @@ export function rawFixtureToH2HMatch(
 				.padStart(2, "0")}`
 		: "";
 
+	const validatedShort = getValidatedStatusShort(raw.status?.short);
+
 	return {
 		id: raw.id,
 		date: raw.date,
@@ -41,8 +43,8 @@ export function rawFixtureToH2HMatch(
 		timestamp: raw.timestamp,
 		timezone: "UTC",
 		status: {
-			long: raw.status?.long ?? "Match Finished",
-			short: getValidatedStatusShort(raw.status?.short),
+			long: raw.status?.long ?? getFallbackStatusLong(validatedShort),
+			short: validatedShort,
 			elapsed: null,
 		},
 		teams: raw.teams,
@@ -63,6 +65,24 @@ function getValidatedStatusShort(
 		(FIXTURE_STATUS.CANCELLED as readonly string[]).includes(statusShort);
 	if (isKnownStatus) return statusShort as FixtureStatusShort;
 	return "FT";
+}
+
+function getFallbackStatusLong(
+	statusShort: FormattedMatch["status"]["short"],
+): string {
+	if ((FIXTURE_STATUS.LIVE as readonly string[]).includes(statusShort)) {
+		return "Live";
+	}
+	if ((FIXTURE_STATUS.NOT_STARTED as readonly string[]).includes(statusShort)) {
+		return "Not Started";
+	}
+	if ((FIXTURE_STATUS.CANCELLED as readonly string[]).includes(statusShort)) {
+		return "Cancelled";
+	}
+	if ((FIXTURE_STATUS.FINISHED as readonly string[]).includes(statusShort)) {
+		return "Match Finished";
+	}
+	return "";
 }
 
 /** Filter matches based on team's home/away status */
