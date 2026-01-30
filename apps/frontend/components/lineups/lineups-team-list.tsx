@@ -11,9 +11,13 @@ import {
 	SubstitutesList,
 	TeamAccordionTrigger,
 } from "@/components/lineups/lineups-team-list.parts";
-import type { InjuryData } from "@/components/lineups/lineups-team-list.parts";
 import { injuriesQuery } from "@/queries/injuries";
-import type { Fixture, FixtureEvent } from "@outscore/shared-types";
+import type {
+	APIFootballInjury,
+	Fixture,
+	FixtureEvent,
+	InjuriesResponse,
+} from "@outscore/shared-types";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { View } from "react-native";
@@ -29,7 +33,7 @@ export function LineupsTeamList({ fixture }: LineupsTeamListProps) {
 	const isAnyAccordionOpen = expandedTeams.length > 0;
 
 	// Fetch injuries when any accordion is opened
-	const { data: injuryData } = useQuery({
+	const { data: injuryData } = useQuery<InjuriesResponse>({
 		...injuriesQuery({
 			fixtureId: fixture.fixture.id,
 			season: fixture.league.season,
@@ -60,7 +64,7 @@ export function LineupsTeamList({ fixture }: LineupsTeamListProps) {
 		);
 	}
 
-	const injuries = (injuryData?.response ?? []) as InjuryData[];
+	const injuries: APIFootballInjury[] = injuryData?.response ?? [];
 
 	return (
 		<View className="mt-24">
@@ -71,7 +75,7 @@ export function LineupsTeamList({ fixture }: LineupsTeamListProps) {
 					value={expandedTeams}
 					onValueChange={setExpandedTeams}
 				>
-					<AccordionItem value={lineup.team.name} className="border-b-0">
+				<AccordionItem value={String(lineup.team.id)} className="border-b-0">
 						<TeamAccordionTrigger
 							teamName={lineup.team.name}
 							teamLogo={lineup.team.logo}

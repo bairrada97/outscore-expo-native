@@ -76,35 +76,6 @@ function getEventIcon(detail?: string, isAssist?: boolean): ReactElement | null 
 					className="text-red"
 				/>
 			);
-		case "Substitution 1":
-		case "Substitution 2":
-		case "Substitution 3":
-		case "Substitution 4":
-		case "Substitution 5":
-		case "Substitution 6":
-		case "Substitution 7":
-		case "Substitution 8":
-		case "Substitution 9":
-		case "Substitution 10":
-		case "Substitution 11":
-		case "Substitution 12":
-		case "Substitution 13":
-		case "Substitution 14":
-		case "Substitution 15":
-		case "Substitution 16":
-			return isAssist ? (
-				<SvgB044
-					width={ICON_SIZE}
-					height={ICON_SIZE}
-					className="text-red"
-				/>
-			) : (
-				<SvgB043
-					width={ICON_SIZE}
-					height={ICON_SIZE}
-					className="text-m-01-light-02"
-				/>
-			);
 		case "Goal Cancelled":
 			return (
 				<SvgB034
@@ -147,6 +118,21 @@ function getEventIcon(detail?: string, isAssist?: boolean): ReactElement | null 
 				/>
 			);
 		default:
+			if (detail?.startsWith("Substitution")) {
+				return isAssist ? (
+					<SvgB044
+						width={ICON_SIZE}
+						height={ICON_SIZE}
+						className="text-red"
+					/>
+				) : (
+					<SvgB043
+						width={ICON_SIZE}
+						height={ICON_SIZE}
+						className="text-m-01-light-02"
+					/>
+				);
+			}
 			return null;
 	}
 }
@@ -236,16 +222,16 @@ export function CardPlayerLineup({
 			{/* Event icons */}
 			{events && events.length > 0 && (
 				<View className="ml-auto flex-row-reverse items-center gap-8">
-					{events.map((event) => {
+					{events.map((event, index) => {
 						const icon = getEventIcon(event.detail);
 						if (!icon) return null;
-						const key = `event-${event.time.elapsed}-${event.detail}`;
+						const key = `event-${event.time.elapsed}-${event.detail}-${index}`;
 						return <View key={key}>{icon}</View>;
 					})}
-					{assistEvents?.map((event) => {
+					{assistEvents?.map((event, index) => {
 						const icon = getEventIcon(event.detail, true);
 						if (!icon) return null;
-						const key = `assist-${event.time.elapsed}-${event.detail}`;
+						const key = `assist-${event.time.elapsed}-${event.detail}-${index}`;
 						return <View key={key}>{icon}</View>;
 					})}
 				</View>

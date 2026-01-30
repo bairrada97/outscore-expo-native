@@ -85,7 +85,7 @@ export function Tabs({
 			const tab = tabs.find((t) => t.key === route.key);
 			return (
 				<ScrollView
-					className="flex-1"
+					className="flex-1 bg-neu-01 dark:bg-neu-11"
 					contentContainerStyle={{ flexGrow: 1 }}
 					nestedScrollEnabled
 					directionalLockEnabled
@@ -120,12 +120,12 @@ export function Tabs({
 										)}
 									>
 										<Text
-											variant="body-02--semi"
+											variant="title-02"
 											className={cn(
 												"uppercase",
 												isActive
 													? "text-m-01 dark:text-m-01-light-04"
-													: "text-neu-09",
+													: "text-neu-09 dark:text-m-01-light-04",
 											)}
 										>
 											{tab.title}

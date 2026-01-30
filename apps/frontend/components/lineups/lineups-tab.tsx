@@ -1,9 +1,14 @@
+import type { Fixture, FixtureLineup } from "@outscore/shared-types";
+import { Image } from "expo-image";
+import {
+	Platform,
+	useColorScheme,
+	useWindowDimensions,
+	View,
+} from "react-native";
 import SvgGoal from "@/components/ui/SvgIcons/Goal";
 import SvgMidfield from "@/components/ui/SvgIcons/Midfield";
 import { Text } from "@/components/ui/text";
-import type { Fixture, FixtureLineup } from "@outscore/shared-types";
-import { Image } from "expo-image";
-import { useWindowDimensions, View } from "react-native";
 import { EventsLegend } from "./events-legend";
 import { LineupsRow } from "./lineups-row";
 import { LineupsTeamHeader } from "./lineups-team";
@@ -94,7 +99,8 @@ function parseLineup(lineup: FixtureLineup): {
 const PITCH_ASPECT_RATIO = 1.5;
 
 export function LineupsTab({ fixture }: LineupsTabProps) {
-	const { width: screenWidth } = useWindowDimensions();
+	const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+	const isDark = useColorScheme() === "dark";
 	const lineups = fixture.lineups;
 
 	// No lineups available
@@ -108,103 +114,151 @@ export function LineupsTab({ fixture }: LineupsTabProps) {
 		);
 	}
 
-	const homeLineup = lineups[0];
-	const awayLineup = lineups[1];
+	const homeTeamId = fixture.teams.home.id;
+	const awayTeamId = fixture.teams.away.id;
+	const homeLineup =
+		lineups.find((lineup) => lineup.team.id === homeTeamId) ?? lineups[0];
+	const awayLineup =
+		lineups.find((lineup) => lineup.team.id === awayTeamId) ?? lineups[1];
 
 	const homeParsed = parseLineup(homeLineup);
 	const awayParsed = parseLineup(awayLineup);
 
-	// Calculate pitch dimensions (full width minus padding)
-	const pitchWidth = screenWidth - 32; // 16px padding on each side
-	const pitchHeight = pitchWidth * PITCH_ASPECT_RATIO;
+	const isWebPlatform = Platform.OS === "web";
+	// Calculate pitch dimensions (cap width on web for desktop layouts)
+	const maxPitchWidth = isWebPlatform ? 768 : 768;
+	const pitchWidth = Math.min(screenWidth - 32, maxPitchWidth);
+	const pitchHeight = isWebPlatform
+		? pitchWidth / PITCH_ASPECT_RATIO
+		: pitchWidth * PITCH_ASPECT_RATIO;
 	const halfPitchHeight = pitchHeight / 2;
+	const contentWidth = isWebPlatform ? pitchHeight : pitchWidth;
+	const contentHeight = isWebPlatform ? pitchWidth : pitchHeight;
 
 	return (
 		<View className="py-24">
-			{/* Home team header */}
-			<LineupsTeamHeader
-				teamName={homeLineup.team.name}
-				formation={homeLineup.formation}
-			/>
-
-			{/* Pitch container */}
-			<View className="mx-16 overflow-hidden rounded-lg">
-				{/* Pitch background image */}
-				<Image
-					source={fieldImage}
-					style={{ width: pitchWidth, height: pitchHeight }}
-					contentFit="cover"
-				/>
-
-				{/* Color overlay */}
-				<View
-					className="absolute left-0 top-0 bg-m-01-light-02 dark:bg-m-01-light-04 opacity-10 dark:opacity-[14%]"
-					style={{ width: pitchWidth, height: pitchHeight }}
-				/>
-
-				{/* Pitch markings */}
-				<View
-					className="absolute left-0 top-0 z-[9] items-center justify-center"
-					style={{ width: pitchWidth, height: pitchHeight }}
-				>
-					{/* Midfield line */}
-					<View className="absolute left-0 top-1/2 h-[2px] w-full -translate-y-1/2 bg-neu-01 dark:bg-neu-12" />
-
-					{/* Top goal area */}
-					<View className="absolute left-1/2 top-0 -translate-x-1/2 text-neu-01 dark:text-neu-12">
-						<SvgGoal width={172} height={91} />
-					</View>
-
-					{/* Center circle */}
-					<View className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-neu-01 dark:text-neu-12">
-						<SvgMidfield width={94} height={94} />
-					</View>
-
-					{/* Bottom goal area (rotated 180deg) */}
-					<View className="absolute bottom-0 left-1/2 -translate-x-1/2 rotate-180 text-neu-01 dark:text-neu-12">
-						<SvgGoal width={172} height={91} />
-					</View>
-				</View>
-
-				{/* Players overlay */}
-				<View
-					className="absolute left-0 top-0"
-					style={{ width: pitchWidth, height: pitchHeight }}
-				>
-					{/* Home team (top half, rows from top to middle) */}
-					<View style={{ height: halfPitchHeight }} className="justify-around">
-						{homeParsed.rows.map((rowNum) => (
-							<LineupsRow
-								key={`home-row-${rowNum}`}
-								players={homeParsed.playersByRow[rowNum]}
-								teamVariant="home"
-								isGoalkeeperRow={rowNum === 1}
+			<View className="px-16">
+				<View className="self-center" style={{ width: pitchWidth }}>
+					{isWebPlatform ? (
+						<View className="flex-row items-center justify-between">
+							<LineupsTeamHeader
+								teamName={homeLineup.team.name}
+								formation={homeLineup.formation}
 							/>
-						))}
-					</View>
+							<LineupsTeamHeader
+								teamName={awayLineup.team.name}
+								formation={awayLineup.formation}
+							/>
+						</View>
+					) : (
+						<LineupsTeamHeader
+							teamName={homeLineup.team.name}
+							formation={homeLineup.formation}
+						/>
+					)}
 
-					{/* Away team (bottom half, rows from middle to bottom, reversed) */}
+					{/* Pitch container */}
 					<View
-						style={{ height: halfPitchHeight }}
-						className="flex-col-reverse justify-around "
+						className="overflow-hidden rounded-lg relative items-center justify-center"
+						style={{ width: pitchWidth, height: pitchHeight }}
 					>
-						{awayParsed.rows.map((rowNum) => (
-							<LineupsRow
-								key={`away-row-${rowNum}`}
-								players={awayParsed.playersByRow[rowNum]}
-								teamVariant="away"
-								isGoalkeeperRow={rowNum === 1}
+						<View
+							className="relative"
+							style={{
+								width: contentWidth,
+								height: contentHeight,
+								transform: isWebPlatform ? [{ rotate: "-90deg" }] : undefined,
+							}}
+						>
+							{/* Pitch background image */}
+							<Image
+								source={fieldImage}
+								style={{ width: contentWidth, height: contentHeight }}
+								contentFit="cover"
 							/>
-						))}
+
+							{/* Color overlay */}
+							<View
+								className="absolute left-0 top-0 z-[99]"
+								style={{
+									width: contentWidth,
+									height: contentHeight,
+									backgroundColor: isDark
+										? "rgba(102, 227, 167, 0.14)"
+										: "rgba(52, 183, 120, 0.10)",
+								}}
+							/>
+
+							{/* Pitch markings */}
+							<View
+								className="absolute left-0 top-0 z-[9] items-center justify-center"
+								style={{ width: contentWidth, height: contentHeight }}
+							>
+								{/* Midfield line */}
+								<View className="absolute left-0 top-1/2 h-[2px] w-full -translate-y-1/2 bg-neu-01 dark:bg-neu-12" />
+
+								{/* Top goal area */}
+								<View className="absolute left-1/2 top-0 -translate-x-1/2 text-neu-01 dark:text-neu-12">
+									<SvgGoal width={172} height={91} />
+								</View>
+
+								{/* Center circle */}
+								<View className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-neu-01 dark:text-neu-12">
+									<SvgMidfield width={94} height={94} />
+								</View>
+
+								{/* Bottom goal area (rotated 180deg) */}
+								<View className="absolute bottom-0 left-1/2 -translate-x-1/2 rotate-180 text-neu-01 dark:text-neu-12">
+									<SvgGoal width={172} height={91} />
+								</View>
+							</View>
+
+							{/* Players overlay */}
+							<View
+								className="absolute left-0 top-0"
+								style={{ width: contentWidth, height: contentHeight }}
+							>
+								{/* Home team (top half, rows from top to middle) */}
+								<View
+									style={{ height: contentHeight / 2 }}
+									className="justify-around"
+								>
+									{homeParsed.rows.map((rowNum) => (
+										<LineupsRow
+											key={`home-row-${rowNum}`}
+											players={homeParsed.playersByRow[rowNum]}
+											teamVariant="home"
+											isGoalkeeperRow={rowNum === 1}
+										/>
+									))}
+								</View>
+
+								{/* Away team (bottom half, rows from middle to bottom, reversed) */}
+								<View
+									style={{ height: contentHeight / 2 }}
+									className="flex-col-reverse justify-around "
+								>
+									{awayParsed.rows.map((rowNum) => (
+										<LineupsRow
+											key={`away-row-${rowNum}`}
+											players={awayParsed.playersByRow[rowNum]}
+											teamVariant="away"
+											isGoalkeeperRow={rowNum === 1}
+										/>
+									))}
+								</View>
+							</View>
+						</View>
 					</View>
+
+					{!isWebPlatform && (
+						<LineupsTeamHeader
+							teamName={awayLineup.team.name}
+							formation={awayLineup.formation}
+						/>
+					)}
 				</View>
 			</View>
-
-			{/* Away team header */}
-			<LineupsTeamHeader
-				teamName={awayLineup.team.name}
-				formation={awayLineup.formation}
-			/>
 
 			{/* Team lists with accordions */}
 			<LineupsTeamList fixture={fixture} />

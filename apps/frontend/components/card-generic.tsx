@@ -37,8 +37,7 @@ export function CardGeneric({
 			{/* Avatar */}
 			{imageUrl && (
 				<View
-					className="h-32 w-32 items-center justify-center rounded-full border-2 border-neu-01 bg-neu-01 dark:border-neu-08"
-					style={{ boxShadow: "0 1px 2px rgba(0, 0, 0, 0.1)" }}
+					className="h-32 w-32 items-center justify-center rounded-full border-2 border-neu-01 bg-neu-01 shadow-sha-01 dark:border-neu-08 dark:shadow-sha-06"
 				>
 					<View className="h-full w-full overflow-hidden rounded-full">
 						<Image

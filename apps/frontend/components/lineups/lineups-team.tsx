@@ -11,7 +11,7 @@ export function LineupsTeamHeader({
 	formation,
 }: LineupsTeamHeaderProps) {
 	return (
-		<View className="flex-row items-center justify-between px-16 py-8">
+		<View className="flex-row items-center justify-between gap-8 py-8">
 			<Text
 				variant="body-02--semi"
 				className="text-neu-10 dark:text-neu-01"
@@ -20,10 +20,7 @@ export function LineupsTeamHeader({
 				{teamName}
 			</Text>
 			{formation && (
-				<Text
-					variant="body-02--semi"
-					className="text-neu-10 dark:text-neu-01"
-				>
+				<Text variant="body-02--semi" className="text-neu-10 dark:text-neu-01">
 					{formation}
 				</Text>
 			)}

@@ -2,26 +2,13 @@ import { CardGeneric } from "@/components/card-generic";
 import { CardPlayerLineup } from "@/components/card-player-lineup";
 import { AccordionTrigger } from "@/components/ui/accordion";
 import { Text } from "@/components/ui/text";
-import type { FixtureEvent, FixtureLineup } from "@outscore/shared-types";
+import type {
+	APIFootballInjury,
+	FixtureEvent,
+	FixtureLineup,
+} from "@outscore/shared-types";
 import * as AccordionPrimitive from "@rn-primitives/accordion";
 import { View } from "react-native";
-
-type InjuredPlayer = {
-	id: number;
-	name: string;
-	photo: string;
-	type: string;
-	reason: string;
-};
-
-export type InjuryData = {
-	player: InjuredPlayer;
-	team: {
-		id: number;
-		name: string;
-		logo: string;
-	};
-};
 
 type SectionHeaderProps = {
 	title: string;
@@ -87,7 +74,7 @@ export function SubstitutesList({
 }
 
 type MissingPlayersListProps = {
-	injuries: InjuryData[];
+	injuries: APIFootballInjury[];
 	teamId: number;
 };
 

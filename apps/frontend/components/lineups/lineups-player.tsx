@@ -1,20 +1,6 @@
+import { Rating } from "@/components/ui/rating";
 import { Text } from "@/components/ui/text";
-import { View } from "react-native";
-
-export type RatingColor = "green" | "orange" | "red";
-
-function getRatingColor(rating: number | null | undefined): RatingColor {
-	if (rating == null) return "orange";
-	if (rating >= 7.0) return "green";
-	if (rating < 6.0) return "red";
-	return "orange";
-}
-
-const ratingColorClasses: Record<RatingColor, string> = {
-	green: "bg-green-500",
-	orange: "bg-orange-400",
-	red: "bg-red-500",
-};
+import { Platform, View } from "react-native";
 
 type LineupsPlayerProps = {
 	number: number;
@@ -31,7 +17,6 @@ export function LineupsPlayer({
 	isGoalkeeper = false,
 	teamVariant,
 }: LineupsPlayerProps) {
-	const ratingColor = getRatingColor(rating);
 	const showRating = rating != null;
 
 	// Shorten name to first initial + last name (e.g., "Diogo Costa" -> "D. Costa")
@@ -53,18 +38,16 @@ export function LineupsPlayer({
 		: "text-neu-01";
 
 	return (
-		<View className="items-center gap-4">
+		<View
+			className="items-center gap-4"
+			style={Platform.OS === "web" ? { transform: [{ rotate: "90deg" }] } : undefined}
+		>
 			{/* Player number chip */}
 			<View className="relative">
 				{/* Rating badge */}
 				{showRating && (
-					<View
-						className={`absolute -top-6 left-16 z-10 min-w-24 items-center justify-center rounded-lg px-4 ${ratingColorClasses[ratingColor]}`}
-						style={{ boxShadow: "0 1px 3px rgba(0, 0, 0, 0.3)" }}
-					>
-						<Text variant="caption-03" className="text-neu-01">
-							{rating.toFixed(1)}
-						</Text>
+					<View className="absolute -top-6 left-16 z-10">
+						<Rating rating={rating} hasShadow />
 					</View>
 				)}
 
