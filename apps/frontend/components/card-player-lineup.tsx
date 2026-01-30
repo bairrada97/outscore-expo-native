@@ -42,12 +42,11 @@ const ICON_SIZE = 24;
 function getEventIcon(detail?: string, isAssist?: boolean): ReactElement | null {
 	switch (detail) {
 		case "Normal Goal":
-			if (isAssist) return null;
 			return (
 				<SvgB027
 					width={ICON_SIZE}
 					height={ICON_SIZE}
-					className="text-m-01-light-02"
+					className={isAssist ? "text-m-01-light-01" : "text-m-01-light-02"}
 				/>
 			);
 		case "Own Goal":
