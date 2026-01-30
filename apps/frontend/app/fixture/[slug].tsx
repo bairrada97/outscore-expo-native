@@ -1,26 +1,16 @@
-import type {
-	Fixture,
-	FixturesResponse,
-	FormattedCountry,
-	FormattedLeague,
-	FormattedMatch,
-} from "@outscore/shared-types";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useRef } from "react";
-import { ActivityIndicator, View } from "react-native";
 import { FixtureBestStats } from "@/components/fixture-best-stats/fixture-best-stats";
 import { FixtureEventsBlock } from "@/components/fixture-events-block";
 import { FixtureH2H } from "@/components/fixture-h2h/fixture-h2h";
 import { FixtureInfoHeader } from "@/components/fixture-info-header";
 import { FixtureOverviewDetails } from "@/components/fixture-overview-details/fixture-overview-details";
-import { FixtureTeamForm } from "@/components/fixture-team-form/fixture-team-form";
 import { FixtureStatistics } from "@/components/fixture-statistics/fixture-statistics";
+import { FixtureTeamForm } from "@/components/fixture-team-form/fixture-team-form";
 import { GoalAnalysisCard } from "@/components/insights/goal-analysis-card/goal-analysis-card";
 import { InsightsSectionHeader } from "@/components/insights/insights-section-header";
 import { KeyInsightsList } from "@/components/insights/key-insights-list";
 import { MatchFactsGrid } from "@/components/insights/match-facts-grid";
 import { MatchOutcomeCard } from "@/components/insights/match-outcome-card";
+import { LineupsTab } from "@/components/lineups";
 import { Tabs } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/text";
 import { useSelectedDate } from "@/context/selected-date-context";
@@ -40,6 +30,17 @@ import {
 	FIXTURE_IS_LIVE_STATUS,
 } from "@/utils/fixtures-status-constants";
 import { isWeb } from "@/utils/platform";
+import type {
+	Fixture,
+	FixturesResponse,
+	FormattedCountry,
+	FormattedLeague,
+	FormattedMatch,
+} from "@outscore/shared-types";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useRef } from "react";
+import { ActivityIndicator, View } from "react-native";
 
 const FIXTURE_TABS = [
 	{ key: "overview", title: "OVERVIEW" },
@@ -453,13 +454,7 @@ export default function FixtureDetailScreen() {
 						{
 							key: "lineups",
 							title: "LINEUPS",
-							render: () => (
-								<View className="p-16">
-									<Text className="text-neu-07 dark:text-neu-06">
-										Coming soon
-									</Text>
-								</View>
-							),
+							render: () => <LineupsTab fixture={fixture} />,
 						},
 						{
 							key: "statistics",

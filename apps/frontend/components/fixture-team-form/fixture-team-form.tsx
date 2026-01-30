@@ -31,7 +31,9 @@ function TeamFormRow({ teamId, fixtures }: TeamFormRowProps) {
 			outcome: getMatchOutcome(match, teamId),
 		}))
 		.filter(
-			(entry): entry is { match: H2HFormattedMatch; outcome: "W" | "D" | "L" } =>
+			(
+				entry,
+			): entry is { match: H2HFormattedMatch; outcome: "W" | "D" | "L" } =>
 				entry.outcome !== null,
 		);
 
@@ -40,10 +42,7 @@ function TeamFormRow({ teamId, fixtures }: TeamFormRowProps) {
 			<View className="flex-row gap-4">
 				{outcomes.map(({ match, outcome }, index) => (
 					<View key={match.id} className="items-center">
-						<MatchOutcomeBadge
-							outcome={outcome}
-							textClassName="text-neu-01"
-						/>
+						<MatchOutcomeBadge outcome={outcome} textClassName="text-neu-01" />
 						{index === 0 && (
 							<View className="mt-4 h-[2px] w-full rounded-full bg-m-02" />
 						)}
@@ -68,7 +67,7 @@ export function FixtureTeamForm({
 				<Text variant="body-02--semi" className="text-neu-04 dark:text-neu-06">
 					Team Form
 				</Text>
-				<View className="flex-row items-center gap-8">
+				<View className="flex-row items-center gap-4">
 					<View className="h-4 w-4 rounded-full bg-m-02" />
 					<Text variant="caption-03" className="text-neu-04 dark:text-neu-06">
 						Last Game
