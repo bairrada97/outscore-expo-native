@@ -1,3 +1,5 @@
+import type { APIFootballInjury, InjuriesResponse } from "@outscore/shared-types";
+
 /**
  * Injuries Data Fetching
  *
@@ -18,50 +20,6 @@
 // ============================================================================
 // TYPES
 // ============================================================================
-
-/**
- * Raw injury data from API-Football
- */
-export interface APIFootballInjury {
-  player: {
-    id: number;
-    name: string;
-    photo: string;
-    type: string; // e.g., "Missing Fixture", "Questionable"
-    reason: string; // e.g., "Knee Injury", "Suspended"
-  };
-  team: {
-    id: number;
-    name: string;
-    logo: string;
-  };
-  fixture: {
-    id: number;
-    timezone: string;
-    date: string;
-    timestamp: number;
-  };
-  league: {
-    id: number;
-    season: number;
-    name: string;
-    country: string;
-    logo: string;
-    flag: string | null;
-  };
-}
-
-/**
- * API-Football injuries response
- */
-export interface InjuriesResponse {
-  get: string;
-  parameters: Record<string, string>;
-  errors: unknown[];
-  results: number;
-  paging: { current: number; total: number };
-  response: APIFootballInjury[];
-}
 
 /**
  * Processed injury for algorithm use

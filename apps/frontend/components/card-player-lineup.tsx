@@ -220,9 +220,9 @@ export function CardPlayerLineup({
 			)}
 
 			{/* Event icons */}
-			{events && events.length > 0 && (
+			{(events?.length ?? 0) > 0 || (assistEvents?.length ?? 0) > 0 ? (
 				<View className="ml-auto flex-row-reverse items-center gap-8">
-					{events.map((event, index) => {
+					{events?.map((event, index) => {
 						const icon = getEventIcon(event.detail);
 						if (!icon) return null;
 						const key = `event-${event.time.elapsed}-${event.detail}-${index}`;
@@ -235,7 +235,7 @@ export function CardPlayerLineup({
 						return <View key={key}>{icon}</View>;
 					})}
 				</View>
-			)}
+			) : null}
 
 			{/* Injury icon */}
 			{playerInjury && (

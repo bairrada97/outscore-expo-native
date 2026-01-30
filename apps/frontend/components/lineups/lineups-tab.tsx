@@ -179,7 +179,7 @@ export function LineupsTab({ fixture }: LineupsTabProps) {
 
 							{/* Color overlay */}
 							<View
-								className="absolute left-0 top-0 z-[99]"
+								className="absolute left-0 top-0 z-[19]"
 								style={{
 									width: contentWidth,
 									height: contentHeight,
@@ -215,7 +215,7 @@ export function LineupsTab({ fixture }: LineupsTabProps) {
 
 							{/* Players overlay */}
 							<View
-								className="absolute left-0 top-0"
+								className="absolute left-0 top-0 z-[99]"
 								style={{ width: contentWidth, height: contentHeight }}
 							>
 								{/* Home team (top half, rows from top to middle) */}

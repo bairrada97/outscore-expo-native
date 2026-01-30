@@ -54,7 +54,16 @@ export function LineupsPlayer({
 				{/* Number circle */}
 				<View
 					className={`h-24 w-24 items-center justify-center rounded-full ${chipBgClass}`}
-					style={{ boxShadow: "0 2px 4px rgba(0, 0, 0, 0.15)" }}
+					style={Platform.select({
+						web: { boxShadow: "0 2px 4px rgba(0, 0, 0, 0.15)" },
+						default: {
+							shadowColor: "#000",
+							shadowOpacity: 0.15,
+							shadowRadius: 4,
+							shadowOffset: { width: 0, height: 2 },
+							elevation: 2,
+						},
+					})}
 				>
 					<Text variant="caption-01" className={chipTextClass}>
 						{number}
