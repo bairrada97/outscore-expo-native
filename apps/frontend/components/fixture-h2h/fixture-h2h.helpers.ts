@@ -26,9 +26,13 @@ export function rawFixtureToH2HMatch(
 
 	// Extract time from date (UTC to match timezone field)
 	const dateObj = new Date(raw.date);
-	const hours = dateObj.getUTCHours().toString().padStart(2, "0");
-	const minutes = dateObj.getUTCMinutes().toString().padStart(2, "0");
-	const time = `${hours}:${minutes}`;
+	const isValidDate = !Number.isNaN(dateObj.getTime());
+	const time = isValidDate
+		? `${dateObj.getUTCHours().toString().padStart(2, "0")}:${dateObj
+				.getUTCMinutes()
+				.toString()
+				.padStart(2, "0")}`
+		: "";
 
 	return {
 		id: raw.id,
