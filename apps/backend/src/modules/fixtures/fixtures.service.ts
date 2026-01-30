@@ -1213,6 +1213,14 @@ export const fixturesService = {
 			? convertStandingsToDisplay(standingsResult.data)
 			: undefined;
 
+		const contextSource = deriveContextSource([
+			fixtureResult?.source,
+			h2hResult?.source,
+			homeTeamResult?.source,
+			awayTeamResult?.source,
+			standingsResult?.source,
+		]);
+
 		return {
 			data: {
 				h2hFixtures,
@@ -1220,7 +1228,7 @@ export const fixturesService = {
 				awayTeamFixtures,
 				standings,
 			},
-			source: "API",
+			source: contextSource,
 		};
 	},
 
@@ -1246,36 +1254,47 @@ export const fixturesService = {
 		url.searchParams.append("league", leagueId.toString());
 		url.searchParams.append("season", season.toString());
 
-		try {
-			const response = await fetch(url.toString(), {
-				headers: {
-					"x-rapidapi-host": "api-football-v1.p.rapidapi.com",
-					"x-rapidapi-key": env.RAPIDAPI_KEY,
-				},
-			});
+		const dedupKey = `standings:${leagueId}:${season}`;
 
-			if (!response.ok) {
-				console.warn(
-					`⚠️ [Standings] Failed to fetch standings for league ${leagueId}`,
-				);
+		return withDeduplication(dedupKey, async () => {
+			const controller = new AbortController();
+			const timeoutMs = 15000;
+			const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+			try {
+				const response = await fetch(url.toString(), {
+					headers: {
+						"x-rapidapi-host": "api-football-v1.p.rapidapi.com",
+						"x-rapidapi-key": env.RAPIDAPI_KEY,
+					},
+					signal: controller.signal,
+				});
+
+				if (!response.ok) {
+					console.warn(
+						`⚠️ [Standings] Failed to fetch standings for league ${leagueId}`,
+					);
+					return null;
+				}
+
+				const data = (await response.json()) as StandingsApiResponse;
+				const rawStandings = data.response?.[0];
+
+				if (!rawStandings?.league?.standings?.[0]) {
+					return null;
+				}
+
+				return {
+					data: rawStandings,
+					source: "API",
+				};
+			} catch (error) {
+				console.error(`❌ [Standings] Error fetching standings:`, error);
 				return null;
+			} finally {
+				clearTimeout(timeoutId);
 			}
-
-			const data = (await response.json()) as StandingsApiResponse;
-			const rawStandings = data.response?.[0];
-
-			if (!rawStandings?.league?.standings?.[0]) {
-				return null;
-			}
-
-			return {
-				data: rawStandings,
-				source: "API",
-			};
-		} catch (error) {
-			console.error(`❌ [Standings] Error fetching standings:`, error);
-			return null;
-		}
+		});
 	},
 };
 
@@ -1403,6 +1422,28 @@ interface StandingsApiResponse {
 // ============================================================================
 // HELPERS
 // ============================================================================
+
+/**
+ * Derive a combined source label for fixture context responses.
+ * Priority: STALE -> CACHE -> API.
+ */
+function deriveContextSource(
+	sources: Array<string | null | undefined>,
+): "STALE" | "CACHE" | "API" {
+	const normalized = sources
+		.filter((source): source is string => Boolean(source))
+		.map((source) => source.toUpperCase());
+
+	const hasStale = normalized.some((source) => source.includes("STALE"));
+	if (hasStale) return "STALE";
+
+	const hasCache = normalized.some(
+		(source) => source.includes("CACHE") || source === "KV" || source === "R2",
+	);
+	if (hasCache) return "CACHE";
+
+	return "API";
+}
 
 /**
  * Convert API fixtures to display format

@@ -110,7 +110,13 @@ export function getHigherSide(
 /**
  * Check if a stat value includes percentage
  */
-export function isPercentageStat(type: string): boolean {
-  const percentageStats = ["ball possession", "possession", "passes %"];
-  return percentageStats.includes(type.toLowerCase());
+export const percentageStats = ["ball possession", "possession", "passes %"];
+
+export function isPercentageStat(
+  type: string,
+  statValue?: string,
+): boolean {
+  const normalizedType = type.toLowerCase();
+  if (percentageStats.includes(normalizedType)) return true;
+  return typeof statValue === "string" && statValue.toLowerCase().includes("%");
 }

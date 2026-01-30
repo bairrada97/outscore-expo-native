@@ -1,4 +1,4 @@
-import type { Fixture, FormattedMatch } from "@outscore/shared-types";
+import { isFinishedStatus, type Fixture, type FormattedMatch } from "@outscore/shared-types";
 
 /**
  * Convert a Fixture (API response) to FormattedMatch (frontend format)
@@ -40,8 +40,12 @@ export function getMatchOutcome(
 
 	// If neither team has winner set, match is not finished or was a draw
 	if (homeWinner === null && awayWinner === null) {
+		const statusShort = fixture.status?.short;
+		const isFinished = statusShort ? isFinishedStatus(statusShort) : false;
+
 		// Check if it's a draw (goals are equal and match is finished)
 		if (
+			isFinished &&
 			fixture.goals.home !== null &&
 			fixture.goals.away !== null &&
 			fixture.goals.home === fixture.goals.away

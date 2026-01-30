@@ -86,12 +86,22 @@ export function FixtureBestStats({ fixture }: FixtureBestStatsProps) {
   const stats = (fixture as FixtureWithStatistics).statistics;
   if (!stats || stats.length === 0) return null;
 
-  const homeStats =
-    stats.find((entry) => entry.team.id === fixture.teams.home.id) ?? stats[0];
-  const awayStats =
-    stats.find((entry) => entry.team.id === fixture.teams.away.id) ?? stats[1];
+  const homeTeamId = fixture.teams.home.id;
+  const awayTeamId = fixture.teams.away.id;
+  const homeStats = stats.find((entry) => entry.team.id === homeTeamId);
+  const awayStats = stats.find((entry) => entry.team.id === awayTeamId);
 
-  if (!homeStats || !awayStats) return null;
+  if (!homeStats || !awayStats) {
+    const missingTeamIds = [
+      !homeStats ? homeTeamId : null,
+      !awayStats ? awayTeamId : null,
+    ].filter((id): id is number => id !== null);
+    console.warn("[FixtureBestStats] Missing stats for team(s)", {
+      missingTeamIds,
+      stats,
+    });
+    return null;
+  }
 
   const possessionHome = findStatValue(homeStats.statistics, POSSESSION_KEYS);
   const possessionAway = findStatValue(awayStats.statistics, POSSESSION_KEYS);

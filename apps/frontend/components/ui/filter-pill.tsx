@@ -12,6 +12,9 @@ export function FilterPill({ label, isActive, onPress }: FilterPillProps) {
 	return (
 		<Pressable
 			onPress={onPress}
+			accessibilityRole="button"
+			accessibilityState={{ selected: isActive }}
+			accessibilityLabel={label}
 			className={cn(
 				"h-32 items-center justify-center rounded-full px-24",
 				isActive

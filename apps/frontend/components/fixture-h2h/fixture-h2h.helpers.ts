@@ -1,5 +1,5 @@
 import type { RawFixtureForDisplay } from "@/queries/insights-by-fixture-id";
-import type { FormattedMatch } from "@outscore/shared-types";
+import { FIXTURE_STATUS, type FormattedMatch, type FixtureStatusShort } from "@outscore/shared-types";
 
 export type H2HFilterKey = "overall" | "home" | "away";
 
@@ -24,10 +24,10 @@ export function rawFixtureToH2HMatch(
 		return null;
 	}
 
-	// Extract time from date
+	// Extract time from date (UTC to match timezone field)
 	const dateObj = new Date(raw.date);
-	const hours = dateObj.getHours().toString().padStart(2, "0");
-	const minutes = dateObj.getMinutes().toString().padStart(2, "0");
+	const hours = dateObj.getUTCHours().toString().padStart(2, "0");
+	const minutes = dateObj.getUTCMinutes().toString().padStart(2, "0");
 	const time = `${hours}:${minutes}`;
 
 	return {
@@ -38,7 +38,7 @@ export function rawFixtureToH2HMatch(
 		timezone: "UTC",
 		status: {
 			long: raw.status?.long ?? "Match Finished",
-			short: (raw.status?.short ?? "FT") as FormattedMatch["status"]["short"],
+			short: getValidatedStatusShort(raw.status?.short),
 			elapsed: null,
 		},
 		teams: raw.teams,
@@ -46,6 +46,19 @@ export function rawFixtureToH2HMatch(
 		score: raw.score,
 		type: "H2H",
 	};
+}
+
+function getValidatedStatusShort(
+	statusShort?: string,
+): FormattedMatch["status"]["short"] {
+	if (!statusShort) return "FT";
+	const isKnownStatus =
+		(FIXTURE_STATUS.LIVE as readonly string[]).includes(statusShort) ||
+		(FIXTURE_STATUS.FINISHED as readonly string[]).includes(statusShort) ||
+		(FIXTURE_STATUS.NOT_STARTED as readonly string[]).includes(statusShort) ||
+		(FIXTURE_STATUS.CANCELLED as readonly string[]).includes(statusShort);
+	if (isKnownStatus) return statusShort as FixtureStatusShort;
+	return "FT";
 }
 
 /** Filter matches based on team's home/away status */

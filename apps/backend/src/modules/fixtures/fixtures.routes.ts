@@ -1,9 +1,15 @@
 import { zValidator } from "@hono/zod-validator";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { z } from "zod";
 import { isValidTimezone } from "../timezones";
 import { type FixturesEnv, fixturesService } from "./fixtures.service";
 import { parseH2HParam } from "./utils";
+
+type FixturesContext = Context<
+	{ Bindings: FixturesEnv },
+	string,
+	Record<string, unknown>
+>;
 
 export const createFixturesRoutes = () => {
 	const fixtures = new Hono<{ Bindings: FixturesEnv }>();
@@ -179,7 +185,7 @@ export const createFixturesRoutes = () => {
  * Handle fixture detail request
  */
 async function handleFixtureDetail(
-	context: Parameters<Parameters<ReturnType<typeof Hono.prototype.get>>[1]>[0],
+	context: FixturesContext,
 	fixtureId: number,
 	requestStartTime: number,
 ) {
@@ -297,7 +303,7 @@ async function handleFixtureDetail(
  * Handle fixtures list request
  */
 async function handleFixturesList(
-	context: Parameters<Parameters<ReturnType<typeof Hono.prototype.get>>[1]>[0],
+	context: FixturesContext,
 	date: string | undefined,
 	from: string | undefined,
 	to: string | undefined,
@@ -429,7 +435,7 @@ async function handleFixturesList(
  * Handle team fixtures request
  */
 async function handleTeamFixtures(
-	context: Parameters<Parameters<ReturnType<typeof Hono.prototype.get>>[1]>[0],
+	context: FixturesContext,
 	teamId: number,
 	last: number,
 	requestStartTime: number,
@@ -494,7 +500,7 @@ async function handleTeamFixtures(
  * Handle H2H fixtures request
  */
 async function handleH2HFixtures(
-	context: Parameters<Parameters<ReturnType<typeof Hono.prototype.get>>[1]>[0],
+	context: FixturesContext,
 	h2h: string,
 	last: number,
 	requestStartTime: number,
@@ -575,7 +581,7 @@ async function handleH2HFixtures(
  * Handle injuries request
  */
 async function handleInjuries(
-	context: Parameters<Parameters<ReturnType<typeof Hono.prototype.get>>[1]>[0],
+	context: FixturesContext,
 	fixtureId: number,
 	season: number,
 	requestStartTime: number,
@@ -639,7 +645,7 @@ async function handleInjuries(
  * Independent of insights - works for any match status
  */
 async function handleFixtureContext(
-	context: Parameters<Parameters<ReturnType<typeof Hono.prototype.get>>[1]>[0],
+	context: FixturesContext,
 	fixtureId: number,
 	requestStartTime: number,
 ) {
@@ -657,6 +663,7 @@ async function handleFixtureContext(
 				`h2h=${result.data.h2hFixtures?.length ?? 0}, ` +
 				`home=${result.data.homeTeamFixtures?.length ?? 0}, ` +
 				`away=${result.data.awayTeamFixtures?.length ?? 0}, ` +
+				`standings=${Boolean(result.data.standings)}, ` +
 				`time=${responseTime}ms`,
 		);
 
