@@ -1,9 +1,13 @@
+import SvgGoal from "@/components/ui/SvgIcons/Goal";
+import SvgMidfield from "@/components/ui/SvgIcons/Midfield";
 import { Text } from "@/components/ui/text";
 import type { Fixture, FixtureLineup } from "@outscore/shared-types";
 import { Image } from "expo-image";
 import { useWindowDimensions, View } from "react-native";
+import { EventsLegend } from "./events-legend";
 import { LineupsRow } from "./lineups-row";
 import { LineupsTeamHeader } from "./lineups-team";
+import { LineupsTeamList } from "./lineups-team-list";
 
 // Import the field image
 const fieldImage = require("@/assets/field.png");
@@ -138,6 +142,30 @@ export function LineupsTab({ fixture }: LineupsTabProps) {
 					style={{ width: pitchWidth, height: pitchHeight }}
 				/>
 
+				{/* Pitch markings */}
+				<View
+					className="absolute left-0 top-0 z-[9] items-center justify-center"
+					style={{ width: pitchWidth, height: pitchHeight }}
+				>
+					{/* Midfield line */}
+					<View className="absolute left-0 top-1/2 h-[2px] w-full -translate-y-1/2 bg-neu-01 dark:bg-neu-12" />
+
+					{/* Top goal area */}
+					<View className="absolute left-1/2 top-0 -translate-x-1/2 text-neu-01 dark:text-neu-12">
+						<SvgGoal width={172} height={91} />
+					</View>
+
+					{/* Center circle */}
+					<View className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-neu-01 dark:text-neu-12">
+						<SvgMidfield width={94} height={94} />
+					</View>
+
+					{/* Bottom goal area (rotated 180deg) */}
+					<View className="absolute bottom-0 left-1/2 -translate-x-1/2 rotate-180 text-neu-01 dark:text-neu-12">
+						<SvgGoal width={172} height={91} />
+					</View>
+				</View>
+
 				{/* Players overlay */}
 				<View
 					className="absolute left-0 top-0"
@@ -177,6 +205,12 @@ export function LineupsTab({ fixture }: LineupsTabProps) {
 				teamName={awayLineup.team.name}
 				formation={awayLineup.formation}
 			/>
+
+			{/* Team lists with accordions */}
+			<LineupsTeamList fixture={fixture} />
+
+			{/* Events legend */}
+			<EventsLegend />
 		</View>
 	);
 }
