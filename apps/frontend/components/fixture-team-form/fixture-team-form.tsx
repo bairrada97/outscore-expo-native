@@ -21,19 +21,27 @@ type TeamFormRowProps = {
 };
 
 function TeamFormRow({ teamId, fixtures }: TeamFormRowProps) {
-	const form = fixtures
+	const validatedMatches = fixtures
 		.slice(0, 5)
 		.map(rawFixtureToH2HMatch)
-		.filter((match): match is H2HFormattedMatch => match !== null)
-		.map((match) => getMatchOutcome(match, teamId) ?? "D");
+		.filter((match): match is H2HFormattedMatch => match !== null);
+	const outcomes = validatedMatches
+		.map((match) => ({
+			match,
+			outcome: getMatchOutcome(match, teamId),
+		}))
+		.filter(
+			(entry): entry is { match: H2HFormattedMatch; outcome: "W" | "D" | "L" } =>
+				entry.outcome !== null,
+		);
 
 	return (
 		<View>
 			<View className="flex-row gap-4">
-				{fixtures.slice(0, form.length).map((fixture, index) => (
-					<View key={fixture.id} className="items-center">
+				{outcomes.map(({ match, outcome }, index) => (
+					<View key={match.id} className="items-center">
 						<MatchOutcomeBadge
-							outcome={form[index]}
+							outcome={outcome}
 							textClassName="text-neu-01"
 						/>
 						{index === 0 && (

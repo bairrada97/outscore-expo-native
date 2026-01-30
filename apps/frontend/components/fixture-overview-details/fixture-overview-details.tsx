@@ -146,18 +146,3 @@ export function FixtureOverviewDetails({
 		</View>
 	);
 }
-				))}
-			</View>
-		</View>
-	);
-}
-				))}
-			</View>
-		</View>
-	);
-}
-				))}
-			</View>
-		</View>
-	);
-}
