@@ -12,13 +12,66 @@ type FixtureOverviewDetailsProps = {
 	fixture: Fixture;
 };
 
-type DetailItem = {
-	id: string;
-	label: string;
-	value: string;
-	iconType: "lucide" | "svg";
-	icon: LucideIcon | ComponentType<SvgProps>;
+type DetailItem =
+	| {
+			id: string;
+			label: string;
+			value: string;
+			iconType: "lucide";
+			icon: LucideIcon;
+	  }
+	| {
+			id: string;
+			label: string;
+			value: string;
+			iconType: "svg";
+			icon: ComponentType<SvgProps>;
+	  };
+
+type DetailItemRowProps = {
+	items: DetailItem[];
 };
+
+function DetailItemRow({ items }: DetailItemRowProps) {
+	return (
+		<View className="flex-row gap-16">
+			{items.map((item) => {
+				const SvgIcon = item.iconType === "svg" ? item.icon : null;
+
+				return (
+					<View key={item.id} className="flex-1 flex-row items-center gap-16">
+						<View className="h-24 w-24 items-center justify-center rounded-lg bg-neu-02 dark:bg-neu-10">
+							{item.iconType === "lucide" ? (
+								<Icon className="size-24 text-neu-08 dark:text-neu-04" as={item.icon} />
+							) : SvgIcon ? (
+								<SvgIcon
+									width={18}
+									height={18}
+									className="text-neu-08 dark:text-neu-04"
+								/>
+							) : null}
+						</View>
+						<View className="flex-1">
+							<Text
+								variant="body-02--semi"
+							className="text-neu-07 dark:text-neu-06"
+							>
+								{item.label}
+							</Text>
+							<Text
+								variant="body-02"
+								className="text-neu-10 dark:text-neu-01"
+								numberOfLines={2}
+							>
+								{item.value}
+							</Text>
+						</View>
+					</View>
+				);
+			})}
+		</View>
+	);
+}
 
 function formatMatchDate(dateString?: string | null): string {
 	if (!dateString) return "—";
@@ -63,86 +116,10 @@ export function FixtureOverviewDetails({
 
 	return (
 		<View className="rounded-lg bg-neu-01 px-16 py-16 shadow-sha-01 dark:bg-neu-11 dark:shadow-sha-06">
-			<View className="mb-16 flex-row gap-16">
-				{items.slice(0, 2).map((item) => (
-					<View key={item.id} className="flex-1 flex-row items-center gap-16">
-						<View className="h-24 w-24 items-center justify-center rounded-lg bg-neu-02 dark:bg-neu-10">
-							{item.iconType === "lucide" ? (
-								<Icon
-									as={item.icon as LucideIcon}
-									className="size-24 text-neu-08 dark:text-neu-04"
-								/>
-							) : (
-								(() => {
-									const SvgIcon = item.icon as ComponentType<SvgProps>;
-									return (
-										<SvgIcon
-											width={18}
-											height={18}
-											className="text-neu-08 dark:text-neu-04"
-										/>
-									);
-								})()
-							)}
-						</View>
-						<View className="flex-1">
-							<Text
-								variant="body-02--semi"
-								className="text-neu-07 dark:text-neu-06"
-							>
-								{item.label}
-							</Text>
-							<Text
-								variant="body-02"
-								className="text-neu-10 dark:text-neu-01"
-								numberOfLines={2}
-							>
-								{item.value}
-							</Text>
-						</View>
-					</View>
-				))}
+			<View className="mb-16">
+				<DetailItemRow items={items.slice(0, 2)} />
 			</View>
-			<View className="flex-row gap-16">
-				{items.slice(2, 4).map((item) => (
-					<View key={item.id} className="flex-1 flex-row items-center gap-16">
-						<View className="h-24 w-24 items-center justify-center rounded-lg bg-neu-02 dark:bg-neu-10">
-							{item.iconType === "lucide" ? (
-								<Icon
-									as={item.icon as LucideIcon}
-									className="size-24 text-neu-08 dark:text-neu-04"
-								/>
-							) : (
-								(() => {
-									const SvgIcon = item.icon as ComponentType<SvgProps>;
-									return (
-										<SvgIcon
-											width={18}
-											height={18}
-											className="text-neu-08 dark:text-neu-04"
-										/>
-									);
-								})()
-							)}
-						</View>
-						<View className="flex-1">
-							<Text
-								variant="body-02--semi"
-								className="uppercase text-neu-07 dark:text-neu-06"
-							>
-								{item.label}
-							</Text>
-							<Text
-								variant="body-02"
-								className="text-neu-10 dark:text-neu-01"
-								numberOfLines={2}
-							>
-								{item.value}
-							</Text>
-						</View>
-					</View>
-				))}
-			</View>
+			<DetailItemRow items={items.slice(2, 4)} />
 		</View>
 	);
 }

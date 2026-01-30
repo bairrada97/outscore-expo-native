@@ -60,7 +60,7 @@ export function FixtureTeamForm({
 	homeTeamFixtures,
 	awayTeamFixtures,
 }: FixtureTeamFormProps) {
-	if (!homeTeamId || !awayTeamId) return null;
+	if (homeTeamId == null || awayTeamId == null) return null;
 
 	return (
 		<View className="rounded-lg bg-neu-12 dark:bg-neu-11 px-16 py-16">
