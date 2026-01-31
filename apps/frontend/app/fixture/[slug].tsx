@@ -3,6 +3,7 @@ import { FixtureEventsBlock } from "@/components/fixture-events-block";
 import { FixtureH2H } from "@/components/fixture-h2h/fixture-h2h";
 import { FixtureInfoHeader } from "@/components/fixture-info-header";
 import { FixtureOverviewDetails } from "@/components/fixture-overview-details/fixture-overview-details";
+import { FixtureStandings } from "@/components/fixture-standings/fixture-standings";
 import { FixtureStatistics } from "@/components/fixture-statistics/fixture-statistics";
 import { FixtureTeamForm } from "@/components/fixture-team-form/fixture-team-form";
 import { GoalAnalysisCard } from "@/components/insights/goal-analysis-card/goal-analysis-card";
@@ -482,11 +483,11 @@ export default function FixtureDetailScreen() {
 							key: "standings",
 							title: "STANDINGS",
 							render: () => (
-								<View className="p-16">
-									<Text className="text-neu-07 dark:text-neu-06">
-										Coming soon
-									</Text>
-								</View>
+								<FixtureStandings
+									fixture={fixture}
+									contextData={contextData}
+									isContextLoading={isContextLoading}
+								/>
 							),
 						},
 					]}
