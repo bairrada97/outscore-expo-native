@@ -13,10 +13,7 @@ export function TitleSection({ children, icon }: TitleSectionProps) {
 			<View className="flex flex-row items-center gap-2">
 				<View className="h-4 w-16 rounded-r-lg bg-linear-to-r from-m-02-dark-01 to-m-02-light-02" />
 
-				<Text
-					variant="title-02"
-					className="text-m-01 dark:text-m-01-light-04"
-				>
+				<Text variant="title-02" className="text-m-01 dark:text-m-01-light-04">
 					{children}
 				</Text>
 			</View>
@@ -25,4 +22,3 @@ export function TitleSection({ children, icon }: TitleSectionProps) {
 		</View>
 	);
 }
-

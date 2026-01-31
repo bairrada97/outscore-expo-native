@@ -1,6 +1,8 @@
 import { CardsBlock } from "@/components/cards-block";
 import { FixtureCard } from "@/components/fixture-card";
+import { Button } from "@/components/ui/button";
 import { FilterPillGroup } from "@/components/ui/filter-pill";
+import SvgAdd from "@/components/ui/SvgIcons/Add";
 import { Text } from "@/components/ui/text";
 import type { FixtureContextResponse } from "@/queries/fixture-context";
 import { generateFixtureSlug } from "@/utils/fixture-slug";
@@ -21,8 +23,12 @@ type FixtureH2HProps = {
 	isContextLoading?: boolean;
 };
 
+const INITIAL_MATCHES_TO_SHOW = 5;
+
 export function FixtureH2H({ fixture, contextData, isContextLoading }: FixtureH2HProps) {
 	const [activeFilter, setActiveFilter] = useState<H2HFilterKey>("overall");
+	const [showAllHomeMatches, setShowAllHomeMatches] = useState(false);
+	const [showAllAwayMatches, setShowAllAwayMatches] = useState(false);
 
 	const homeTeamId = fixture?.teams?.home?.id;
 	const awayTeamId = fixture?.teams?.away?.id;
@@ -115,40 +121,74 @@ export function FixtureH2H({ fixture, contextData, isContextLoading }: FixtureH2
 
 			{/* Home Team Last Matches */}
 			{activeFilter !== "away" && homeTeamMatches.length > 0 && (
-				<CardsBlock title={`Last Matches: ${homeTeamName}`} cardsClassName="gap-0">
-					{homeTeamMatches.map((match, index) => (
-						<Link
-							key={match.id}
-							href={{ pathname: "/fixture/[slug]", params: { slug: generateFixtureSlug(match) } }}
-							asChild
-						>
-							<FixtureCard
-								fixture={match}
-								isLastMatch={index === homeTeamMatches.length - 1}
-								perspectiveTeamId={showOutcome ? homeTeamId : undefined}
-							/>
-						</Link>
-					))}
-				</CardsBlock>
+				<View>
+					<CardsBlock title={`Last Matches: ${homeTeamName}`} cardsClassName="gap-0">
+						{(showAllHomeMatches
+							? homeTeamMatches
+							: homeTeamMatches.slice(0, INITIAL_MATCHES_TO_SHOW)
+						).map((match, index, arr) => (
+							<Link
+								key={match.id}
+								href={{ pathname: "/fixture/[slug]", params: { slug: generateFixtureSlug(match) } }}
+								asChild
+							>
+								<FixtureCard
+									fixture={match}
+									isLastMatch={index === arr.length - 1}
+									perspectiveTeamId={showOutcome ? homeTeamId : undefined}
+								/>
+							</Link>
+						))}
+					</CardsBlock>
+					{!showAllHomeMatches && homeTeamMatches.length > INITIAL_MATCHES_TO_SHOW && (
+						<View className="mt-16 mb-24 w-full max-w-[350px] self-center">
+							<Button
+								variant="cta-02"
+								className="w-full flex-row gap-x-8"
+								onPress={() => setShowAllHomeMatches(true)}
+							>
+								<Text className="uppercase">Show More</Text>
+								<SvgAdd className="text-m-01 dark:text-m-01-light-04" width={24} height={24} />
+							</Button>
+						</View>
+					)}
+				</View>
 			)}
 
 			{/* Away Team Last Matches */}
 			{activeFilter !== "home" && awayTeamMatches.length > 0 && (
-				<CardsBlock title={`Last Matches: ${awayTeamName}`} cardsClassName="gap-0">
-					{awayTeamMatches.map((match, index) => (
-						<Link
-							key={match.id}
-							href={{ pathname: "/fixture/[slug]", params: { slug: generateFixtureSlug(match) } }}
-							asChild
-						>
-							<FixtureCard
-								fixture={match}
-								isLastMatch={index === awayTeamMatches.length - 1}
-								perspectiveTeamId={showOutcome ? awayTeamId : undefined}
-							/>
-						</Link>
-					))}
-				</CardsBlock>
+				<View>
+					<CardsBlock title={`Last Matches: ${awayTeamName}`} cardsClassName="gap-0">
+						{(showAllAwayMatches
+							? awayTeamMatches
+							: awayTeamMatches.slice(0, INITIAL_MATCHES_TO_SHOW)
+						).map((match, index, arr) => (
+							<Link
+								key={match.id}
+								href={{ pathname: "/fixture/[slug]", params: { slug: generateFixtureSlug(match) } }}
+								asChild
+							>
+								<FixtureCard
+									fixture={match}
+									isLastMatch={index === arr.length - 1}
+									perspectiveTeamId={showOutcome ? awayTeamId : undefined}
+								/>
+							</Link>
+						))}
+					</CardsBlock>
+					{!showAllAwayMatches && awayTeamMatches.length > INITIAL_MATCHES_TO_SHOW && (
+						<View className="mt-16 mb-24 w-full max-w-[350px] self-center">
+							<Button
+								variant="cta-02"
+								className="w-full flex-row gap-x-8"
+								onPress={() => setShowAllAwayMatches(true)}
+							>
+								<Text className="uppercase">Show More</Text>
+								<SvgAdd className="text-m-01 dark:text-m-01-light-04" width={24} height={24} />
+							</Button>
+						</View>
+					)}
+				</View>
 			)}
 
 			{!h2hMatches.length && !homeTeamMatches.length && !awayTeamMatches.length && (
