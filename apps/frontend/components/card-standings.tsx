@@ -30,8 +30,8 @@ export type CardStandingsProps = {
 	isLive?: boolean;
 };
 
-/** Column widths for standings stats */
-const COLUMN_WIDTHS = {
+/** Column widths for standings stats (shared with header) */
+export const COLUMN_WIDTHS = {
 	played: 18,
 	win: 18,
 	draw: 18,

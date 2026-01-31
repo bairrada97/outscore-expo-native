@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { ActivityIndicator, View } from "react-native";
 import {
 	CardStandings,
+	COLUMN_WIDTHS,
 	type StandingsRowData,
 } from "@/components/card-standings";
 import { NoResultsBox } from "@/components/no-results-box";
@@ -21,20 +22,13 @@ type FixtureStandingsProps = {
 	isContextLoading?: boolean;
 };
 
-/** Column widths matching CardStandings */
-const HEADER_COLUMN_WIDTHS = {
-	default: 18,
-	goals: 36,
-	points: 24,
-} as const;
-
 const HEADER_LABELS = [
-	{ key: "played", label: "P", width: HEADER_COLUMN_WIDTHS.default },
-	{ key: "win", label: "W", width: HEADER_COLUMN_WIDTHS.default },
-	{ key: "draw", label: "D", width: HEADER_COLUMN_WIDTHS.default },
-	{ key: "lose", label: "L", width: HEADER_COLUMN_WIDTHS.default },
-	{ key: "goals", label: "G", width: HEADER_COLUMN_WIDTHS.goals },
-	{ key: "points", label: "PTS", width: HEADER_COLUMN_WIDTHS.points },
+	{ key: "played", label: "P", width: COLUMN_WIDTHS.played },
+	{ key: "win", label: "W", width: COLUMN_WIDTHS.win },
+	{ key: "draw", label: "D", width: COLUMN_WIDTHS.draw },
+	{ key: "lose", label: "L", width: COLUMN_WIDTHS.lose },
+	{ key: "goals", label: "G", width: COLUMN_WIDTHS.goals },
+	{ key: "points", label: "PTS", width: COLUMN_WIDTHS.points },
 ] as const;
 
 function StandingsHeader() {
