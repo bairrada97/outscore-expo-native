@@ -1,6 +1,6 @@
+import { View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { cn } from "@/lib/utils";
-import { View } from "react-native";
 
 export type StandingsRowData = {
 	rank: number;
@@ -48,7 +48,17 @@ export function CardStandings({
 	indicatorColorClass,
 	isLive = false,
 }: CardStandingsProps) {
-	const { rank, team, points, played, win, draw, loss, goalsFor, goalsAgainst } = standing;
+	const {
+		rank,
+		team,
+		points,
+		played,
+		win,
+		draw,
+		loss,
+		goalsFor,
+		goalsAgainst,
+	} = standing;
 	const goalsDiff = `${goalsFor}:${goalsAgainst}`;
 
 	const stats = [
@@ -63,7 +73,7 @@ export function CardStandings({
 	return (
 		<View
 			className={cn(
-				"h-32 flex-row items-center gap-x-4 px-16",
+				"h-32 flex-row items-center gap-x-8 px-16",
 				isLive && "bg-neu-03 dark:bg-neu-11",
 			)}
 		>
@@ -77,7 +87,9 @@ export function CardStandings({
 				<Text
 					variant="body-02--semi"
 					className={cn(
-						indicatorColorClass ? "text-neu-01" : "text-neu-10 dark:text-neu-01",
+						indicatorColorClass
+							? "text-neu-01"
+							: "text-neu-10 dark:text-neu-01",
 					)}
 				>
 					{rank}

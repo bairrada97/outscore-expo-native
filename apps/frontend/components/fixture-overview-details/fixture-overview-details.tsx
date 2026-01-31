@@ -39,28 +39,28 @@ function DetailItemRow({ items }: DetailItemRowProps) {
 				const SvgIcon = item.iconType === "svg" ? item.icon : null;
 
 				return (
-					<View key={item.id} className="flex-1 flex-row items-center gap-16">
-						<View className="h-24 w-24 items-center justify-center rounded-lg bg-neu-02 dark:bg-neu-10">
+					<View key={item.id} className="flex-1 items-center gap-8">
+						<View className="h-32 w-32 items-center justify-center rounded-lg bg-neu-02 dark:bg-neu-10">
 							{item.iconType === "lucide" ? (
 								<Icon className="size-24 text-neu-08 dark:text-neu-04" as={item.icon} />
 							) : SvgIcon ? (
 								<SvgIcon
-									width={18}
-									height={18}
+									width={20}
+									height={20}
 									className="text-neu-08 dark:text-neu-04"
 								/>
 							) : null}
 						</View>
-						<View className="flex-1">
+						<View className="items-center">
 							<Text
 								variant="body-02--semi"
-							className="text-neu-07 dark:text-neu-06"
+								className="text-neu-07 dark:text-neu-06"
 							>
 								{item.label}
 							</Text>
 							<Text
 								variant="body-02"
-								className="text-neu-10 dark:text-neu-01"
+								className="text-center text-neu-10 dark:text-neu-01"
 								numberOfLines={2}
 							>
 								{item.value}

@@ -102,7 +102,7 @@ export function CountryItem({
 					{/* Country name */}
 					<Text
 						variant="body-01--semi"
-						className="text-left text-neu-10 dark:text-neu-06 in-data-[state=expanded]:text-neu-01"
+						className="text-left text-neu-10 dark:text-neu-06 in-data-[state=expanded]:text-neu-01 dark:in-data-[state=expanded]:text-neu-01"
 					>
 						{country.name}
 					</Text>
