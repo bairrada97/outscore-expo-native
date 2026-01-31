@@ -9,6 +9,7 @@ import {
 	EventSub,
 } from "@/components/ui/SvgIcons";
 import { Text } from "@/components/ui/text";
+import { cn } from "@/lib/utils";
 import type { FixtureEvent } from "@outscore/shared-types";
 import { View } from "react-native";
 
@@ -182,7 +183,12 @@ export function CardEvent({
 	);
 
 	return (
-		<View className="h-56 px-16 flex-row items-center border-b border-neu-04 dark:border-neu-12">
+		<View
+			className={cn(
+				"h-56 px-16 flex-row items-center border-b border-neu-04",
+				side === "home" ? "dark:bg-neu-12 dark:border-neu-11" : "dark:bg-neu-11 dark:border-neu-12",
+			)}
+		>
 			{side === "home" ? (
 				<>
 					<View className="flex-row items-center gap-x-8">
